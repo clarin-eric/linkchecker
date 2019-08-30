@@ -109,6 +109,7 @@ config:
   sql.max.urls.per.bucket: 5
   
   sql.status.table: "urls"
+  sql.status.resultTable: "status"
   
   sql.spout.max.results: 100
   
@@ -126,9 +127,8 @@ config:
   sql.metrics.table: "metrics"
   
   sql.index.table: "content"
-  
-    # Metrics consumers:
-  topology.metrics.consumer.register:
-     - class: "com.digitalpebble.stormcrawler.sql.metrics.MetricsConsumer"
-       parallelism.hint: 1
+
+  #1 for testing, change later
+  sql.update.batch.size: 1
+
 

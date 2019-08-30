@@ -6,7 +6,7 @@ includes:
       override: false
 
     - resource: false
-      file: "crawler-conf.yaml"
+      file: "/home/can/Downloads/crawler-conf.yaml"
       override: true
 
 spouts:
@@ -21,20 +21,8 @@ bolts:
   - id: "fetcher"
     className: "com.digitalpebble.stormcrawler.bolt.FetcherBolt"
     parallelism: 1
-  - id: "sitemap"
-    className: "com.digitalpebble.stormcrawler.bolt.SiteMapParserBolt"
-    parallelism: 1
-  - id: "feed"
-    className: "com.digitalpebble.stormcrawler.bolt.FeedParserBolt"
-    parallelism: 1
-  - id: "parse"
-    className: "com.digitalpebble.stormcrawler.bolt.JSoupParserBolt"
-    parallelism: 1
-  - id: "index"
-    className: "com.digitalpebble.stormcrawler.indexing.StdOutIndexer"
-    parallelism: 1
   - id: "status"
-    className: "com.digitalpebble.stormcrawler.sql.StatusUpdaterBolt"
+    className: "at.ac.oeaw.acdh.StatusUpdaterBolt"
     parallelism: 1
 
 streams:
@@ -48,7 +36,6 @@ streams:
     grouping:
       type: FIELDS
       args: ["key"]
-
 
   - from: "fetcher"
     to: "status"
