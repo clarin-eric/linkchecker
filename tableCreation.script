@@ -18,11 +18,12 @@ CREATE TABLE stormcrawler.status (
  metadata TEXT,
  bucket SMALLINT DEFAULT 0,
  host VARCHAR(128),
+ statusCode INT(32),
  method VARCHAR(128),
  contentType VARCHAR(255),
  byteSize INT(255),
  duration INT(128),
- timestamp BIGINT(255),
+ timestamp TIMESTAMP DEFAULT NULL,
  redirectCount INT(32),
  FOREIGN KEY (url) REFERENCES urls (url)
  ON DELETE CASCADE

@@ -3,6 +3,7 @@ package at.ac.oeaw.acdh;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -160,8 +161,10 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         String contentType = md.getFirstValue("content-type");
         int byteLength = md.getFirstValue("byte-length") == null ? 0 : Integer.parseInt(md.getFirstValue("byte-length"));
         int loadingTime = md.getFirstValue("fetch.loadingTime") == null ? 0 : Integer.parseInt(md.getFirstValue("fetch.loadingTime"));
+
         String lastProcessedDate = md.getFirstValue("lastProcessedDate");
         Date timestamp = lastProcessedDate == null ? null : Date.from(Instant.parse(lastProcessedDate));
+        Timestamp sqlTimestamp = timestamp==null?null:new Timestamp(timestamp.getTime());
 
         preparedStmt.setString(1, url);
         preparedStmt.setString(2, status.toString());
@@ -172,7 +175,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         preparedStmt.setString(7, contentType);
         preparedStmt.setInt(8, byteLength);
         preparedStmt.setInt(9, loadingTime);
-        preparedStmt.setObject(10, timestamp);
+        preparedStmt.setTimestamp(10, sqlTimestamp);
         preparedStmt.setInt(11, 0);//todo
 
         // updates are not batched
