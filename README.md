@@ -39,8 +39,15 @@ Stormychecker is a Storm Crawler adaptation for URL checking. Instead of crawlin
   
 # Simple Explanation of Current Implementation
 
-1. *crawlerSQL.flux* defines our topology. It defines all the spouts, bolts and streams.
+Our MYSQL database has 3 tables:
+1. **urls:** This is the table that stormychecker reads from. So this will be populated by another application(in our case curation-module).
+2. **status:** This is the table that stormychecker saves the results into.
+3. **metrics:** This table is filled by default storm-crawler behaviour in FetcherBolt and has some statistics information.
+
+*crawlerSQL.flux* defines our topology. It defines all the spouts, bolts and streams.
 2. `com.digitalpebble.stormcrawler.sql.SQLSpout` reads from the urls table in the database and sends it to URLPartitionerBolt.
 3. `com.digitalpebble.stormcrawler.bolt.URLPartitionerBolt` partitions the URLS to host, path, parameter etc.
 4. `com.digitalpebble.stormcrawler.bolt.FetcherBolt` fetches the urls. [Here](https://github.com/DigitalPebble/storm-crawler/wiki/FetcherBolt%28s%29) is how it works. This is the default implementation but we might need to adapt it in the future. 
 5. `at.ac.oeaw.acdh.StatusUpdaterBolt` persists the results in the status table in the database. This is our own adaptation of `com.digitalpebble.stormcrawler.sql.StatusUpdaterBolt`.
+
+Note: For now streams just forward the tuples between the bolts. Parallelism is currently set to 1, so streams are not fully used to their potential right now.
