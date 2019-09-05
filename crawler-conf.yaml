@@ -4,14 +4,14 @@
 # Use this file with the parameter -conf when launching your extension of ConfigurableTopology.
 # This file does not contain all the key values but only the most frequently used ones. See crawler-default.xml for an extensive list.
 
-config: 
+config:
   topology.workers: 1
   topology.message.timeout.secs: 300
   topology.max.spout.pending: 100
   topology.debug: false
 
   fetcher.threads.number: 50
-  
+
   # override the JVM parameters for the workers
   topology.worker.childopts: "-Xmx2g -Djava.net.preferIPv4Stack=true"
 
@@ -28,11 +28,11 @@ config:
   # lists the metadata to persist to storage
   # these are not transfered to the outlinks
   metadata.persist:
-   - _redirTo
-   - error.cause
-   - error.source
-   - isSitemap
-   - isFeed
+    - _redirTo
+    - error.cause
+    - error.source
+    - isSitemap
+    - isFeed
 
   http.agent.name: "Autrian Centre for Digital Hummanities"
   http.agent.version: "1.0"
@@ -66,13 +66,13 @@ config:
 
   # text extraction for JSoupParserBolt
   textextractor.include.pattern:
-   - DIV[id="maincontent"]
-   - DIV[itemprop="articleBody"]
-   - ARTICLE
+    - DIV[id="maincontent"]
+    - DIV[itemprop="articleBody"]
+    - ARTICLE
 
   textextractor.exclude.tags:
-   - STYLE
-   - SCRIPT
+    - STYLE
+    - SCRIPT
 
   # custom fetch interval to be used when a document has the key/value in its metadata
   # and has been fetched successfully (value in minutes)
@@ -85,37 +85,38 @@ config:
   indexer.text.fieldname: "content"
   indexer.canonical.name: "canonical"
   indexer.md.mapping:
-  - parse.title=title
-  - parse.keywords=keywords
-  - parse.description=description
-  - domain=domain
+    - parse.title=title
+    - parse.keywords=keywords
+    - parse.description=description
+    - domain=domain
 
   # Metrics consumers:
   topology.metrics.consumer.register:
-     - class: "org.apache.storm.metric.LoggingMetricsConsumer"
-       parallelism.hint: 1
+    - class: "org.apache.storm.metric.LoggingMetricsConsumer"
+      parallelism.hint: 1
 
-#######
-# SQL #
-#######
+  #######
+  # SQL #
+  #######
 
+  #todo your mysql parameters go here
   sql.connection:
-   url: 
-   user:
-   password:
-   rewriteBatchedStatements: "true"
-   useBatchMultiSend: "true"
-   
+    url:
+    user:
+    password:
+    rewriteBatchedStatements: "true"
+    useBatchMultiSend: "true"
+
   sql.max.urls.per.bucket: 5
-  
+
   sql.status.table: "urls"
   sql.status.resultTable: "status"
-  
+
   sql.spout.max.results: 100
-  
-    # time in secs for which the URLs will be considered for fetching after a ack of fail
+
+  # time in secs for which the URLs will be considered for fetching after a ack of fail
   spout.ttl.purgatory: 30
-  
+
   # Min time (in msecs) to allow between 2 successive queries to SQL
   spout.min.delay.queries: 2000
 
@@ -125,10 +126,9 @@ config:
   spout.reset.fetchdate.after: 120
 
   sql.metrics.table: "metrics"
-  
+
   sql.index.table: "content"
 
-  #1 for testing, change later
-  sql.update.batch.size: 1
-
+  #default value 1000, you can change to test
+  sql.update.batch.size: 100
 
