@@ -89,7 +89,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
             throw new RuntimeException(ex);
         }
 
-        //Can code: extended query
+        //Can's code: extended query
         String query = resultTableName + " (url, status, nextfetchdate, metadata, host, statusCode, contentType, byteSize, duration, timestamp, redirectCount)"
                 + " values (?, ?, ?, ?, ?, ?, ? ,? ,? ,? ,?)";
 
@@ -153,7 +153,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         }
 
 
-        //Can code, read this info from tuple, not to change fetcherbolt for now
+        //Can's code, read this info from tuple, not to change fetcherbolt for now
         //because in the given parameter metadata, all this info is not there
         Metadata md = (Metadata) t.getValueByField("metadata");
         int statusCode = md.getFirstValue("fetch.statusCode") == null ? 0 : Integer.parseInt(md.getFirstValue("fetch.statusCode"));
