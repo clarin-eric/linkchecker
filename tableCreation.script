@@ -23,7 +23,7 @@ CREATE TABLE stormcrawler.status (
  contentType VARCHAR(255),
  byteSize INT(255),
  duration INT(128),
- timestamp TIMESTAMP DEFAULT NULL,
+ timestamp TIMESTAMP,
  redirectCount INT(32),
  FOREIGN KEY (url) REFERENCES urls (url)
  ON DELETE CASCADE
