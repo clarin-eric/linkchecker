@@ -109,8 +109,8 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         }
 
         //Can's code: extended query
-        String query = resultTableName + " (url, status, nextfetchdate, metadata, host, statusCode, contentType, byteSize, duration, timestamp, redirectCount)"
-                + " values (?, ?, ?, ?, ?, ?, ? ,? ,? ,? ,?)";
+        String query = resultTableName + " (url, statusCode, contentType, byteSize, duration, timestamp, redirectCount)"
+                + " values (?, ?, ? ,? ,? ,? ,?)";
 
         updateQuery = "REPLACE INTO " + query;
         insertQuery = "INSERT IGNORE INTO " + query;
@@ -183,18 +183,16 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         String lastProcessedDate = md.getFirstValue("lastProcessedDate");
         Date timestamp = lastProcessedDate == null ? null : Date.from(Instant.parse(lastProcessedDate));
         Timestamp sqlTimestamp = timestamp==null?null:new Timestamp(timestamp.getTime());
+        
+        int redirectCount = md.getFirstValue("fetch.redirectCount") == null ? 0 : Integer.parseInt(md.getFirstValue("fetch.redirectCount"));
 
-        preparedStmt.setString(1, url);
-        preparedStmt.setString(2, status.toString());
-        preparedStmt.setObject(3, nextFetch);
-        preparedStmt.setString(4, mdAsString.toString());
-        preparedStmt.setString(5, partitionKey);
-        preparedStmt.setInt(6, statusCode);
-        preparedStmt.setString(7, contentType);
-        preparedStmt.setInt(8, byteLength);
-        preparedStmt.setInt(9, loadingTime);
-        preparedStmt.setTimestamp(10, sqlTimestamp);
-        preparedStmt.setInt(11, 0);//todo
+        preparedStmt.setString(1, url);        
+        preparedStmt.setInt(2, statusCode);
+        preparedStmt.setString(3, contentType);
+        preparedStmt.setInt(4, byteLength);
+        preparedStmt.setInt(5, loadingTime);
+        preparedStmt.setTimestamp(6, sqlTimestamp);
+        preparedStmt.setInt(7, redirectCount);
 
         // updates are not batched
         if (isUpdate) {
