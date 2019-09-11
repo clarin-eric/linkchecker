@@ -47,7 +47,7 @@ Our MYSQL database has 3 tables:
 *crawlerSQL.flux* defines our topology. It defines all the spouts, bolts and streams.
 1. `com.digitalpebble.stormcrawler.sql.SQLSpout` reads from the urls table in the database and sends it to URLPartitionerBolt.
 2. `com.digitalpebble.stormcrawler.bolt.URLPartitionerBolt` partitions the URLS to host, path, parameter etc.
-3. `com.digitalpebble.stormcrawler.bolt.FetcherBolt` fetches the urls. [Here](https://github.com/DigitalPebble/storm-crawler/wiki/FetcherBolt%28s%29) is how it works. This is the default implementation but we might need to adapt it in the future. 
+3. `at.ac.oeaw.acdh.RedirectFetcherBolt` fetches the urls. It is a modified version of the class com.digitalpebble.stormcrawler.bolt.FetcherBolt(see https://github.com/DigitalPebble/storm-crawler/wiki/FetcherBolt%28s%29) that follows up to three redirects and passes also status code 200 to the following bolt (the standard FetcherBold passes no data to the status stream in case of status code 200!). 
 4. `at.ac.oeaw.acdh.StatusUpdaterBolt` persists the results in the status table in the database. This is our own adaptation of `com.digitalpebble.stormcrawler.sql.StatusUpdaterBolt`.
 
 Note: For now streams just forward the tuples between the bolts. Parallelism is currently set to 1, so streams are not fully used to their potential right now.
