@@ -13,11 +13,6 @@ CREATE TABLE stormcrawler.urls (
 
 CREATE TABLE stormcrawler.status (
  url VARCHAR(255),
- status VARCHAR(16) DEFAULT 'DISCOVERED',
- nextfetchdate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
- metadata TEXT,
- bucket SMALLINT DEFAULT 0,
- host VARCHAR(128),
  statusCode INT(32),
  method VARCHAR(128),
  contentType VARCHAR(255),
@@ -30,9 +25,6 @@ CREATE TABLE stormcrawler.status (
  ON UPDATE CASCADE
 );
 
-ALTER TABLE stormcrawler.status ADD INDEX b (`bucket`);
-ALTER TABLE stormcrawler.status ADD INDEX t (`nextfetchdate`);
-ALTER TABLE stormcrawler.status ADD INDEX h (`host`);
 
 CREATE TABLE stormcrawler.metrics (
  srcComponentId VARCHAR(128),

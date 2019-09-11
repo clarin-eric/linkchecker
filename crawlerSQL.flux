@@ -19,7 +19,7 @@ bolts:
     className: "com.digitalpebble.stormcrawler.bolt.URLPartitionerBolt"
     parallelism: 1
   - id: "fetcher"
-    className: "com.digitalpebble.stormcrawler.bolt.FetcherBolt"
+    className: "at.ac.oeaw.acdh.RedirectFetcherBolt"
     parallelism: 1
   - id: "status"
     className: "at.ac.oeaw.acdh.StatusUpdaterBolt"
