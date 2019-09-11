@@ -34,7 +34,7 @@ config:
     - isSitemap
     - isFeed
 
-  http.agent.name: "Autrian Centre for Digital Hummanities"
+  http.agent.name: "Austrian Centre for Digital Hummanities"
   http.agent.version: "1.0"
   http.agent.description: "built with StormCrawler Archetype 1.14"
   http.agent.url: "https://www.oeaw.ac.at/acdh/"
