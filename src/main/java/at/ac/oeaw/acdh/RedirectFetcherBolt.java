@@ -578,7 +578,7 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
 
                     LOG.info(
                             "[Fetcher #{}] Fetched {} with status {} in msec {}",
-                            taskID, fit.url, response.getStatusCode(),
+                            taskID, baseURL, response.getStatusCode(),
                             timeFetching);
 
                     // merges the original MD and the ones returned by the

@@ -108,15 +108,13 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
             throw new RuntimeException(ex);
         }
 
-        //Can's code: extended query
-
         //insert into status table
         String query = statusTableName + " (url, statusCode, contentType, byteSize, duration, timestamp, redirectCount)"
                 + " values (?, ?, ? ,? ,? ,? ,?)";
         insertQuery = "INSERT IGNORE INTO " + query;
 
         //update urls table for nextfetchdate
-        query = urlTableName + " SET nextfetchdate=NOW() + INTERVAL 1 DAY WHERE url=?";
+        query = urlTableName + " SET nextfetchdate = NOW() + INTERVAL 1 DAY, host = ? WHERE url = ?";
         updateQuery = "UPDATE " + query;
 
         try {
@@ -169,8 +167,6 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
             partition = Math.abs(partitionKey.hashCode() % maxNumBuckets);
         }
 
-        //Can's code, read this info from tuple, not to change fetcherbolt for now
-        //because in the given parameter metadata, all this info is not there
         Metadata md = (Metadata) t.getValueByField("metadata");
         int statusCode = md.getFirstValue("fetch.statusCode") == null ? 0 : Integer.parseInt(md.getFirstValue("fetch.statusCode"));
         String contentType = md.getFirstValue("content-type");
@@ -192,7 +188,9 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         insertPreparedStmt.setInt(7, redirectCount);
         insertPreparedStmt.addBatch();
 
-        updatePreparedStmt.setString(1, url);
+
+        updatePreparedStmt.setString(1, partitionKey);
+        updatePreparedStmt.setString(2, url);
         updatePreparedStmt.addBatch();
 
         if (lastInsertBatchTime == -1) {
@@ -226,7 +224,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         try {
             long start = System.currentTimeMillis();
             insertPreparedStmt.executeBatch();
-            updatePreparedStmt.execute();
+            updatePreparedStmt.executeBatch();
             long end = System.currentTimeMillis();
 
             LOG.info("Batched {} inserts and updates executed in {} msec", currentBatchSize, end - start);
