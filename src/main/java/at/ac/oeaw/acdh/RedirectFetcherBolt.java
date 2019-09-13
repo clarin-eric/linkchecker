@@ -599,6 +599,7 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
                     mergedMD.setValue("fetch.timeInQueues",
                             Long.toString(timeInQueues));
 
+                    mergedMD.setValue("fetch.redirectCount", Integer.toString(redirects));
 
                     final Values tupleToSend = new Values(baseURL, mergedMD,
                             status);

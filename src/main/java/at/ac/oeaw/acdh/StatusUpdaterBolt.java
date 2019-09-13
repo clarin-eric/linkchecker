@@ -5,9 +5,9 @@
  * DigitalPebble licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,6 +18,19 @@
 
 package at.ac.oeaw.acdh;
 
+import com.digitalpebble.stormcrawler.Metadata;
+import com.digitalpebble.stormcrawler.persistence.AbstractStatusUpdaterBolt;
+import com.digitalpebble.stormcrawler.persistence.Status;
+import com.digitalpebble.stormcrawler.sql.SQLUtil;
+import com.digitalpebble.stormcrawler.util.ConfUtils;
+import com.digitalpebble.stormcrawler.util.URLPartitioner;
+import org.apache.storm.metric.api.MultiCountMetric;
+import org.apache.storm.task.OutputCollector;
+import org.apache.storm.task.TopologyContext;
+import org.apache.storm.tuple.Tuple;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -27,20 +40,6 @@ import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
-import com.digitalpebble.stormcrawler.sql.SQLUtil;
-import org.apache.storm.metric.api.MultiCountMetric;
-import org.apache.storm.task.OutputCollector;
-import org.apache.storm.task.TopologyContext;
-import org.apache.storm.tuple.Tuple;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.digitalpebble.stormcrawler.Metadata;
-import com.digitalpebble.stormcrawler.persistence.AbstractStatusUpdaterBolt;
-import com.digitalpebble.stormcrawler.persistence.Status;
-import com.digitalpebble.stormcrawler.util.ConfUtils;
-import com.digitalpebble.stormcrawler.util.URLPartitioner;
 
 /**
  * Status updater for SQL backend. Discovered URLs are sent as a batch, whereas
@@ -56,8 +55,8 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
     private MultiCountMetric eventCounter;
 
     private Connection connection;
-    private String tableName;
-    private String resultTableName;
+    private String urlTableName;
+    private String statusTableName;
 
     private URLPartitioner partitioner;
     private int maxNumBuckets = -1;
@@ -68,6 +67,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
     private int currentBatchSize = 0;
 
     private PreparedStatement insertPreparedStmt = null;
+    private PreparedStatement updatePreparedStmt = null;
 
     private long lastInsertBatchTime = -1;
 
@@ -96,8 +96,8 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
         this.eventCounter = context.registerMetric("counter", new MultiCountMetric(), 10);
 
-        tableName = ConfUtils.getString(stormConf, Constants.SQL_STATUS_TABLE_PARAM_NAME, "urls");
-        resultTableName = ConfUtils.getString(stormConf, Constants.SQL_STATUS_RESULT_TABLE_PARAM_NAME, "status");
+        urlTableName = ConfUtils.getString(stormConf, Constants.SQL_STATUS_TABLE_PARAM_NAME, "urls");
+        statusTableName = ConfUtils.getString(stormConf, Constants.SQL_STATUS_RESULT_TABLE_PARAM_NAME, "status");
 
         batchMaxSize = ConfUtils.getInt(stormConf, Constants.SQL_UPDATE_BATCH_SIZE_PARAM_NAME, 1000);
 
@@ -109,14 +109,19 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         }
 
         //Can's code: extended query
-        String query = resultTableName + " (url, statusCode, contentType, byteSize, duration, timestamp, redirectCount)"
-                + " values (?, ?, ? ,? ,? ,? ,?)";
 
-        updateQuery = "REPLACE INTO " + query;
+        //insert into status table
+        String query = statusTableName + " (url, statusCode, contentType, byteSize, duration, timestamp, redirectCount)"
+                + " values (?, ?, ? ,? ,? ,? ,?)";
         insertQuery = "INSERT IGNORE INTO " + query;
+
+        //update urls table for nextfetchdate
+        query = urlTableName + " SET nextfetchdate=NOW() + INTERVAL 1 DAY WHERE url=?";
+        updateQuery = "UPDATE " + query;
 
         try {
             insertPreparedStmt = connection.prepareStatement(insertQuery);
+            updatePreparedStmt = connection.prepareStatement(updateQuery);
         } catch (SQLException e) {
             LOG.error(e.getMessage(), e);
         }
@@ -164,14 +169,6 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
             partition = Math.abs(partitionKey.hashCode() % maxNumBuckets);
         }
 
-        PreparedStatement preparedStmt = this.insertPreparedStmt;
-
-        // create in table if does not already exist
-        if (isUpdate) {
-            preparedStmt = connection.prepareStatement(updateQuery);
-        }
-
-
         //Can's code, read this info from tuple, not to change fetcherbolt for now
         //because in the given parameter metadata, all this info is not there
         Metadata md = (Metadata) t.getValueByField("metadata");
@@ -182,29 +179,21 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
         String lastProcessedDate = md.getFirstValue("lastProcessedDate");
         Date timestamp = lastProcessedDate == null ? null : Date.from(Instant.parse(lastProcessedDate));
-        Timestamp sqlTimestamp = timestamp==null?null:new Timestamp(timestamp.getTime());
-        
+        Timestamp sqlTimestamp = timestamp == null ? null : new Timestamp(timestamp.getTime());
+
         int redirectCount = md.getFirstValue("fetch.redirectCount") == null ? 0 : Integer.parseInt(md.getFirstValue("fetch.redirectCount"));
 
-        preparedStmt.setString(1, url);        
-        preparedStmt.setInt(2, statusCode);
-        preparedStmt.setString(3, contentType);
-        preparedStmt.setInt(4, byteLength);
-        preparedStmt.setInt(5, loadingTime);
-        preparedStmt.setTimestamp(6, sqlTimestamp);
-        preparedStmt.setInt(7, redirectCount);
+        insertPreparedStmt.setString(1, url);
+        insertPreparedStmt.setInt(2, statusCode);
+        insertPreparedStmt.setString(3, contentType);
+        insertPreparedStmt.setInt(4, byteLength);
+        insertPreparedStmt.setInt(5, loadingTime);
+        insertPreparedStmt.setTimestamp(6, sqlTimestamp);
+        insertPreparedStmt.setInt(7, redirectCount);
+        insertPreparedStmt.addBatch();
 
-        // updates are not batched
-        if (isUpdate) {
-            preparedStmt.executeUpdate();
-            preparedStmt.close();
-            eventCounter.scope("sql_updates_number").incrBy(1);
-            super.ack(t, url);
-            return;
-        }
-
-        // code below is for inserts i.e. DISCOVERED URLs
-        preparedStmt.addBatch();
+        updatePreparedStmt.setString(1, url);
+        updatePreparedStmt.addBatch();
 
         if (lastInsertBatchTime == -1) {
             lastInsertBatchTime = System.currentTimeMillis();
@@ -214,9 +203,9 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         // once this method has returned
         waitingAck.put(url, new LinkedList<Tuple>());
 
-        currentBatchSize++;
+        currentBatchSize += 2;
 
-        eventCounter.scope("sql_inserts_number").incrBy(1);
+        eventCounter.scope("sql_inserts_number").incrBy(2);
     }
 
     private synchronized void checkExecuteBatch() throws SQLException {
@@ -237,9 +226,10 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         try {
             long start = System.currentTimeMillis();
             insertPreparedStmt.executeBatch();
+            updatePreparedStmt.execute();
             long end = System.currentTimeMillis();
 
-            LOG.info("Batched {} inserts executed in {} msec", currentBatchSize, end - start);
+            LOG.info("Batched {} inserts and updates executed in {} msec", currentBatchSize, end - start);
             waitingAck.forEach((k, v) -> {
                 for (Tuple t : v) {
                     super.ack(t, k);
@@ -261,6 +251,8 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
         insertPreparedStmt.close();
         insertPreparedStmt = connection.prepareStatement(insertQuery);
+        updatePreparedStmt.close();
+        updatePreparedStmt = connection.prepareStatement(updateQuery);
     }
 
     @Override
