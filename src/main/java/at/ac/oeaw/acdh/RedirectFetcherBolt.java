@@ -5,9 +5,9 @@
  * DigitalPebble licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -86,6 +86,8 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
 
     private ProtocolFactory protocolFactory;
 
+    private int HTTP_REDIRECT_LIMIT;
+
     private int taskID = -1;
 
     boolean sitemapsAutoDiscovery = false;
@@ -94,7 +96,9 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
 
     private File debugfiletrigger;
 
-    /** blocks the processing of new URLs if this value is reached **/
+    /**
+     * blocks the processing of new URLs if this value is reached
+     **/
     private int maxNumberURLsInQueues = -1;
 
     private String[] beingFetched;
@@ -123,7 +127,7 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
          */
 
         public static FetchItem create(URL u, String url, Tuple t,
-                String queueMode) {
+                                       String queueMode) {
 
             String queueID;
 
@@ -190,7 +194,7 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
         long crawlDelay;
 
         public FetchItemQueue(int maxThreads, long crawlDelay,
-                long minCrawlDelay, int maxQueueSize) {
+                              long minCrawlDelay, int maxQueueSize) {
             this.maxThreads = maxThreads;
             this.crawlDelay = crawlDelay;
             this.minCrawlDelay = minCrawlDelay;
@@ -291,7 +295,9 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
             }
         }
 
-        /** @return true if the URL has been added, false otherwise **/
+        /**
+         * @return true if the URL has been added, false otherwise
+         **/
         public synchronized boolean addFetchItem(URL u, String url, Tuple input) {
             FetchItem it = FetchItem.create(u, url, input, queueMode);
             FetchItemQueue fiq = getFetchItemQueue(it.queueID);
@@ -450,87 +456,54 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
                 boolean asap = false;
 
                 try {
-                    int statusCode = 302;                    
+                    int statusCode = 302;//redirect code
                     String baseURL = fit.url;
-                    URL url = null;
                     ProtocolResponse response = null;
-                    
+                    Status status = null;
+
                     long start = System.currentTimeMillis();
                     long timeInQueues = start - fit.creationTime;
-                    
+
                     int redirects = 0;
-                    
-                    while(Status.fromHTTPCode(statusCode).equals(Status.REDIRECTION)) {
-                        
-                        if(redirects++ > 3)
+
+                    while (Status.fromHTTPCode(statusCode).equals(Status.REDIRECTION)) {
+
+                        if (redirects++ > HTTP_REDIRECT_LIMIT) {
+                            response = new ProtocolResponse(new byte[0], 0, null);
                             break;
-                    
-                        url = new URL(fit.url);
+                        }
+
+                        URL url = new URL(fit.url);
                         Protocol protocol = protocolFactory.getProtocol(url);
-    
+
                         if (protocol == null)
                             throw new RuntimeException(
                                     "No protocol implementation found for "
                                             + fit.url);
-    
+
                         BaseRobotRules rules = protocol.getRobotRules(fit.url);
-                        boolean fromCache = false;
                         if (rules instanceof RobotRules
                                 && ((RobotRules) rules).getContentLengthFetched().length == 0) {
-                            fromCache = true;
                             eventCounter.scope("robots.fromCache").incrBy(1);
                         } else {
                             eventCounter.scope("robots.fetched").incrBy(1);
                         }
-    
-                        // autodiscovery of sitemaps
-                        // the sitemaps will be sent down the topology
-                        // if the robot file did not come from the cache
-                        // to avoid sending them unecessarily
-    
-                        // check in the metadata if discovery setting has been
-                        // overridden
-                        boolean smautodisco = sitemapsAutoDiscovery;
-                        String localSitemapDiscoveryVal = metadata
-                                .getFirstValue(SITEMAP_DISCOVERY_PARAM_KEY);
-                        if ("true".equalsIgnoreCase(localSitemapDiscoveryVal)) {
-                            smautodisco = true;
-                        } else if ("false"
-                                .equalsIgnoreCase(localSitemapDiscoveryVal)) {
-                            smautodisco = false;
-                        }
-    
-                        if (!fromCache && smautodisco) {
-                            for (String sitemapURL : rules.getSitemaps()) {
-                                if (rules.isAllowed(sitemapURL)) {
-                                    emitOutlink(fit.t, url, sitemapURL, metadata,
-                                            SiteMapParserBolt.isSitemapKey, "true");
-                                }
-                            }
-                        }
-    
-                        // has found sitemaps
-                        // https://github.com/DigitalPebble/storm-crawler/issues/710
-                        // note: we don't care if the sitemap URLs where actually
-                        // kept
-                        boolean foundSitemap = (rules.getSitemaps().size() > 0);
-                        metadata.setValue(SiteMapParserBolt.foundSitemapKey,
-                                Boolean.toString(foundSitemap));
-    
+
                         if (!rules.isAllowed(fit.url)) {
                             LOG.info("Denied by robots.txt: {}", fit.url);
                             // pass the info about denied by robots
                             metadata.setValue(Constants.STATUS_ERROR_CAUSE,
                                     "robots.txt");
-                            collector
-                                    .emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName,
-                                            fit.t, new Values(fit.url, metadata,
-                                                    Status.ERROR));
+
+                            response = new ProtocolResponse(new byte[0], 0, null);
+                            status = Status.ERROR;
+
                             // no need to wait next time as we won't request from
                             // that site
                             asap = true;
-                            continue;
+                            break;
                         }
+
                         FetchItemQueue fiq = fetchQueues
                                 .getFetchItemQueue(fit.queueID);
                         if (rules.getCrawlDelay() > 0
@@ -551,14 +524,13 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
                                     // pass the info about crawl delay
                                     metadata.setValue(Constants.STATUS_ERROR_CAUSE,
                                             "crawl_delay");
-                                    collector
-                                            .emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName,
-                                                    fit.t, new Values(fit.url,
-                                                            metadata, Status.ERROR));
+
+                                    response = new ProtocolResponse(new byte[0], 0, null);
+                                    status = Status.ERROR;
                                     // no need to wait next time as we won't request
                                     // from that site
                                     asap = true;
-                                    continue;
+                                    break;
                                 }
                             } else if (rules.getCrawlDelay() < fetchQueues.crawlDelay
                                     && crawlDelayForce) {
@@ -573,23 +545,26 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
                                         fit.queueID, fiq.crawlDelay, fit.url);
                             }
                         }
-    
 
-    
                         response = protocol.getProtocolOutput(
                                 fit.url, metadata);
-                        
+
                         statusCode = response.getStatusCode();
-                        
+
+                        status = Status.fromHTTPCode(statusCode);
+
                         fit.url = response.getMetadata()
                                 .getFirstValue(HttpHeaders.LOCATION);
+
+
                     }
-                    
-            //end while        
+
+                    //end while
+                    //the result is either an error or the real response
 
                     long timeFetching = System.currentTimeMillis() - start;
 
-                    final int byteLength = response.getContent().length;
+                    final int byteLength = response == null ? 0 : response.getContent().length;
 
                     averagedMetrics.scope("fetch_time").update(timeFetching);
                     averagedMetrics.scope("time_in_queues")
@@ -624,56 +599,12 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
                     mergedMD.setValue("fetch.timeInQueues",
                             Long.toString(timeInQueues));
 
-                    // determine the status based on the status code
-                    final Status status = Status.fromHTTPCode(response
-                            .getStatusCode());
 
                     final Values tupleToSend = new Values(baseURL, mergedMD,
                             status);
 
-                    // if the status is OK emit on default stream
-                    if (status.equals(Status.FETCHED)) {
-                        if (response.getStatusCode() == 304) {
-                            // mark this URL as fetched so that it gets
-                            // rescheduled
-                            // but do not try to parse or index
-                            collector.emit(Constants.StatusStreamName, fit.t,
-                                    tupleToSend);
-                        } else {
-                            collector.emit(Constants.StatusStreamName, fit.t,
-                                    tupleToSend);
-                            // send content for parsing
-                            collector.emit(fit.t,
-                                    new Values(fit.url, response.getContent(),
-                                            mergedMD));
-                        }
-                    } else if (status.equals(Status.REDIRECTION)) {
-
-                        // find the URL it redirects to
-                        String redirection = response.getMetadata()
-                                .getFirstValue(HttpHeaders.LOCATION);
-
-                        // stores the URL it redirects to
-                        // used for debugging mainly - do not resolve the target
-                        // URL
-                        if (StringUtils.isNotBlank(redirection)) {
-                            mergedMD.setValue("_redirTo", redirection);
-                        }
-
-                        // mark this URL as redirected
-                        collector.emit(Constants.StatusStreamName, fit.t,
-                                tupleToSend);
-
-                        if (allowRedirs()
-                                && StringUtils.isNotBlank(redirection)) {
-                            emitOutlink(fit.t, url, redirection, mergedMD);
-                        }
-                    }
-                    // error
-                    else {
-                        collector.emit(Constants.StatusStreamName, fit.t,
-                                tupleToSend);
-                    }
+                    collector.emit(Constants.StatusStreamName, fit.t,
+                            tupleToSend);
 
                 } catch (Exception exece) {
                     String message = exece.getMessage();
@@ -734,12 +665,15 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
             LOG.error(message);
             throw new IllegalArgumentException(message);
         }
+
+        HTTP_REDIRECT_LIMIT = ConfUtils.getInt(stormConf, at.ac.oeaw.acdh.Constants.HTTP_REDIRECT_LIMIT, 5);
+
     }
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @SuppressWarnings({"rawtypes", "unchecked"})
     @Override
     public void prepare(Map stormConf, TopologyContext context,
-            OutputCollector collector) {
+                        OutputCollector collector) {
 
         super.prepare(stormConf, context, collector);
 

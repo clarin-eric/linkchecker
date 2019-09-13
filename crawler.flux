@@ -6,7 +6,7 @@ includes:
       override: false
 
     - resource: false
-      file: "crawler-conf.yaml"
+      file: "/usr/local/stormychecker/conf/crawler-conf.yaml"
       override: true
 
 spouts:
@@ -19,22 +19,10 @@ bolts:
     className: "com.digitalpebble.stormcrawler.bolt.URLPartitionerBolt"
     parallelism: 1
   - id: "fetcher"
-    className: "com.digitalpebble.stormcrawler.bolt.FetcherBolt"
-    parallelism: 1
-  - id: "sitemap"
-    className: "com.digitalpebble.stormcrawler.bolt.SiteMapParserBolt"
-    parallelism: 1
-  - id: "feed"
-    className: "com.digitalpebble.stormcrawler.bolt.FeedParserBolt"
-    parallelism: 1
-  - id: "parse"
-    className: "com.digitalpebble.stormcrawler.bolt.JSoupParserBolt"
-    parallelism: 1
-  - id: "index"
-    className: "com.digitalpebble.stormcrawler.indexing.StdOutIndexer"
+    className: "at.ac.oeaw.acdh.RedirectFetcherBolt"
     parallelism: 1
   - id: "status"
-    className: "com.digitalpebble.stormcrawler.sql.StdOutStatusUpdaterBolt"
+    className: "at.ac.oeaw.acdh.StatusUpdaterBolt"
     parallelism: 1
 
 streams:
@@ -50,56 +38,9 @@ streams:
       args: ["key"]
 
   - from: "fetcher"
-    to: "sitemap"
-    grouping:
-      type: LOCAL_OR_SHUFFLE
-
-  - from: "sitemap"
-    to: "feed"
-    grouping:
-      type: LOCAL_OR_SHUFFLE
-
-  - from: "feed"
-    to: "parse"
-    grouping:
-      type: LOCAL_OR_SHUFFLE
-
-  - from: "parse"
-    to: "index"
-    grouping:
-      type: LOCAL_OR_SHUFFLE
-
-  - from: "fetcher"
     to: "status"
     grouping:
       type: FIELDS
       args: ["url"]
       streamId: "status"
 
-  - from: "sitemap"
-    to: "status"
-    grouping:
-      type: FIELDS
-      args: ["url"]
-      streamId: "status"
-      
-  - from: "feed"
-    to: "status"
-    grouping:
-      type: FIELDS
-      args: ["url"]
-      streamId: "status"
-
-  - from: "parse"
-    to: "status"
-    grouping:
-      type: FIELDS
-      args: ["url"]
-      streamId: "status"
-
-  - from: "index"
-    to: "status"
-    grouping:
-      type: FIELDS
-      args: ["url"]
-      streamId: "status"
