@@ -33,7 +33,7 @@ Stormychecker is a Storm Crawler adaptation for URL checking. Instead of crawlin
   ```
   Note: If you set it "crawler-conf.yaml", then you can directly use the crawler-conf.yaml in this repository.
 
-6. To start stormychecker, run `apache-storm-1.2.2/bin/storm jar path/to/this/repository/target/stormychecker-1.0-SNAPSHOT.jar  org.apache.storm.flux.Flux --local path/to/this/repository/crawlerSQL.flux --sleep 86400000`
+6. To start stormychecker on local mode, run `apache-storm-1.2.2/bin/storm jar path/to/this/repository/target/stormychecker-1.0-SNAPSHOT.jar  org.apache.storm.flux.Flux --local path/to/this/repository/crawler.flux --sleep 86400000`
   Note: For now, it is on SNAPSHOT level because this repository containst just a very basic implementation.
   
   
@@ -44,10 +44,10 @@ Our MYSQL database has 3 tables:
 2. **status:** This is the table that stormychecker saves the results into.
 3. **metrics:** This table is filled by default storm-crawler behaviour in FetcherBolt and has some statistics information.
 
-*crawlerSQL.flux* defines our topology. It defines all the spouts, bolts and streams.
-1. `com.digitalpebble.stormcrawler.sql.SQLSpout` reads from the urls table in the database and sends it to URLPartitionerBolt.
+*crawler.flux* defines our topology. It defines all the spouts, bolts and streams.
+1. `com.digitalpebble.stormcrawler.sql.SQLSpout` reads from the urls table in the database and sends it to URLPartitionerBolt. It reads only when nextfetchdate is in the future and it orders the reads based on that column.
 2. `com.digitalpebble.stormcrawler.bolt.URLPartitionerBolt` partitions the URLS to host, path, parameter etc.
-3. `at.ac.oeaw.acdh.RedirectFetcherBolt` fetches the urls. It is a modified version of the class com.digitalpebble.stormcrawler.bolt.FetcherBolt(see [https://github.com/DigitalPebble/storm-crawler/wiki/FetcherBolt(s)](https://github.com/DigitalPebble/storm-crawler/wiki/FetcherBolt%28s%29) ) that follows up to three redirects and passes also status code 200 to the following bolt (the standard FetcherBold passes no data to the status stream in case of status code 200!). 
-4. `at.ac.oeaw.acdh.StatusUpdaterBolt` persists the results in the status table in the database. This is our own adaptation of `com.digitalpebble.stormcrawler.sql.StatusUpdaterBolt`.
+3. `at.ac.oeaw.acdh.RedirectFetcherBolt` fetches the urls. It follows redirects and passes all results onwards down the stream to StatusUpdaterBolt. Modification of  `com.digitalpebble.stormcrawler.bolt.FetcherBolt`
+4. `at.ac.oeaw.acdh.StatusUpdaterBolt` persists the results in the status table in the database. It also persists nextfetchdate and host columns in the urls table. Modification of `com.digitalpebble.stormcrawler.sql.StatusUpdaterBolt`.
 
 Note: For now streams just forward the tuples between the bolts. Parallelism is currently set to 1, so streams are not fully used to their potential right now.
