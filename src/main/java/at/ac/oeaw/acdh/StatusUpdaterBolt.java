@@ -62,7 +62,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
     private int maxNumBuckets = -1;
 
     private int batchMaxSize = 1000;
-    private float batchMaxIdleMsec = 2000;
+    private float batchMaxIdleMsec = 10000;
 
     private int currentBatchSize = 0;
 
