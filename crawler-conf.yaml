@@ -7,7 +7,7 @@
 config:
   topology.workers: 1
   topology.message.timeout.secs: 300
-  topology.max.spout.pending: 100
+  topology.max.spout.pending: 1000
   topology.debug: false
 
   fetcher.threads.number: 50
@@ -113,7 +113,7 @@ config:
     useBatchMultiSend: "true"
     autoReconnect:  "true"
 
-  sql.max.urls.per.bucket: 5
+  sql.max.urls.per.bucket: 10000
 
   sql.status.table: "urls"
   sql.status.resultTable: "status"
@@ -136,5 +136,5 @@ config:
   sql.index.table: "content"
 
   #default value 1000, you can change to test
-  sql.update.batch.size: 100
+  sql.update.batch.size: 1000
 
