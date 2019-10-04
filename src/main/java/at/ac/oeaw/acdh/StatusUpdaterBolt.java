@@ -114,7 +114,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         insertQuery = "INSERT IGNORE INTO " + query;
 
         //update urls table for nextfetchdate
-        query = urlTableName + " SET nextfetchdate = NOW() + INTERVAL 1 DAY, host = ? WHERE url = ?";
+        query = urlTableName + " SET nextfetchdate = NOW() + INTERVAL 2 WEEK, host = ? WHERE url = ?";
         updateQuery = "UPDATE " + query;
 
         try {
