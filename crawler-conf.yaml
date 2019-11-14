@@ -117,6 +117,7 @@ config:
 
   sql.status.table: "urls"
   sql.status.resultTable: "status"
+  sql.status.historyTable: "history"
 
   sql.spout.max.results: 100
 

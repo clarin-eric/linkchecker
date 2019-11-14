@@ -25,6 +25,7 @@ public class Constants {
     public static final String SQL_UPDATE_BATCH_SIZE_PARAM_NAME = "sql.update.batch.size";
     public static final String SQL_METRICS_TABLE_PARAM_NAME = "sql.metrics.table";
     public static final String SQL_STATUS_RESULT_TABLE_PARAM_NAME = "sql.status.resultTable";
+    public static final String SQL_STATUS_HISTORY_TABLE_PARAM_NAME = "sql.status.historyTable";
     public static final String HTTP_REDIRECT_LIMIT = "http.redirectLimit";
 
     private Constants() {

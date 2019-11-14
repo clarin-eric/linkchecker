@@ -14,13 +14,13 @@ Stormychecker is a Storm Crawler adaptation for URL checking. Instead of crawlin
 4. Add your mysql url and login parameters to *crawler-conf.yaml* (and change any other parameters you wish, ex: http.agent):
   ```
   sql.connection:
-  url: {your mysql url, ex: "jdbc:mysql://localhost:3307/stormcrawler"}
+  url: {your mysql url, ex: "jdbc:mysql://localhost:3307/stormychecker"}
   user: {your mysql username}
   password: {your mysql password}
   rewriteBatchedStatements: "true"
   useBatchMultiSend: "true"
   ```
-5. Point to your crawler-conf.yaml file in *crawlerSQL.flux*:
+5. Point to your crawler-conf.yaml file in *crawler.flux*:
   ```
   includes:
     - resource: true

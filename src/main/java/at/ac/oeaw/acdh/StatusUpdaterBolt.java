@@ -31,12 +31,10 @@ import org.apache.storm.tuple.Tuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Timestamp;
+import java.sql.*;
 import java.time.Instant;
 import java.util.*;
+import java.util.Date;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -57,6 +55,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
     private Connection connection;
     private String urlTableName;
     private String statusTableName;
+    private String historyTableName;
 
     private URLPartitioner partitioner;
     private int maxNumBuckets = -1;
@@ -66,13 +65,15 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
     private int currentBatchSize = 0;
 
-    private PreparedStatement insertPreparedStmt = null;
+    private PreparedStatement insertHistoryPreparedStmt = null;
+    private PreparedStatement replacePreparedStmt = null;
     private PreparedStatement updatePreparedStmt = null;
 
     private long lastInsertBatchTime = -1;
 
-    private String updateQuery;
-    private String insertQuery;
+    private String updateURLTableQuery;
+    private String replaceStatusTableQuery;
+    private String insertHistoryTableQuery;
 
     private final Map<String, List<Tuple>> waitingAck = new HashMap<>();
 
@@ -98,6 +99,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
         urlTableName = ConfUtils.getString(stormConf, Constants.SQL_STATUS_TABLE_PARAM_NAME, "urls");
         statusTableName = ConfUtils.getString(stormConf, Constants.SQL_STATUS_RESULT_TABLE_PARAM_NAME, "status");
+        historyTableName = ConfUtils.getString(stormConf, Constants.SQL_STATUS_HISTORY_TABLE_PARAM_NAME, "history");
 
         batchMaxSize = ConfUtils.getInt(stormConf, Constants.SQL_UPDATE_BATCH_SIZE_PARAM_NAME, 1000);
 
@@ -108,18 +110,21 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
             throw new RuntimeException(ex);
         }
 
-        //insert into status table
-        String query = statusTableName + " (url, statusCode, contentType, byteSize, duration, timestamp, redirectCount)"
-                + " values (?, ?, ? ,? ,? ,? ,?)";
-        insertQuery = "INSERT IGNORE INTO " + query;
 
+        String fields = "url, statusCode, contentType, byteSize, duration, timestamp, redirectCount, record, collection, expectedMimeType";
+        //insert into status table
+        replaceStatusTableQuery = "REPLACE INTO " + statusTableName + "(" + fields + ")" +
+                " values (?, ?, ? ,? ,? ,? ,?, ?, ?, ?)";
+
+//        insertHistoryTableQuery = "INSERT INTO " + historyTableName + "(" + fields + ")" + "SELECT " + fields + " FROM " + statusTableName + " WHERE url = ?";
+        insertHistoryTableQuery = "INSERT INTO " + historyTableName + " SELECT * FROM " + statusTableName + " WHERE url = ?";
         //update urls table for nextfetchdate
-        query = urlTableName + " SET nextfetchdate = NOW() + INTERVAL 2 WEEK, host = ? WHERE url = ?";
-        updateQuery = "UPDATE " + query;
+        updateURLTableQuery = "UPDATE " + urlTableName + " SET nextfetchdate = NOW() + INTERVAL 4 WEEK, host = ? WHERE url = ?";
 
         try {
-            insertPreparedStmt = connection.prepareStatement(insertQuery);
-            updatePreparedStmt = connection.prepareStatement(updateQuery);
+            insertHistoryPreparedStmt = connection.prepareStatement(insertHistoryTableQuery);
+            replacePreparedStmt = connection.prepareStatement(replaceStatusTableQuery);
+            updatePreparedStmt = connection.prepareStatement(updateURLTableQuery);
         } catch (SQLException e) {
             LOG.error(e.getMessage(), e);
         }
@@ -179,15 +184,35 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
         int redirectCount = md.getFirstValue("fetch.redirectCount") == null ? 0 : Integer.parseInt(md.getFirstValue("fetch.redirectCount"));
 
-        insertPreparedStmt.setString(1, url);
-        insertPreparedStmt.setInt(2, statusCode);
-        insertPreparedStmt.setString(3, contentType);
-        insertPreparedStmt.setInt(4, byteLength);
-        insertPreparedStmt.setInt(5, loadingTime);
-        insertPreparedStmt.setTimestamp(6, sqlTimestamp);
-        insertPreparedStmt.setInt(7, redirectCount);
-        insertPreparedStmt.addBatch();
+        replacePreparedStmt.setString(1, url);
+        replacePreparedStmt.setInt(2, statusCode);
+        replacePreparedStmt.setString(3, contentType);
+        replacePreparedStmt.setInt(4, byteLength);
+        replacePreparedStmt.setInt(5, loadingTime);
+        replacePreparedStmt.setTimestamp(6, sqlTimestamp);
+        replacePreparedStmt.setInt(7, redirectCount);
 
+        //get record collection expectedmimetype info from urls
+        //this part is curation module specific, and if this code is used later,
+        //could be taken out and replacepreparedStmt should be modified accordingly
+        String selectQuery = "SELECT collection,record,expectedMimeType FROM " + urlTableName + " WHERE url=?";
+        PreparedStatement urlStmt = connection.prepareStatement(selectQuery);
+        urlStmt.setString(1, url);
+        ResultSet resultSet = urlStmt.executeQuery();
+        //only one result
+        if (resultSet.next()) {
+            replacePreparedStmt.setString(8, resultSet.getString("record"));
+            replacePreparedStmt.setString(9, resultSet.getString("collection"));
+            replacePreparedStmt.setString(10, resultSet.getString("expectedMimeType"));
+        } else {
+            replacePreparedStmt.setString(8, null);
+            replacePreparedStmt.setString(9, null);
+            replacePreparedStmt.setString(10, null);
+        }
+        replacePreparedStmt.addBatch();
+
+        insertHistoryPreparedStmt.setString(1, url);
+        insertHistoryPreparedStmt.addBatch();
 
         updatePreparedStmt.setString(1, partitionKey);
         updatePreparedStmt.setString(2, url);
@@ -223,7 +248,9 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
         try {
             long start = System.currentTimeMillis();
-            insertPreparedStmt.executeBatch();
+            //inserthistoy should be done first because replace deletes old ones
+            insertHistoryPreparedStmt.executeBatch();
+            replacePreparedStmt.executeBatch();
             updatePreparedStmt.executeBatch();
             long end = System.currentTimeMillis();
 
@@ -247,10 +274,12 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         currentBatchSize = 0;
         waitingAck.clear();
 
-        insertPreparedStmt.close();
-        insertPreparedStmt = connection.prepareStatement(insertQuery);
+        replacePreparedStmt.close();
+        replacePreparedStmt = connection.prepareStatement(replaceStatusTableQuery);
         updatePreparedStmt.close();
-        updatePreparedStmt = connection.prepareStatement(updateQuery);
+        updatePreparedStmt = connection.prepareStatement(updateURLTableQuery);
+        insertHistoryPreparedStmt.close();
+        insertHistoryPreparedStmt = connection.prepareStatement(insertHistoryTableQuery);
     }
 
     @Override
