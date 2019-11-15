@@ -7,7 +7,7 @@
 config:
   topology.workers: 1
   topology.message.timeout.secs: 300
-  topology.max.spout.pending: 1000
+  topology.max.spout.pending: 100000
   topology.debug: false
 
   fetcher.threads.number: 50
@@ -119,7 +119,7 @@ config:
   sql.status.resultTable: "status"
   sql.status.historyTable: "history"
 
-  sql.spout.max.results: 100
+  sql.spout.max.results: 100000
 
   # time in secs for which the URLs will be considered for fetching after a ack of fail
   spout.ttl.purgatory: 30

@@ -40,10 +40,7 @@ import org.apache.storm.tuple.Values;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.net.InetAddress;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Map.Entry;
@@ -90,6 +87,11 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
     private int maxNumberURLsInQueues = -1;
 
     private String[] beingFetched;
+
+    private List<Integer> redirectStatusCodes = new ArrayList<>(Arrays.asList(301, 302, 303, 307, 308));
+
+    //this determines what status codes will not be considered broken links. urls with these codes will also not factor into the url-scores
+    private List<Integer> undeterminedStatusCodes = new ArrayList<>(Arrays.asList(401, 405, 429));
 
     /**
      * This class described the item to be fetched.
@@ -442,10 +444,11 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
                 }
 
                 boolean asap = false;
+                String message = null;
 
+                String originalURL = fit.url;
                 try {
-                    int statusCode = 302;//redirect code
-                    String baseURL = fit.url;
+                    int statusCode = 302;//redirect code, so that it goes into the while first
                     ProtocolResponse response = null;
                     Status status = null;
 
@@ -454,21 +457,27 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
 
                     int redirects = 0;
 
-                    while (Status.fromHTTPCode(statusCode).equals(Status.REDIRECTION)) {
+                    while (redirectStatusCodes.contains(statusCode)) {
 
                         if (redirects++ > HTTP_REDIRECT_LIMIT) {
                             response = new ProtocolResponse(new byte[0], 0, null);
+                            message = "Redirects exceeded " + HTTP_REDIRECT_LIMIT + "for " + originalURL;
+                            break;
+                        }
+                        URL url;
+                        try {
+                            url = new URL(fit.url);
+                        } catch (MalformedURLException e) {
+                            response = new ProtocolResponse(new byte[0], 0, null);
+                            message = e.getMessage();
                             break;
                         }
 
-                        URL url = new URL(fit.url);
                         Protocol protocol = protocolFactory.getProtocol(url);
 
-                        if (protocol == null)
-                            throw new RuntimeException(
-                                    "No protocol implementation found for "
-                                            + fit.url);
-
+                        if (protocol == null) {
+                            throw new RuntimeException("No protocol implementation found for " + fit.url);
+                        }
                         BaseRobotRules rules = protocol.getRobotRules(fit.url);
                         if (rules instanceof RobotRules
                                 && ((RobotRules) rules).getContentLengthFetched().length == 0) {
@@ -484,6 +493,7 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
                                     "robots.txt");
 
                             response = new ProtocolResponse(new byte[0], 0, null);
+                            message = "Denied by robots.txt: " + fit.url;
                             status = Status.ERROR;
 
                             // no need to wait next time as we won't request from
@@ -541,9 +551,10 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
 
                         status = Status.fromHTTPCode(statusCode);
 
-                        fit.url = response.getMetadata()
-                                .getFirstValue(HttpHeaders.LOCATION);
-
+                        if (redirectStatusCodes.contains(statusCode)) {
+                            fit.url = convertRelativeToAbsolute(fit.url, response.getMetadata()
+                                    .getFirstValue(HttpHeaders.LOCATION));
+                        }
 
                     }
 
@@ -564,9 +575,19 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
                     eventCounter.scope("fetched").incrBy(1);
                     eventCounter.scope("bytes_fetched").incrBy(byteLength);
 
+                    if (message == null) {
+                        if (statusCode == 200 || statusCode == 304) {
+                            message = "Ok";
+                        } else if (undeterminedStatusCodes.contains(statusCode)) {
+                            message = "Undetermined";
+                        } else {
+                            message = "Broken";
+                        }
+                    }
+
                     LOG.info(
                             "[Fetcher #{}] Fetched {} with status {} in msec {}",
-                            taskID, baseURL, response.getStatusCode(),
+                            taskID, originalURL, response.getStatusCode(),
                             timeFetching);
 
                     // merges the original MD and the ones returned by the
@@ -589,34 +610,36 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
 
                     mergedMD.setValue("fetch.redirectCount", Integer.toString(redirects));
 
-                    final Values tupleToSend = new Values(baseURL, mergedMD,
+                    mergedMD.setValue("fetch.message", message);
+
+                    final Values tupleToSend = new Values(originalURL, mergedMD,
                             status);
 
                     collector.emit(Constants.StatusStreamName, fit.t,
                             tupleToSend);
 
                 } catch (Exception exece) {
-                    String message = exece.getMessage();
-                    if (message == null)
-                        message = "";
+                    String errorMessage = exece.getMessage();
+                    if (errorMessage == null)
+                        errorMessage = "";
 
                     // common exceptions for which we log only a short message
                     if (exece.getCause() instanceof java.util.concurrent.TimeoutException
-                            || message.contains(" timed out")) {
+                            || errorMessage.contains(" timed out")) {
                         LOG.info("Socket timeout fetching {}", fit.url);
-                        message = "Socket timeout fetching";
+                        errorMessage = "Socket timeout fetching";
                     } else if (exece.getCause() instanceof java.net.UnknownHostException
                             || exece instanceof java.net.UnknownHostException) {
                         LOG.info("Unknown host {}", fit.url);
-                        message = "Unknown host";
+                        errorMessage = "Unknown host";
                     } else {
-                        message = exece.getClass().getName();
+                        errorMessage = exece.getClass().getName();
                         if (LOG.isDebugEnabled()) {
                             LOG.debug("Exception while fetching {}", fit.url,
                                     exece);
                         } else {
                             LOG.info("Exception while fetching {} -> {}",
-                                    fit.url, message);
+                                    fit.url, exece.getMessage());
                         }
                     }
 
@@ -624,11 +647,13 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
                         metadata = new Metadata();
                     }
                     // add the reason of the failure in the metadata
-                    metadata.setValue("fetch.exception", message);
+                    metadata.setValue("fetch.exception", errorMessage);
+
+                    metadata.setValue("fetch.message", exece.getMessage());
 
                     // send to status stream
                     collector.emit(Constants.StatusStreamName, fit.t,
-                            new Values(fit.url, metadata, Status.FETCH_ERROR));
+                            new Values(originalURL, metadata, Status.FETCH_ERROR));
 
                     eventCounter.scope("exception").incrBy(1);
                 } finally {
@@ -819,6 +844,28 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
         }
     }
 
+    private String convertRelativeToAbsolute(String url, String locationHeader) throws URISyntaxException, MalformedURLException {
+        if (locationHeader == null) {
+            throw new MalformedURLException("Location Header in a redirect shouldn't be null.");
+        }
+        String result;
+        if (locationHeader.startsWith(".")) {
+            //remove query parameters
+            url = url.split("\\?")[0];
+            int lastIndex = url.lastIndexOf("/");
+            result = url.substring(0, lastIndex) + locationHeader.substring(1);
+
+        } else if (locationHeader.startsWith("/")) {
+            URI uri = new URI(url);
+            String scheme = uri.getScheme();
+            String domain = uri.getHost();
+            result = scheme + "://" + domain + locationHeader;
+        } else {
+            return locationHeader;
+        }
+        return result;
+    }
+
     private void logQueuesContent() {
         StringBuilder sb = new StringBuilder();
         synchronized (fetchQueues.queues) {
@@ -848,6 +895,8 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
             }
             LOG.info("URLs being fetched {}", sb2.toString());
         }
+
+
     }
 
 }

@@ -111,10 +111,10 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         }
 
 
-        String fields = "url, statusCode, contentType, byteSize, duration, timestamp, redirectCount, record, collection, expectedMimeType";
+        String fields = "url, statusCode, contentType, byteSize, duration, timestamp, redirectCount, record, collection, expectedMimeType, message";
         //insert into status table
         replaceStatusTableQuery = "REPLACE INTO " + statusTableName + "(" + fields + ")" +
-                " values (?, ?, ? ,? ,? ,? ,?, ?, ?, ?)";
+                " values (?, ?, ? ,? ,? ,? ,?, ?, ?, ?, ?)";
 
 //        insertHistoryTableQuery = "INSERT INTO " + historyTableName + "(" + fields + ")" + "SELECT " + fields + " FROM " + statusTableName + " WHERE url = ?";
         insertHistoryTableQuery = "INSERT INTO " + historyTableName + " SELECT * FROM " + statusTableName + " WHERE url = ?";
@@ -177,6 +177,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         String contentType = md.getFirstValue("content-type");
         int byteLength = md.getFirstValue("byte-length") == null ? 0 : Integer.parseInt(md.getFirstValue("byte-length"));
         int loadingTime = md.getFirstValue("fetch.loadingTime") == null ? 0 : Integer.parseInt(md.getFirstValue("fetch.loadingTime"));
+        String message = md.getFirstValue("fetch.message");
 
         String lastProcessedDate = md.getFirstValue("lastProcessedDate");
         Date timestamp = lastProcessedDate == null ? null : Date.from(Instant.parse(lastProcessedDate));
@@ -209,7 +210,9 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
             replacePreparedStmt.setString(9, null);
             replacePreparedStmt.setString(10, null);
         }
+        replacePreparedStmt.setString(11, message);
         replacePreparedStmt.addBatch();
+        LOG.info("added to batch this url: "+url);
 
         insertHistoryPreparedStmt.setString(1, url);
         insertHistoryPreparedStmt.addBatch();

@@ -11,7 +11,7 @@ includes:
 
 spouts:
   - id: "spout"
-    className: "com.digitalpebble.stormcrawler.sql.SQLSpout"
+    className: "at.ac.oeaw.acdh.SQLSpout"
     parallelism: 1
 
 bolts:
@@ -20,7 +20,7 @@ bolts:
     parallelism: 1
   - id: "fetcher"
     className: "at.ac.oeaw.acdh.RedirectFetcherBolt"
-    parallelism: 1
+    parallelism: 10
   - id: "status"
     className: "at.ac.oeaw.acdh.StatusUpdaterBolt"
     parallelism: 1
