@@ -13,13 +13,13 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ * NOTICE: This code was modified in ACDH - Austrian Academy of Sciences, based on Stormcrawler source code.
  */
 
 package at.ac.oeaw.acdh;
 
 import com.digitalpebble.stormcrawler.Constants;
 import com.digitalpebble.stormcrawler.Metadata;
-import com.digitalpebble.stormcrawler.bolt.StatusEmitterBolt;
 import com.digitalpebble.stormcrawler.persistence.Status;
 import com.digitalpebble.stormcrawler.protocol.*;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
@@ -446,6 +446,10 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
                 boolean asap = false;
                 String message = null;
 
+                String collection = fit.t.getStringByField("collection");
+                String record = fit.t.getStringByField("record");
+                String expectedMimeType = fit.t.getStringByField("expectedMimeType");
+
                 String originalURL = fit.url;
                 try {
                     int statusCode = 302;//redirect code, so that it goes into the while first
@@ -613,7 +617,7 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
                     mergedMD.setValue("fetch.message", message);
 
                     final Values tupleToSend = new Values(originalURL, mergedMD,
-                            status);
+                            status, collection, record, expectedMimeType);
 
                     collector.emit(Constants.StatusStreamName, fit.t,
                             tupleToSend);
@@ -651,9 +655,11 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
 
                     metadata.setValue("fetch.message", exece.getMessage());
 
+                    final Values tupleToSend = new Values(originalURL, metadata, Status.FETCH_ERROR, collection, record, expectedMimeType);
+
                     // send to status stream
                     collector.emit(Constants.StatusStreamName, fit.t,
-                            new Values(originalURL, metadata, Status.FETCH_ERROR));
+                            tupleToSend);
 
                     eventCounter.scope("exception").incrBy(1);
                 } finally {
@@ -774,7 +780,7 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         super.declareOutputFields(declarer);
-        declarer.declare(new Fields("url", "content", "metadata"));
+        declarer.declare(new Fields("url", "content", "metadata", "collection", "record", "expectedMimeType"));
     }
 
     @Override
@@ -810,6 +816,9 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
         }
 
         final String urlString = input.getStringByField("url");
+        String collection = input.getStringByField("collection");
+        String record = input.getStringByField("record");
+        String expectedMimeType = input.getStringByField("expectedMimeType");
         if (StringUtils.isBlank(urlString)) {
             LOG.info("[Fetcher #{}] Missing value for field url in tuple {}",
                     taskID, input);
@@ -831,9 +840,11 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
             }
             // Report to status stream and ack
             metadata.setValue(Constants.STATUS_ERROR_CAUSE, "malformed URL");
+
+            final Values tupleToSend = new Values(urlString, metadata, Status.ERROR, collection, record, expectedMimeType);
             collector.emit(
                     com.digitalpebble.stormcrawler.Constants.StatusStreamName,
-                    input, new Values(urlString, metadata, Status.ERROR));
+                    input, tupleToSend);
             collector.ack(input);
             return;
         }

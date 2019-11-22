@@ -16,7 +16,7 @@ spouts:
 
 bolts:
   - id: "partitioner"
-    className: "com.digitalpebble.stormcrawler.bolt.URLPartitionerBolt"
+    className: "at.ac.oeaw.acdh.URLPartitionerBolt"
     parallelism: 1
   - id: "fetcher"
     className: "at.ac.oeaw.acdh.RedirectFetcherBolt"

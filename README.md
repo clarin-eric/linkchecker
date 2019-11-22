@@ -9,7 +9,7 @@ Stormychecker is a Storm Crawler adaptation for URL checking. Instead of crawlin
 
 2. Run `mvn install` in the working directory
 
-3. Run *tableCreation.script* on your mysql database. It requires a database with the name *stormcrawler*. You can change the database name and the table names in the script but then you would have to change the *crawler-conf.yaml* configuration for those parameters as well.
+3. Run *tableCreation.script* on your mysql database. It requires a database with the name *stormychecker*. You can change the database name and the table names in the script but then you would have to change the *crawler-conf.yaml* configuration for those parameters as well.
 
 4. Add your mysql url and login parameters to *crawler-conf.yaml* (and change any other parameters you wish, ex: http.agent):
   ```

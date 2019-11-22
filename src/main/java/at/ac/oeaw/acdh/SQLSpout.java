@@ -13,11 +13,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ * NOTICE: This code was modified in ACDH - Austrian Academy of Sciences, based on Stormcrawler source code.
  */
 
 package at.ac.oeaw.acdh;
 
-import com.digitalpebble.stormcrawler.persistence.AbstractQueryingSpout;
 import com.digitalpebble.stormcrawler.sql.Constants;
 import com.digitalpebble.stormcrawler.sql.SQLUtil;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
@@ -26,6 +26,7 @@ import org.apache.storm.spout.Scheme;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
+import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +54,9 @@ public class SQLSpout extends AbstractQueryingSpout {
      **/
     private int bucketNum = -1;
 
-    /** Used to distinguish between instances in the logs **/
+    /**
+     * Used to distinguish between instances in the logs
+     **/
     protected String logIdprefix = "";
 
     private int maxDocsPerBucket;
@@ -97,7 +100,7 @@ public class SQLSpout extends AbstractQueryingSpout {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(SCHEME.getOutputFields());
+        declarer.declare(new Fields("url","collection","record","expectedMimeType"));
     }
 
     @Override
@@ -170,23 +173,32 @@ public class SQLSpout extends AbstractQueryingSpout {
             // iterate through the java resultset
             while (rs.next()) {
                 String url = rs.getString("url");
+                String collection = rs.getString("collection");
+                String record = rs.getString("record");
+                String expectedMimeType = rs.getString("expectedMimeType");
+
                 numhits++;
                 // already processed? skip
                 if (beingProcessed.containsKey(url)) {
                     alreadyprocessed++;
                     continue;
                 }
-                String metadata = rs.getString("metadata");
-                if (metadata == null) {
-                    metadata = "";
-                } else if (!metadata.startsWith("\t")) {
-                    metadata = "\t" + metadata;
-                }
-                String URLMD = url + metadata;
-                List<Object> v = SCHEME.deserialize(ByteBuffer.wrap(URLMD
-                        .getBytes()));
+//                String metadata = rs.getString("metadata");
+//                if (metadata == null) {
+//                    metadata = "";
+//                } else if (!metadata.startsWith("\t")) {
+//                    metadata = "\t" + metadata;
+//                }
+                String URLMD = url + "\t" + collection + "\t" + record + "\t" + expectedMimeType;
+//                List<Object> v = SCHEME.deserialize(ByteBuffer.wrap(URLMD
+//                        .getBytes()));
+
                 Values vals = new Values();
-                vals.addAll(v);
+//                vals.addAll(v);
+                vals.add(url);
+                vals.add(collection);
+                vals.add(record);
+                vals.add(expectedMimeType);
                 buffer.add(vals);
             }
 

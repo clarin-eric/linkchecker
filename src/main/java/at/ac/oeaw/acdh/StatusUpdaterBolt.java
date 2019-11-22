@@ -13,7 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * NOTICE: This code was modified in ACDH - Austrian Academy of Sciences.
+ * NOTICE: This code was modified in ACDH - Austrian Academy of Sciences, based on Stormcrawler source code.
  */
 
 package at.ac.oeaw.acdh;
@@ -179,6 +179,10 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         int loadingTime = md.getFirstValue("fetch.loadingTime") == null ? 0 : Integer.parseInt(md.getFirstValue("fetch.loadingTime"));
         String message = md.getFirstValue("fetch.message");
 
+        String collection = t.getStringByField("collection");
+        String record = t.getStringByField("record");
+        String expectedMimeType = t.getStringByField("expectedMimeType");
+
         String lastProcessedDate = md.getFirstValue("lastProcessedDate");
         Date timestamp = lastProcessedDate == null ? null : Date.from(Instant.parse(lastProcessedDate));
         Timestamp sqlTimestamp = timestamp == null ? null : new Timestamp(timestamp.getTime());
@@ -192,24 +196,27 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         replacePreparedStmt.setInt(5, loadingTime);
         replacePreparedStmt.setTimestamp(6, sqlTimestamp);
         replacePreparedStmt.setInt(7, redirectCount);
+        replacePreparedStmt.setString(8, record);
+        replacePreparedStmt.setString(9, collection);
+        replacePreparedStmt.setString(10, expectedMimeType);
 
-        //get record collection expectedmimetype info from urls
-        //this part is curation module specific, and if this code is used later,
-        //could be taken out and replacepreparedStmt should be modified accordingly
-        String selectQuery = "SELECT collection,record,expectedMimeType FROM " + urlTableName + " WHERE url=?";
-        PreparedStatement urlStmt = connection.prepareStatement(selectQuery);
-        urlStmt.setString(1, url);
-        ResultSet resultSet = urlStmt.executeQuery();
-        //only one result
-        if (resultSet.next()) {
-            replacePreparedStmt.setString(8, resultSet.getString("record"));
-            replacePreparedStmt.setString(9, resultSet.getString("collection"));
-            replacePreparedStmt.setString(10, resultSet.getString("expectedMimeType"));
-        } else {
-            replacePreparedStmt.setString(8, null);
-            replacePreparedStmt.setString(9, null);
-            replacePreparedStmt.setString(10, null);
-        }
+//        //get record collection expectedmimetype info from urls
+//        //this part is curation module specific, and if this code is used later,
+//        //could be taken out and replacepreparedStmt should be modified accordingly
+//        String selectQuery = "SELECT collection,record,expectedMimeType FROM " + urlTableName + " WHERE url=?";
+//        PreparedStatement urlStmt = connection.prepareStatement(selectQuery);
+//        urlStmt.setString(1, url);
+//        ResultSet resultSet = urlStmt.executeQuery();
+//        //only one result
+//        if (resultSet.next()) {
+//            replacePreparedStmt.setString(8, resultSet.getString("record"));
+//            replacePreparedStmt.setString(9, resultSet.getString("collection"));
+//            replacePreparedStmt.setString(10, resultSet.getString("expectedMimeType"));
+//        } else {
+//            replacePreparedStmt.setString(8, null);
+//            replacePreparedStmt.setString(9, null);
+//            replacePreparedStmt.setString(10, null);
+//        }
         replacePreparedStmt.setString(11, message);
         replacePreparedStmt.addBatch();
         LOG.info("added to batch this url: "+url);
