@@ -461,6 +461,8 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
 
                     int redirects = 0;
 
+                    //todo redirects back to different threads
+                    //todo sql spout max query limit causes bottleneck
                     while (redirectStatusCodes.contains(statusCode)) {
 
                         if (redirects++ > HTTP_REDIRECT_LIMIT) {

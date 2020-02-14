@@ -118,8 +118,32 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
 //        insertHistoryTableQuery = "INSERT INTO " + historyTableName + "(" + fields + ")" + "SELECT " + fields + " FROM " + statusTableName + " WHERE url = ?";
         insertHistoryTableQuery = "INSERT INTO " + historyTableName + " SELECT * FROM " + statusTableName + " WHERE url = ?";
+
         //update urls table for nextfetchdate
-        updateURLTableQuery = "UPDATE " + urlTableName + " SET nextfetchdate = NOW() + INTERVAL 4 WEEK, host = ? WHERE url = ?";
+
+        //set the latestFetchdate if not set
+        if (Configuration.latestFetchDate == null) {
+            String latestFetchDateQuery = "SELECT MAX(nextfetchdate) as nextfetchdate FROM stormychecker.urls";
+            try {
+                Statement st = this.connection.createStatement();
+                ResultSet rs = st.executeQuery(latestFetchDateQuery);
+                if (rs.next()) {
+                    Configuration.latestFetchDate = rs.getTimestamp("nextfetchdate");
+                }
+
+            } catch (SQLException e) {
+                LOG.error("Couldn't set latest fetch date. Default of now+4 weeks will be used.");
+            }
+        }
+
+        //couldn't get it from the database
+        if(Configuration.latestFetchDate == null){
+            updateURLTableQuery = "UPDATE " + urlTableName + " SET nextfetchdate = NOW() + INTERVAL 4 WEEK, host = ? WHERE url = ?";
+        }else{
+            updateURLTableQuery = "UPDATE " + urlTableName + " SET nextfetchdate = ? + INTERVAL ? SECOND, host = ? WHERE url = ?";
+        }
+
+
 
         try {
             insertHistoryPreparedStmt = connection.prepareStatement(insertHistoryTableQuery);
@@ -219,13 +243,22 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 //        }
         replacePreparedStmt.setString(11, message);
         replacePreparedStmt.addBatch();
-        LOG.info("added to batch this url: "+url);
 
         insertHistoryPreparedStmt.setString(1, url);
         insertHistoryPreparedStmt.addBatch();
 
-        updatePreparedStmt.setString(1, partitionKey);
-        updatePreparedStmt.setString(2, url);
+        if(Configuration.latestFetchDate==null){
+            updatePreparedStmt.setString(1, partitionKey);
+            updatePreparedStmt.setString(2, url);
+        }else{
+//          this is the query:
+//          updateURLTableQuery = "UPDATE " + urlTableName + " SET nextfetchdate = ? + INTERVAL ? SECOND, host = ? WHERE url = ?";
+            updatePreparedStmt.setTimestamp(1, Configuration.latestFetchDate);
+            updatePreparedStmt.setInt(2, Configuration.sec.incrementAndGet());
+            updatePreparedStmt.setString(3, partitionKey);
+            updatePreparedStmt.setString(4, url);
+        }
+
         updatePreparedStmt.addBatch();
 
         if (lastInsertBatchTime == -1) {

@@ -100,7 +100,7 @@ public class SQLSpout extends AbstractQueryingSpout {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("url","collection","record","expectedMimeType"));
+        declarer.declare(new Fields("url", "collection", "record", "expectedMimeType"));
     }
 
     @Override
@@ -148,7 +148,6 @@ public class SQLSpout extends AbstractQueryingSpout {
             query += " LIMIT " + this.maxNumResults;
         }
         //MY QUERY END
-
 
         int alreadyprocessed = 0;
         int numhits = 0;
