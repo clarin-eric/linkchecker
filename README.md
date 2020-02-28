@@ -47,7 +47,7 @@ Our MYSQL database has 3 tables:
 *crawler.flux* defines our topology. It defines all the spouts, bolts and streams.
 1. `com.digitalpebble.stormcrawler.sql.SQLSpout` reads from the urls table in the database and sends it to URLPartitionerBolt. It reads only when nextfetchdate is in the future and it orders the reads based on that column.
 2. `com.digitalpebble.stormcrawler.bolt.URLPartitionerBolt` partitions the URLS to host, path, parameter etc.
-3. `at.ac.oeaw.acdh.FetcherBolt` fetches the urls. It sends redirects back to URLPartitionerBolt and sends the rest onwards down the stream to StatusUpdaterBolt. Modification of  `com.digitalpebble.stormcrawler.bolt.FetcherBolt`
-4. `at.ac.oeaw.acdh.StatusUpdaterBolt` persists the results in the status table in the database. It also persists nextfetchdate and host columns in the urls table. Modification of `com.digitalpebble.stormcrawler.sql.StatusUpdaterBolt`.
+3. `at.ac.oeaw.acdh.bolt.FetcherBolt` fetches the urls. It sends redirects back to URLPartitionerBolt and sends the rest onwards down the stream to StatusUpdaterBolt. Modification of  `com.digitalpebble.stormcrawler.bolt.FetcherBolt`
+4. `at.ac.oeaw.acdh.bolt.StatusUpdaterBolt` persists the results in the status table in the database. It also persists nextfetchdate and host columns in the urls table. Modification of `com.digitalpebble.stormcrawler.sql.StatusUpdaterBolt`.
 
 Note: For now streams just forward the tuples between the bolts. Parallelism is currently set to 1, so streams are not fully used to their potential right now.

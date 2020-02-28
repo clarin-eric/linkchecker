@@ -16,10 +16,11 @@
  * NOTICE: This code was modified in ACDH - Austrian Academy of Sciences, based on Stormcrawler source code.
  */
 
-package at.ac.oeaw.acdh;
+package at.ac.oeaw.acdh.bolt;
 
-import at.ac.oeaw.acdh.Exceptions.CrawlDelayTooLongException;
-import at.ac.oeaw.acdh.Exceptions.DeniedByRobotsException;
+import at.ac.oeaw.acdh.config.Constants;
+import at.ac.oeaw.acdh.exception.CrawlDelayTooLongException;
+import at.ac.oeaw.acdh.exception.DeniedByRobotsException;
 import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.persistence.Status;
 import com.digitalpebble.stormcrawler.protocol.*;
@@ -42,7 +43,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.*;
-import java.nio.file.AccessDeniedException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Map.Entry;
@@ -709,7 +709,7 @@ public class FetcherBolt extends StatusEmitterBolt {
             throw new IllegalArgumentException(message);
         }
 
-        HTTP_REDIRECT_LIMIT = ConfUtils.getInt(stormConf, at.ac.oeaw.acdh.Constants.HTTP_REDIRECT_LIMIT, 5);
+        HTTP_REDIRECT_LIMIT = ConfUtils.getInt(stormConf, Constants.HTTP_REDIRECT_LIMIT, 5);
 
     }
 

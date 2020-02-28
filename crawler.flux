@@ -11,18 +11,18 @@ includes:
 
 spouts:
   - id: "spout"
-    className: "at.ac.oeaw.acdh.SQLSpout"
+    className: "at.ac.oeaw.acdh.spout.SQLSpout"
     parallelism: 1
 
 bolts:
   - id: "partitioner"
-    className: "at.ac.oeaw.acdh.URLPartitionerBolt"
+    className: "at.ac.oeaw.acdh.bolt.URLPartitionerBolt"
     parallelism: 1
   - id: "fetcher"
-    className: "at.ac.oeaw.acdh.FetcherBolt"
+    className: "at.ac.oeaw.acdh.bolt.FetcherBolt"
     parallelism: 10
   - id: "status"
-    className: "at.ac.oeaw.acdh.StatusUpdaterBolt"
+    className: "at.ac.oeaw.acdh.bolt.StatusUpdaterBolt"
     parallelism: 1
 
 streams:

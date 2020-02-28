@@ -16,8 +16,10 @@
  * NOTICE: This code was modified in ACDH - Austrian Academy of Sciences, based on Stormcrawler source code.
  */
 
-package at.ac.oeaw.acdh;
+package at.ac.oeaw.acdh.bolt;
 
+import at.ac.oeaw.acdh.config.Configuration;
+import at.ac.oeaw.acdh.config.Constants;
 import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.persistence.AbstractStatusUpdaterBolt;
 import com.digitalpebble.stormcrawler.persistence.Status;

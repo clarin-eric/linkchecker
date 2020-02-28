@@ -16,8 +16,9 @@
  * NOTICE: This code was modified in ACDH - Austrian Academy of Sciences, based on Stormcrawler source code.
  */
 
-package at.ac.oeaw.acdh;
+package at.ac.oeaw.acdh.spout;
 
+import at.ac.oeaw.acdh.spout.AbstractQueryingSpout;
 import com.digitalpebble.stormcrawler.sql.Constants;
 import com.digitalpebble.stormcrawler.sql.SQLUtil;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
@@ -31,10 +32,8 @@ import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.ByteBuffer;
 import java.sql.*;
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 
 @SuppressWarnings("serial")

@@ -1,4 +1,4 @@
-package at.ac.oeaw.acdh;
+package at.ac.oeaw.acdh.config;
 
 import java.sql.Date;
 import java.sql.Timestamp;

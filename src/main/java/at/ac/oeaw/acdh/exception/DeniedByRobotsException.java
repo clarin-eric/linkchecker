@@ -1,4 +1,4 @@
-package at.ac.oeaw.acdh.Exceptions;
+package at.ac.oeaw.acdh.exception;
 
 public class DeniedByRobotsException extends Exception {
 

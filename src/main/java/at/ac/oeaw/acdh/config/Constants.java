@@ -16,7 +16,7 @@
  * NOTICE: This code was modified in ACDH - Austrian Academy of Sciences.
  */
 
-package at.ac.oeaw.acdh;
+package at.ac.oeaw.acdh.config;
 
 public class Constants {
     public static final String SQL_STATUS_TABLE_PARAM_NAME = "sql.status.table";

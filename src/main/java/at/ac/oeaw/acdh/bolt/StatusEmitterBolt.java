@@ -1,4 +1,4 @@
-package at.ac.oeaw.acdh;
+package at.ac.oeaw.acdh.bolt;
 
 /**
  * Licensed to DigitalPebble Ltd under one or more
