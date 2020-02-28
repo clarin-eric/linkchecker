@@ -63,7 +63,9 @@ public abstract class AbstractStatusUpdaterBolt extends BaseRichBolt {
      **/
     public static String useCacheParamName = "status.updater.use.cache";
 
-    /** Number of successive FETCH_ERROR before status changes to ERROR **/
+    /**
+     * Number of successive FETCH_ERROR before status changes to ERROR
+     **/
     public static String maxFetchErrorsParamName = "max.fetch.errors";
 
     /**
@@ -103,7 +105,7 @@ public abstract class AbstractStatusUpdaterBolt extends BaseRichBolt {
 
     private int roundDateUnit = Calendar.SECOND;
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({"unchecked", "rawtypes"})
     @Override
     public void prepare(Map stormConf, TopologyContext context,
                         OutputCollector collector) {
@@ -148,7 +150,11 @@ public abstract class AbstractStatusUpdaterBolt extends BaseRichBolt {
     @Override
     public void execute(Tuple tuple) {
 
-        String url = tuple.getStringByField("originalUrl");//we want to persist the original url and not the redirected url, fetcherbolt sends both down.
+        String url = tuple.getStringByField("originalUrl");
+
+//        LOG.info("#################updater originalUrl:" + originalUrl);
+//        LOG.info("#################updater url:" + url);
+
         Status status = (Status) tuple.getValueByField("status");
 
         boolean potentiallyNew = status.equals(Status.DISCOVERED);

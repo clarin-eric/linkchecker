@@ -628,6 +628,8 @@ public class FetcherBolt extends StatusEmitterBolt {
                     final Values tupleToSend = new Values(originalUrl, url, mergedMD,
                             status, collection, record, expectedMimeType);
 
+//                    LOG.info("#################fetcher originalURl:"+originalUrl);
+//                    LOG.info("#################fetcher url:"+url);
                     collector.emit(streamName, fit.t, tupleToSend);
 
                 } catch (Exception e) {
@@ -649,6 +651,8 @@ public class FetcherBolt extends StatusEmitterBolt {
                             collection, record, expectedMimeType);
 
                     // send to status stream
+//                    LOG.info("#################fetcher originalURl:"+originalUrl);
+//                    LOG.info("#################fetcher url:"+url);
                     collector.emit(Constants.StatusStreamName, fit.t,
                             tupleToSend);
 
@@ -807,11 +811,11 @@ public class FetcherBolt extends StatusEmitterBolt {
         }
 
         String originalUrl = input.getStringByField("originalUrl");
-        final String urlString = input.getStringByField("url");
+        final String url = input.getStringByField("url");
         String collection = input.getStringByField("collection");
         String record = input.getStringByField("record");
         String expectedMimeType = input.getStringByField("expectedMimeType");
-        if (StringUtils.isBlank(urlString)) {
+        if (StringUtils.isBlank(url)) {
             LOG.info("[Fetcher #{}] Missing value for field url in tuple {}",
                     taskID, input);
             // ignore silently
@@ -819,12 +823,12 @@ public class FetcherBolt extends StatusEmitterBolt {
             return;
         }
 
-        URL url;
+        URL u;
 
         try {
-            url = new URL(urlString);
+            u = new URL(url);
         } catch (MalformedURLException e) {
-            LOG.error("{} is a malformed URL", urlString);
+            LOG.error("{} is a malformed URL", url);
 
             Metadata metadata = (Metadata) input.getValueByField("metadata");
             if (metadata == null) {
@@ -833,7 +837,9 @@ public class FetcherBolt extends StatusEmitterBolt {
             // Report to status stream and ack
             metadata.setValue(Constants.STATUS_ERROR_CAUSE, "malformed URL");
 
-            final Values tupleToSend = new Values(originalUrl, urlString, metadata, Status.ERROR, collection, record, expectedMimeType);
+            final Values tupleToSend = new Values(originalUrl, url, metadata, Status.ERROR, collection, record, expectedMimeType);
+//            LOG.info("#################fetcher originalURl:"+originalUrl);
+//            LOG.info("#################fetcher url:"+url);
             collector.emit(
                     com.digitalpebble.stormcrawler.Constants.StatusStreamName,
                     input, tupleToSend);
@@ -841,7 +847,7 @@ public class FetcherBolt extends StatusEmitterBolt {
             return;
         }
 
-        boolean added = fetchQueues.addFetchItem(url, urlString, input);
+        boolean added = fetchQueues.addFetchItem(u, url, input);
         if (!added) {
             collector.fail(input);
         }
