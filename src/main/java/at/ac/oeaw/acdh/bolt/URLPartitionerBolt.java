@@ -64,7 +64,6 @@ public class URLPartitionerBolt extends BaseRichBolt {
     public void execute(Tuple tuple) {
         String url = tuple.getStringByField("url");
         String originalUrl = tuple.getStringByField("originalUrl");
-        originalUrl = originalUrl == null ? url : originalUrl;//first time coming in from spout
         String collection = tuple.getStringByField("collection");
         String record = tuple.getStringByField("record");
         String expectedMimeType = tuple.getStringByField("expectedMimeType");

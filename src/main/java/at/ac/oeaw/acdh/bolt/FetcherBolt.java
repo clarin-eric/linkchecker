@@ -29,6 +29,7 @@ import com.digitalpebble.stormcrawler.util.PerSecondReducer;
 import crawlercommons.domains.PaidLevelDomain;
 import crawlercommons.robots.BaseRobotRules;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.client.RedirectException;
 import org.apache.storm.Config;
 import org.apache.storm.metric.api.MeanReducer;
 import org.apache.storm.metric.api.MultiCountMetric;
@@ -551,16 +552,14 @@ public class FetcherBolt extends StatusEmitterBolt {
                     status = Status.fromHTTPCode(statusCode);
 
                     boolean redirect = false;
+                    String redirectUrl=null;
                     if (redirectStatusCodes.contains(statusCode)) {
                         redirect = true;
                         redirectCount++;
                         if (redirectCount >= HTTP_REDIRECT_LIMIT) {
-                            response = new ProtocolResponse(new byte[0], 0, null);
-                            message = "Redirects exceeded " + HTTP_REDIRECT_LIMIT + " redirects for " + originalUrl;
-                            redirect = false;//redirect requested but over the limit, so it will persist an undetermined in the database
+                            throw new RedirectException("Redirects exceeded " + HTTP_REDIRECT_LIMIT + " redirects for " + originalUrl);
                         }
-
-                        url = convertRelativeToAbsolute(url, response.getMetadata()
+                        redirectUrl = convertRelativeToAbsolute(url, response.getMetadata()
                                 .getFirstValue(HttpHeaders.LOCATION));
                     }
 
@@ -617,50 +616,26 @@ public class FetcherBolt extends StatusEmitterBolt {
 
                     mergedMD.setValue("fetch.message", message);
 
-                    String streamName = redirect ? Constants.RedirectStreamName : Constants.StatusStreamName;
-
+                    //if redirect, go back to partitioner bolt, if not pass it to status updater bolt
+                    String streamName;
+                    if (redirect) {
+                        streamName = Constants.RedirectStreamName;
+                        url=redirectUrl;
+                    } else {
+                        streamName = Constants.StatusStreamName;
+                    }
 
                     final Values tupleToSend = new Values(originalUrl, url, mergedMD,
                             status, collection, record, expectedMimeType);
 
                     collector.emit(streamName, fit.t, tupleToSend);
 
-                } catch (Exception exece) {
-                    String errorMessage = exece.getMessage();
-                    if (errorMessage == null)
+                } catch (Exception e) {
+                    String errorMessage = e.getMessage();
+                    if (errorMessage == null){
                         errorMessage = "";
-//TODO catch exceptions like a normal person...
-                    // common exceptions for which we log only a short message
-                    if (exece.getCause() instanceof java.util.concurrent.TimeoutException
-                            || errorMessage.contains(" timed out")) {
-                        LOG.info("Socket timeout fetching {}", url);
-                        errorMessage = "Socket timeout fetching";
-                    } else if (exece.getCause() instanceof java.net.UnknownHostException
-                            || exece instanceof java.net.UnknownHostException) {
-                        LOG.info("Unknown host {}", url);
-                        errorMessage = "Unknown host";
-                    } else if (exece.getCause() instanceof java.net.MalformedURLException
-                            || exece instanceof java.net.MalformedURLException) {
-                        LOG.info("Malformed URL {}", url);
-                        errorMessage = "Malformed URL";
-                    } else if (exece.getCause() instanceof DeniedByRobotsException
-                            || exece instanceof DeniedByRobotsException) {
-                        LOG.info("Denied by robots.txt {}", url);
-                        errorMessage = "Denied by robots.txt";
-                    } else if (exece.getCause() instanceof CrawlDelayTooLongException
-                            || exece instanceof CrawlDelayTooLongException) {
-                        LOG.info("Crawl delay too long {}", url);
-                        errorMessage = "Crawl delay too long";
-                    } else {
-                        errorMessage = exece.getClass().getName();
-                        if (LOG.isDebugEnabled()) {
-                            LOG.debug("Exception while fetching {}", url,
-                                    exece);
-                        } else {
-                            LOG.info("Exception while fetching {} -> {}",
-                                    url, exece.getMessage());
-                        }
                     }
+                    LOG.error(errorMessage);
 
                     if (metadata.size() == 0) {
                         metadata = new Metadata();
@@ -668,9 +643,9 @@ public class FetcherBolt extends StatusEmitterBolt {
                     // add the reason of the failure in the metadata
                     metadata.setValue("fetch.exception", errorMessage);
 
-                    metadata.setValue("fetch.message", exece.getMessage());
+                    metadata.setValue("fetch.message", e.getMessage());
 
-                    final Values tupleToSend = new Values(originalUrl, metadata, Status.FETCH_ERROR,
+                    final Values tupleToSend = new Values(originalUrl, url, metadata, Status.FETCH_ERROR,
                             collection, record, expectedMimeType);
 
                     // send to status stream

@@ -181,15 +181,6 @@ public class SQLSpout extends AbstractQueryingSpout {
                     alreadyprocessed++;
                     continue;
                 }
-//                String metadata = rs.getString("metadata");
-//                if (metadata == null) {
-//                    metadata = "";
-//                } else if (!metadata.startsWith("\t")) {
-//                    metadata = "\t" + metadata;
-//                }
-//                String URLMD = url + "\t" + collection + "\t" + record + "\t" + expectedMimeType;
-//                List<Object> v = SCHEME.deserialize(ByteBuffer.wrap(URLMD
-//                        .getBytes()));
 
                 Values values = new Values(originalUrl,url,collection,record,expectedMimeType);
 
