@@ -292,7 +292,7 @@ public abstract class AbstractQueryingSpout extends BaseRichSpout {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("url", "collection", "record", "expectedMimeType"));
+        declarer.declare(new Fields("originalUrl", "url", "collection", "record", "expectedMimeType"));
     }
 
 }

@@ -99,7 +99,7 @@ public class SQLSpout extends AbstractQueryingSpout {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("url", "collection", "record", "expectedMimeType"));
+        declarer.declare(new Fields("originalUrl", "url", "collection", "record", "expectedMimeType"));
     }
 
     @Override
@@ -171,6 +171,7 @@ public class SQLSpout extends AbstractQueryingSpout {
             // iterate through the java resultset
             while (rs.next()) {
                 String url = rs.getString("url");
+                String originalUrl = url;
                 String collection = rs.getString("collection");
                 String record = rs.getString("record");
                 String expectedMimeType = rs.getString("expectedMimeType");
@@ -192,7 +193,7 @@ public class SQLSpout extends AbstractQueryingSpout {
 //                        .getBytes()));
 
                 Values vals = new Values();
-//                vals.addAll(v);
+                vals.add(originalUrl);
                 vals.add(url);
                 vals.add(collection);
                 vals.add(record);
