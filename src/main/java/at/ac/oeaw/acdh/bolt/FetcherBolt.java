@@ -453,6 +453,7 @@ public class FetcherBolt extends StatusEmitterBolt {
                 String expectedMimeType = fit.t.getStringByField("expectedMimeType");
 
                 String originalUrl = fit.t.getStringByField("originalUrl");
+
                 Integer redirectCount = fit.t.getIntegerByField("redirectCount");
 
                 String url = fit.url;
@@ -465,11 +466,9 @@ public class FetcherBolt extends StatusEmitterBolt {
                     long start = System.currentTimeMillis();
                     long timeInQueues = start - fit.creationTime;
 
-                    if (redirectCount == null) {//first time coming in from spout through partitioner
+                    if (redirectCount == null) {
                         redirectCount = 0;
                     }
-
-
 
                     URL u = new URL(url);//here it checks for malformed url and throws an exception, which is handled below
 
@@ -499,7 +498,7 @@ public class FetcherBolt extends StatusEmitterBolt {
                         // no need to wait next time as we won't request from
                         // that site
                         asap = true;
-                        throw new DeniedByRobotsException("Denied by robots.txt");
+                        throw new DeniedByRobotsException("Denied by robots.txt: " + url);
                     }
 
                     FetchItemQueue fiq = fetchQueues
@@ -595,49 +594,42 @@ public class FetcherBolt extends StatusEmitterBolt {
                             taskID, url, response.getStatusCode(),
                             timeFetching);
 
-                    if (redirect) {
-                        final Values tupleToSend = new Values(originalUrl, url, redirectCount,
-                                status, collection, record, expectedMimeType);
+                    // merges the original MD and the ones returned by the
+                    // protocol
+                    Metadata mergedMD = new Metadata();
+                    mergedMD.putAll(metadata);
 
-                        collector.emit(Constants.RedirectStreamName, fit.t,
-                                tupleToSend);
-                    } else {
+                    mergedMD.putAll(response.getMetadata());
 
-                        // merges the original MD and the ones returned by the
-                        // protocol
-                        Metadata mergedMD = new Metadata();
-                        mergedMD.putAll(metadata);
-                        mergedMD.putAll(response.getMetadata());
+                    mergedMD.setValue("fetch.statusCode",
+                            Integer.toString(response.getStatusCode()));
 
-                        mergedMD.setValue("fetch.statusCode",
-                                Integer.toString(response.getStatusCode()));
+                    mergedMD.setValue("fetch.byteLength",
+                            Integer.toString(byteLength));
 
-                        mergedMD.setValue("fetch.byteLength",
-                                Integer.toString(byteLength));
+                    mergedMD.setValue("fetch.loadingTime",
+                            Long.toString(timeFetching));
 
-                        mergedMD.setValue("fetch.loadingTime",
-                                Long.toString(timeFetching));
+                    mergedMD.setValue("fetch.timeInQueues",
+                            Long.toString(timeInQueues));
 
-                        mergedMD.setValue("fetch.timeInQueues",
-                                Long.toString(timeInQueues));
+                    mergedMD.setValue("fetch.redirectCount", Integer.toString(redirectCount));
 
-                        mergedMD.setValue("fetch.redirectCount", Integer.toString(redirectCount));
+                    mergedMD.setValue("fetch.message", message);
 
-                        mergedMD.setValue("fetch.message", message);
+                    String streamName = redirect ? Constants.RedirectStreamName : Constants.StatusStreamName;
 
-                        final Values tupleToSend = new Values(originalUrl, mergedMD, redirectCount,
-                                status, collection, record, expectedMimeType);
 
-                        collector.emit(Constants.StatusStreamName, fit.t,
-                                tupleToSend);
-                    }
+                    final Values tupleToSend = new Values(originalUrl, url, mergedMD,
+                            status, collection, record, expectedMimeType);
 
+                    collector.emit(streamName, fit.t, tupleToSend);
 
                 } catch (Exception exece) {
                     String errorMessage = exece.getMessage();
                     if (errorMessage == null)
                         errorMessage = "";
-
+//TODO catch exceptions like a normal person...
                     // common exceptions for which we log only a short message
                     if (exece.getCause() instanceof java.util.concurrent.TimeoutException
                             || errorMessage.contains(" timed out")) {
@@ -678,7 +670,8 @@ public class FetcherBolt extends StatusEmitterBolt {
 
                     metadata.setValue("fetch.message", exece.getMessage());
 
-                    final Values tupleToSend = new Values(originalUrl, metadata, Status.FETCH_ERROR, collection, record, expectedMimeType);
+                    final Values tupleToSend = new Values(originalUrl, metadata, Status.FETCH_ERROR,
+                            collection, record, expectedMimeType);
 
                     // send to status stream
                     collector.emit(Constants.StatusStreamName, fit.t,
@@ -803,7 +796,7 @@ public class FetcherBolt extends StatusEmitterBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         super.declareOutputFields(declarer);
-        declarer.declare(new Fields("url", "content", "metadata", "collection", "record", "expectedMimeType"));
+        declarer.declare(new Fields("originalUrl", "url", "metadata", "status", "collection", "record", "expectedMimeType"));
     }
 
     @Override
@@ -838,6 +831,7 @@ public class FetcherBolt extends StatusEmitterBolt {
             debugfiletrigger.delete();
         }
 
+        String originalUrl = input.getStringByField("originalUrl");
         final String urlString = input.getStringByField("url");
         String collection = input.getStringByField("collection");
         String record = input.getStringByField("record");
@@ -864,7 +858,7 @@ public class FetcherBolt extends StatusEmitterBolt {
             // Report to status stream and ack
             metadata.setValue(Constants.STATUS_ERROR_CAUSE, "malformed URL");
 
-            final Values tupleToSend = new Values(urlString, metadata, Status.ERROR, collection, record, expectedMimeType);
+            final Values tupleToSend = new Values(originalUrl, urlString, metadata, Status.ERROR, collection, record, expectedMimeType);
             collector.emit(
                     com.digitalpebble.stormcrawler.Constants.StatusStreamName,
                     input, tupleToSend);

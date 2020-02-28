@@ -65,14 +65,20 @@ public class URLPartitionerBolt extends BaseRichBolt {
         String url = tuple.getStringByField("url");
         String originalUrl = tuple.getStringByField("originalUrl");
         originalUrl = originalUrl == null ? url : originalUrl;//first time coming in from spout
-        Integer redirectCount = tuple.getIntegerByField("redirectCount");
+
+
         String collection = tuple.getStringByField("collection");
         String record = tuple.getStringByField("record");
         String expectedMimeType = tuple.getStringByField("expectedMimeType");
         Metadata metadata = null;
 
-        if (tuple.contains("metadata"))
+        Integer redirectCount;
+        if (tuple.contains("metadata")) {
             metadata = (Metadata) tuple.getValueByField("metadata");
+            redirectCount = metadata.getFirstValue("fetch.redirectCount") == null ? 0 : Integer.parseInt(metadata.getFirstValue("fetch.redirectCount"));
+        } else {
+            redirectCount = 0;
+        }
 
         // maybe there is a field metadata but it can be null
         // or there was no field at all
@@ -144,13 +150,13 @@ public class URLPartitionerBolt extends BaseRichBolt {
 
         LOG.debug("Partition Key for: {} > {}", url, partitionKey);
 
-        _collector.emit(tuple, new Values(url, originalUrl, redirectCount, partitionKey, metadata, collection, record, expectedMimeType));
+        _collector.emit(tuple, new Values(originalUrl, url, redirectCount, partitionKey, metadata, collection, record, expectedMimeType));
         _collector.ack(tuple);
     }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("url", "key", "metadata", "collection", "record", "expectedMimeType"));
+        declarer.declare(new Fields("originalUrl", "url", "redirectCount", "key", "metadata", "collection", "record", "expectedMimeType"));
     }
 
     @Override

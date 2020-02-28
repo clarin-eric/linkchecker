@@ -22,6 +22,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Map;
 
+import at.ac.oeaw.acdh.config.Constants;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -67,8 +68,11 @@ public abstract class StatusEmitterBolt extends BaseRichBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         declarer.declareStream(
-                com.digitalpebble.stormcrawler.Constants.StatusStreamName,
-                new Fields("url", "metadata", "status", "collection", "record", "expectedMimeType"));
+                Constants.StatusStreamName,
+                new Fields("originalUrl", "url", "metadata", "status", "collection", "record", "expectedMimeType"));
+        declarer.declareStream(
+                Constants.RedirectStreamName,
+                new Fields("originalUrl", "url", "metadata", "status", "collection", "record", "expectedMimeType"));
     }
 
     /**

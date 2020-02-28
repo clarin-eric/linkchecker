@@ -118,7 +118,6 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         replaceStatusTableQuery = "REPLACE INTO " + statusTableName + "(" + fields + ")" +
                 " values (?, ?, ? ,? ,? ,? ,?, ?, ?, ?, ?)";
 
-//        insertHistoryTableQuery = "INSERT INTO " + historyTableName + "(" + fields + ")" + "SELECT " + fields + " FROM " + statusTableName + " WHERE url = ?";
         insertHistoryTableQuery = "INSERT INTO " + historyTableName + " SELECT * FROM " + statusTableName + " WHERE url = ?";
 
         //update urls table for nextfetchdate
@@ -144,7 +143,6 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         }else{
             updateURLTableQuery = "UPDATE " + urlTableName + " SET nextfetchdate = ? + INTERVAL ? SECOND, host = ? WHERE url = ?";
         }
-
 
 
         try {
