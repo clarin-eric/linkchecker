@@ -197,9 +197,9 @@ public abstract class AbstractQueryingSpout extends BaseRichSpout {
                             System.currentTimeMillis() - timestampEmptyBuffer);
                     timestampEmptyBuffer = -1;
                 }
-                List<Object> fields = buffer.remove();
-                String url = fields.get(0).toString();
-                this._collector.emit(fields, url);
+                List<Object> values = buffer.remove();
+                String url = values.get(1).toString();
+                this._collector.emit(values, url);
                 beingProcessed.put(url, null);
                 in_buffer.remove(url);
                 eventCounter.scope("emitted").incrBy(1);

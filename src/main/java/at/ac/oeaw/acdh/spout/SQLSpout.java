@@ -18,7 +18,6 @@
 
 package at.ac.oeaw.acdh.spout;
 
-import at.ac.oeaw.acdh.spout.AbstractQueryingSpout;
 import com.digitalpebble.stormcrawler.sql.Constants;
 import com.digitalpebble.stormcrawler.sql.SQLUtil;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
@@ -188,17 +187,13 @@ public class SQLSpout extends AbstractQueryingSpout {
 //                } else if (!metadata.startsWith("\t")) {
 //                    metadata = "\t" + metadata;
 //                }
-                String URLMD = url + "\t" + collection + "\t" + record + "\t" + expectedMimeType;
+//                String URLMD = url + "\t" + collection + "\t" + record + "\t" + expectedMimeType;
 //                List<Object> v = SCHEME.deserialize(ByteBuffer.wrap(URLMD
 //                        .getBytes()));
 
-                Values vals = new Values();
-                vals.add(originalUrl);
-                vals.add(url);
-                vals.add(collection);
-                vals.add(record);
-                vals.add(expectedMimeType);
-                buffer.add(vals);
+                Values values = new Values(originalUrl,url,collection,record,expectedMimeType);
+
+                buffer.add(values);
             }
 
             // no results? reset the date
