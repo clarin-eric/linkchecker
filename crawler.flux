@@ -1,4 +1,4 @@
-name: "crawler"
+name: "stormychecker"
 
 includes:
     - resource: true
@@ -19,7 +19,7 @@ bolts:
     className: "at.ac.oeaw.acdh.URLPartitionerBolt"
     parallelism: 1
   - id: "fetcher"
-    className: "at.ac.oeaw.acdh.RedirectFetcherBolt"
+    className: "at.ac.oeaw.acdh.FetcherBolt"
     parallelism: 10
   - id: "status"
     className: "at.ac.oeaw.acdh.StatusUpdaterBolt"
@@ -43,4 +43,12 @@ streams:
       type: FIELDS
       args: ["url"]
       streamId: "status"
+
+  - from: "fetcher"
+    to: "partitioner"
+    grouping:
+      type: FIELDS
+      args: ["url"]
+      streamId: "redirect"
+
 

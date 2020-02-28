@@ -28,6 +28,22 @@ public class Constants {
     public static final String SQL_STATUS_HISTORY_TABLE_PARAM_NAME = "sql.status.historyTable";
     public static final String HTTP_REDIRECT_LIMIT = "http.redirectLimit";
 
+    public static final String PARTITION_MODEParamName = "partition.url.mode";
+    public static final String PARTITION_MODE_HOST = "byHost";
+    public static final String PARTITION_MODE_DOMAIN = "byDomain";
+    public static final String PARTITION_MODE_IP = "byIP";
+    public static final String STATUS_ERROR_MESSAGE = "error.message";
+    public static final String STATUS_ERROR_SOURCE = "error.source";
+    public static final String STATUS_ERROR_CAUSE = "error.cause";
+    public static final String StatusStreamName = "status";
+    public static final String RedirectStreamName = "redirect";
+    public static final String DELETION_STREAM_NAME = "deletion";
+    public static final String AllowRedirParamName = "redirections.allowed";
+    public static final String fetchErrorFetchIntervalParamName = "fetchInterval.fetch.error";
+    public static final String errorFetchIntervalParamName = "fetchInterval.error";
+    public static final String defaultFetchIntervalParamName = "fetchInterval.default";
+    public static final String fetchErrorCountParamName = "fetch.error.count";
+
     private Constants() {
     }
 }

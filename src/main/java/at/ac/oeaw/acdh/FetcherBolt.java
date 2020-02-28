@@ -18,7 +18,8 @@
 
 package at.ac.oeaw.acdh;
 
-import com.digitalpebble.stormcrawler.Constants;
+import at.ac.oeaw.acdh.Exceptions.CrawlDelayTooLongException;
+import at.ac.oeaw.acdh.Exceptions.DeniedByRobotsException;
 import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.persistence.Status;
 import com.digitalpebble.stormcrawler.protocol.*;
@@ -41,6 +42,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.*;
+import java.nio.file.AccessDeniedException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Map.Entry;
@@ -54,10 +56,10 @@ import java.util.concurrent.atomic.AtomicLong;
  * politeness and handles the fetching threads itself.
  */
 @SuppressWarnings("serial")
-public class RedirectFetcherBolt extends StatusEmitterBolt {
+public class FetcherBolt extends StatusEmitterBolt {
 
     private static final org.slf4j.Logger LOG = LoggerFactory
-            .getLogger(RedirectFetcherBolt.class);
+            .getLogger(FetcherBolt.class);
 
     private static final String SITEMAP_DISCOVERY_PARAM_KEY = "sitemap.discovery";
 
@@ -450,122 +452,119 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
                 String record = fit.t.getStringByField("record");
                 String expectedMimeType = fit.t.getStringByField("expectedMimeType");
 
-                String originalURL = fit.url;
+                String originalUrl = fit.t.getStringByField("originalUrl");
+                Integer redirectCount = fit.t.getIntegerByField("redirectCount");
+
+                String url = fit.url;
+
                 try {
-                    int statusCode = 302;//redirect code, so that it goes into the while first
+                    int statusCode = 0;
                     ProtocolResponse response = null;
                     Status status = null;
 
                     long start = System.currentTimeMillis();
                     long timeInQueues = start - fit.creationTime;
 
-                    int redirects = 0;
-
-                    //todo redirects back to different threads
-                    //todo sql spout max query limit causes bottleneck
-                    while (redirectStatusCodes.contains(statusCode)) {
-
-                        if (redirects++ > HTTP_REDIRECT_LIMIT) {
-                            response = new ProtocolResponse(new byte[0], 0, null);
-                            message = "Redirects exceeded " + HTTP_REDIRECT_LIMIT + "for " + originalURL;
-                            break;
-                        }
-                        URL url;
-                        try {
-                            url = new URL(fit.url);
-                        } catch (MalformedURLException e) {
-                            response = new ProtocolResponse(new byte[0], 0, null);
-                            message = e.getMessage();
-                            break;
-                        }
-
-                        Protocol protocol = protocolFactory.getProtocol(url);
-
-                        if (protocol == null) {
-                            throw new RuntimeException("No protocol implementation found for " + fit.url);
-                        }
-                        BaseRobotRules rules = protocol.getRobotRules(fit.url);
-                        if (rules instanceof RobotRules
-                                && ((RobotRules) rules).getContentLengthFetched().length == 0) {
-                            eventCounter.scope("robots.fromCache").incrBy(1);
-                        } else {
-                            eventCounter.scope("robots.fetched").incrBy(1);
-                        }
-
-                        if (!rules.isAllowed(fit.url)) {
-                            LOG.info("Denied by robots.txt: {}", fit.url);
-                            // pass the info about denied by robots
-                            metadata.setValue(Constants.STATUS_ERROR_CAUSE,
-                                    "robots.txt");
-
-                            response = new ProtocolResponse(new byte[0], 0, null);
-                            message = "Denied by robots.txt: " + fit.url;
-                            status = Status.ERROR;
-
-                            // no need to wait next time as we won't request from
-                            // that site
-                            asap = true;
-                            break;
-                        }
-
-                        FetchItemQueue fiq = fetchQueues
-                                .getFetchItemQueue(fit.queueID);
-                        if (rules.getCrawlDelay() > 0
-                                && rules.getCrawlDelay() != fiq.crawlDelay) {
-                            if (rules.getCrawlDelay() > maxCrawlDelay
-                                    && maxCrawlDelay >= 0) {
-                                boolean force = false;
-                                String msg = "skipping";
-                                if (maxCrawlDelayForce) {
-                                    force = true;
-                                    msg = "using value of fetcher.max.crawl.delay instead";
-                                }
-                                LOG.info("Crawl-Delay for {} too long ({}), {}",
-                                        fit.url, rules.getCrawlDelay(), msg);
-                                if (force) {
-                                    fiq.crawlDelay = maxCrawlDelay;
-                                } else {
-                                    // pass the info about crawl delay
-                                    metadata.setValue(Constants.STATUS_ERROR_CAUSE,
-                                            "crawl_delay");
-
-                                    response = new ProtocolResponse(new byte[0], 0, null);
-                                    status = Status.ERROR;
-                                    // no need to wait next time as we won't request
-                                    // from that site
-                                    asap = true;
-                                    break;
-                                }
-                            } else if (rules.getCrawlDelay() < fetchQueues.crawlDelay
-                                    && crawlDelayForce) {
-                                fiq.crawlDelay = fetchQueues.crawlDelay;
-                                LOG.info(
-                                        "Crawl delay for {} too short ({}), set to fetcher.server.delay",
-                                        fit.url, rules.getCrawlDelay());
-                            } else {
-                                fiq.crawlDelay = rules.getCrawlDelay();
-                                LOG.info(
-                                        "Crawl delay for queue: {}  is set to {} as per robots.txt. url: {}",
-                                        fit.queueID, fiq.crawlDelay, fit.url);
-                            }
-                        }
-
-                        response = protocol.getProtocolOutput(
-                                fit.url, metadata);
-
-                        statusCode = response.getStatusCode();
-
-                        status = Status.fromHTTPCode(statusCode);
-
-                        if (redirectStatusCodes.contains(statusCode)) {
-                            fit.url = convertRelativeToAbsolute(fit.url, response.getMetadata()
-                                    .getFirstValue(HttpHeaders.LOCATION));
-                        }
-
+                    if (redirectCount == null) {//first time coming in from spout through partitioner
+                        redirectCount = 0;
                     }
 
-                    //end while
-                    //the result is either an error or the real response
+
+
+                    URL u = new URL(url);//here it checks for malformed url and throws an exception, which is handled below
+
+                    Protocol protocol = protocolFactory.getProtocol(u);
+
+                    if (protocol == null) {
+                        throw new RuntimeException("No protocol implementation found for " + url);
+                    }
+                    BaseRobotRules rules = protocol.getRobotRules(url);
+                    if (rules instanceof RobotRules
+                            && ((RobotRules) rules).getContentLengthFetched().length == 0) {
+                        eventCounter.scope("robots.fromCache").incrBy(1);
+                    } else {
+                        eventCounter.scope("robots.fetched").incrBy(1);
+                    }
+
+                    if (!rules.isAllowed(url)) {
+                        LOG.info("Denied by robots.txt: {}", url);
+                        // pass the info about denied by robots
+                        metadata.setValue(Constants.STATUS_ERROR_CAUSE,
+                                "robots.txt");
+
+                        response = new ProtocolResponse(new byte[0], 0, null);
+                        message = "Denied by robots.txt: " + url;
+                        status = Status.ERROR;
+
+                        // no need to wait next time as we won't request from
+                        // that site
+                        asap = true;
+                        throw new DeniedByRobotsException("Denied by robots.txt");
+                    }
+
+                    FetchItemQueue fiq = fetchQueues
+                            .getFetchItemQueue(fit.queueID);
+                    if (rules.getCrawlDelay() > 0
+                            && rules.getCrawlDelay() != fiq.crawlDelay) {
+                        if (rules.getCrawlDelay() > maxCrawlDelay
+                                && maxCrawlDelay >= 0) {
+                            boolean force = false;
+                            String msg = "skipping";
+                            if (maxCrawlDelayForce) {
+                                force = true;
+                                msg = "using value of fetcher.max.crawl.delay instead";
+                            }
+                            LOG.info("Crawl-Delay for {} too long ({}), {}",
+                                    url, rules.getCrawlDelay(), msg);
+                            if (force) {
+                                fiq.crawlDelay = maxCrawlDelay;
+                            } else {
+                                // pass the info about crawl delay
+                                metadata.setValue(Constants.STATUS_ERROR_CAUSE,
+                                        "crawl_delay");
+
+                                response = new ProtocolResponse(new byte[0], 0, null);
+                                status = Status.ERROR;
+                                // no need to wait next time as we won't request
+                                // from that site
+                                asap = true;
+                                throw new CrawlDelayTooLongException("crawl delay too long.");
+                            }
+                        } else if (rules.getCrawlDelay() < fetchQueues.crawlDelay
+                                && crawlDelayForce) {
+                            fiq.crawlDelay = fetchQueues.crawlDelay;
+                            LOG.info(
+                                    "Crawl delay for {} too short ({}), set to fetcher.server.delay",
+                                    url, rules.getCrawlDelay());
+                        } else {
+                            fiq.crawlDelay = rules.getCrawlDelay();
+                            LOG.info(
+                                    "Crawl delay for queue: {}  is set to {} as per robots.txt. url: {}",
+                                    fit.queueID, fiq.crawlDelay, url);
+                        }
+                    }
+
+                    response = protocol.getProtocolOutput(
+                            url, metadata);
+
+                    statusCode = response.getStatusCode();
+
+                    status = Status.fromHTTPCode(statusCode);
+
+                    boolean redirect = false;
+                    if (redirectStatusCodes.contains(statusCode)) {
+                        redirect = true;
+                        redirectCount++;
+                        if (redirectCount >= HTTP_REDIRECT_LIMIT) {
+                            response = new ProtocolResponse(new byte[0], 0, null);
+                            message = "Redirects exceeded " + HTTP_REDIRECT_LIMIT + " redirects for " + originalUrl;
+                            redirect = false;//redirect requested but over the limit, so it will persist an undetermined in the database
+                        }
+
+                        url = convertRelativeToAbsolute(url, response.getMetadata()
+                                .getFirstValue(HttpHeaders.LOCATION));
+                    }
+
 
                     long timeFetching = System.currentTimeMillis() - start;
 
@@ -593,36 +592,46 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
 
                     LOG.info(
                             "[Fetcher #{}] Fetched {} with status {} in msec {}",
-                            taskID, originalURL, response.getStatusCode(),
+                            taskID, url, response.getStatusCode(),
                             timeFetching);
 
-                    // merges the original MD and the ones returned by the
-                    // protocol
-                    Metadata mergedMD = new Metadata();
-                    mergedMD.putAll(metadata);
-                    mergedMD.putAll(response.getMetadata());
+                    if (redirect) {
+                        final Values tupleToSend = new Values(originalUrl, url, redirectCount,
+                                status, collection, record, expectedMimeType);
 
-                    mergedMD.setValue("fetch.statusCode",
-                            Integer.toString(response.getStatusCode()));
+                        collector.emit(Constants.RedirectStreamName, fit.t,
+                                tupleToSend);
+                    } else {
 
-                    mergedMD.setValue("fetch.byteLength",
-                            Integer.toString(byteLength));
+                        // merges the original MD and the ones returned by the
+                        // protocol
+                        Metadata mergedMD = new Metadata();
+                        mergedMD.putAll(metadata);
+                        mergedMD.putAll(response.getMetadata());
 
-                    mergedMD.setValue("fetch.loadingTime",
-                            Long.toString(timeFetching));
+                        mergedMD.setValue("fetch.statusCode",
+                                Integer.toString(response.getStatusCode()));
 
-                    mergedMD.setValue("fetch.timeInQueues",
-                            Long.toString(timeInQueues));
+                        mergedMD.setValue("fetch.byteLength",
+                                Integer.toString(byteLength));
 
-                    mergedMD.setValue("fetch.redirectCount", Integer.toString(redirects));
+                        mergedMD.setValue("fetch.loadingTime",
+                                Long.toString(timeFetching));
 
-                    mergedMD.setValue("fetch.message", message);
+                        mergedMD.setValue("fetch.timeInQueues",
+                                Long.toString(timeInQueues));
 
-                    final Values tupleToSend = new Values(originalURL, mergedMD,
-                            status, collection, record, expectedMimeType);
+                        mergedMD.setValue("fetch.redirectCount", Integer.toString(redirectCount));
 
-                    collector.emit(Constants.StatusStreamName, fit.t,
-                            tupleToSend);
+                        mergedMD.setValue("fetch.message", message);
+
+                        final Values tupleToSend = new Values(originalUrl, mergedMD, redirectCount,
+                                status, collection, record, expectedMimeType);
+
+                        collector.emit(Constants.StatusStreamName, fit.t,
+                                tupleToSend);
+                    }
+
 
                 } catch (Exception exece) {
                     String errorMessage = exece.getMessage();
@@ -632,20 +641,32 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
                     // common exceptions for which we log only a short message
                     if (exece.getCause() instanceof java.util.concurrent.TimeoutException
                             || errorMessage.contains(" timed out")) {
-                        LOG.info("Socket timeout fetching {}", fit.url);
+                        LOG.info("Socket timeout fetching {}", url);
                         errorMessage = "Socket timeout fetching";
                     } else if (exece.getCause() instanceof java.net.UnknownHostException
                             || exece instanceof java.net.UnknownHostException) {
-                        LOG.info("Unknown host {}", fit.url);
+                        LOG.info("Unknown host {}", url);
                         errorMessage = "Unknown host";
+                    } else if (exece.getCause() instanceof java.net.MalformedURLException
+                            || exece instanceof java.net.MalformedURLException) {
+                        LOG.info("Malformed URL {}", url);
+                        errorMessage = "Malformed URL";
+                    } else if (exece.getCause() instanceof DeniedByRobotsException
+                            || exece instanceof DeniedByRobotsException) {
+                        LOG.info("Denied by robots.txt {}", url);
+                        errorMessage = "Denied by robots.txt";
+                    } else if (exece.getCause() instanceof CrawlDelayTooLongException
+                            || exece instanceof CrawlDelayTooLongException) {
+                        LOG.info("Crawl delay too long {}", url);
+                        errorMessage = "Crawl delay too long";
                     } else {
                         errorMessage = exece.getClass().getName();
                         if (LOG.isDebugEnabled()) {
-                            LOG.debug("Exception while fetching {}", fit.url,
+                            LOG.debug("Exception while fetching {}", url,
                                     exece);
                         } else {
                             LOG.info("Exception while fetching {} -> {}",
-                                    fit.url, exece.getMessage());
+                                    url, exece.getMessage());
                         }
                     }
 
@@ -657,7 +678,7 @@ public class RedirectFetcherBolt extends StatusEmitterBolt {
 
                     metadata.setValue("fetch.message", exece.getMessage());
 
-                    final Values tupleToSend = new Values(originalURL, metadata, Status.FETCH_ERROR, collection, record, expectedMimeType);
+                    final Values tupleToSend = new Values(originalUrl, metadata, Status.FETCH_ERROR, collection, record, expectedMimeType);
 
                     // send to status stream
                     collector.emit(Constants.StatusStreamName, fit.t,
