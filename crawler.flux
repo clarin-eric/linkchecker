@@ -47,8 +47,7 @@ streams:
   - from: "fetcher"
     to: "partitioner"
     grouping:
-      type: FIELDS
-      args: ["url"]
+      type: SHUFFLE
       streamId: "redirect"
 
 

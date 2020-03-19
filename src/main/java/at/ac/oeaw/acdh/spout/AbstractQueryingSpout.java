@@ -7,9 +7,9 @@ package at.ac.oeaw.acdh.spout;
  * DigitalPebble licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -95,7 +95,9 @@ public abstract class AbstractQueryingSpout extends BaseRichSpout {
 
     protected SpoutOutputCollector _collector;
 
-    /** Required for implementations doing asynchronous calls **/
+    /**
+     * Required for implementations doing asynchronous calls
+     **/
     protected AtomicBoolean isInQuery = new AtomicBoolean(false);
 
     protected CollectionMetric queryTimes;
@@ -119,7 +121,7 @@ public abstract class AbstractQueryingSpout extends BaseRichSpout {
 
         context.registerMetric("buffer_size", () -> buffer.size(), 10);
         context.registerMetric("beingProcessed", () -> beingProcessed.size(), 10);
-        context.registerMetric("inPurgatory", () -> beingProcessed.inCache(), 10);
+        context.registerMetric("inPurgatory", () -> beingProcessed.cacheSize(), 10);
 
         queryTimes = new CollectionMetric();
         context.registerMetric("spout_query_time_msec", queryTimes, 10);
@@ -145,7 +147,9 @@ public abstract class AbstractQueryingSpout extends BaseRichSpout {
     protected InProcessMap<String, Object> beingProcessed;
     private boolean active;
 
-    /** Map which holds elements some additional time after the removal. */
+    /**
+     * Map which holds elements some additional time after the removal.
+     */
     public class InProcessMap<K, V> extends HashMap<K, V> {
 
         private Cache<K, Optional<V>> deletionCache;
@@ -170,7 +174,7 @@ public abstract class AbstractQueryingSpout extends BaseRichSpout {
             return super.remove(key);
         }
 
-        public long inCache() {
+        public long cacheSize() {
             return deletionCache.size();
         }
     }
@@ -216,7 +220,6 @@ public abstract class AbstractQueryingSpout extends BaseRichSpout {
             return;
         }
 
-        // re-populate the buffer
         populateBuffer();
 
         timeLastQuerySent = System.currentTimeMillis();

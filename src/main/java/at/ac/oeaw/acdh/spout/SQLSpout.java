@@ -117,28 +117,6 @@ public class SQLSpout extends AbstractQueryingSpout {
             }
         }
 
-        // select entries from mysql
-        // https://mariadb.com/kb/en/library/window-functions-overview/
-        // http://www.mysqltutorial.org/mysql-window-functions/mysql-rank-function/
-//
-//        String query = "SELECT * from (select rank() over (partition by host order by nextfetchdate desc, url) as ranking, url, metadata, nextfetchdate from "
-//                + tableName;
-//
-//        query += " WHERE nextfetchdate <= '"
-//                + new Timestamp(lastNextFetchDate.toEpochMilli()) + "'";
-//
-//        // constraint on bucket num
-//        if (bucketNum >= 0) {
-//            query += " AND bucket = '" + bucketNum + "'";
-//        }
-//
-//        query += ") as urls_ranks where (urls_ranks.ranking <= "
-//                + maxDocsPerBucket + ") order by ranking";
-//
-//        if (maxNumResults != -1) {
-//            query += " LIMIT " + this.maxNumResults;
-//        }
-
         //MY QUERY
         String query = "SELECT * FROM " + tableName + " ORDER BY nextfetchdate";
 

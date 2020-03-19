@@ -628,8 +628,6 @@ public class FetcherBolt extends StatusEmitterBolt {
                     final Values tupleToSend = new Values(originalUrl, url, mergedMD,
                             status, collection, record, expectedMimeType);
 
-//                    LOG.info("#################fetcher originalURl:"+originalUrl);
-//                    LOG.info("#################fetcher url:"+url);
                     collector.emit(streamName, fit.t, tupleToSend);
 
                 } catch (Exception e) {
@@ -651,8 +649,6 @@ public class FetcherBolt extends StatusEmitterBolt {
                             collection, record, expectedMimeType);
 
                     // send to status stream
-//                    LOG.info("#################fetcher originalURl:"+originalUrl);
-//                    LOG.info("#################fetcher url:"+url);
                     collector.emit(Constants.StatusStreamName, fit.t,
                             tupleToSend);
 
