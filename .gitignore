@@ -26,3 +26,6 @@ hs_err_pid*
 # Intellij files
 *iml
 .idea/
+
+# for running in docker locally
+docker/

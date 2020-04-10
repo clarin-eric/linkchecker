@@ -112,10 +112,10 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         }
 
 
-        String fields = "url, statusCode, contentType, byteSize, duration, timestamp, redirectCount, record, collection, expectedMimeType, message";
+        String fields = "url, statusCode, contentType, byteSize, duration, timestamp, redirectCount, record, collection, expectedMimeType, message, method";
         //insert into status table
         replaceStatusTableQuery = "REPLACE INTO " + statusTableName + "(" + fields + ")" +
-                " values (?, ?, ? ,? ,? ,? ,?, ?, ?, ?, ?)";
+                " values (?, ?, ? ,? ,? ,? ,?, ?, ?, ?, ?, ?)";
 
         insertHistoryTableQuery = "INSERT INTO " + historyTableName + " SELECT * FROM " + statusTableName + " WHERE url = ?";
 
@@ -212,6 +212,9 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
         int redirectCount = md.getFirstValue("fetch.redirectCount") == null ? 0 : Integer.parseInt(md.getFirstValue("fetch.redirectCount"));
 
+        String methodBool = md.getFirstValue("http.method.head");
+        String method = methodBool==null?"N/A":methodBool.equalsIgnoreCase("true")?"HEAD":"GET";
+
         replacePreparedStmt.setString(1, url);
         replacePreparedStmt.setInt(2, statusCode);
         replacePreparedStmt.setString(3, contentType);
@@ -222,25 +225,9 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         replacePreparedStmt.setString(8, record);
         replacePreparedStmt.setString(9, collection);
         replacePreparedStmt.setString(10, expectedMimeType);
-
-//        //get record collection expectedmimetype info from urls
-//        //this part is curation module specific, and if this code is used later,
-//        //could be taken out and replacepreparedStmt should be modified accordingly
-//        String selectQuery = "SELECT collection,record,expectedMimeType FROM " + urlTableName + " WHERE url=?";
-//        PreparedStatement urlStmt = connection.prepareStatement(selectQuery);
-//        urlStmt.setString(1, url);
-//        ResultSet resultSet = urlStmt.executeQuery();
-//        //only one result
-//        if (resultSet.next()) {
-//            replacePreparedStmt.setString(8, resultSet.getString("record"));
-//            replacePreparedStmt.setString(9, resultSet.getString("collection"));
-//            replacePreparedStmt.setString(10, resultSet.getString("expectedMimeType"));
-//        } else {
-//            replacePreparedStmt.setString(8, null);
-//            replacePreparedStmt.setString(9, null);
-//            replacePreparedStmt.setString(10, null);
-//        }
         replacePreparedStmt.setString(11, message);
+        replacePreparedStmt.setString(12,method);
+
         replacePreparedStmt.addBatch();
 
         insertHistoryPreparedStmt.setString(1, url);

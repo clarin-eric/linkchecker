@@ -61,7 +61,7 @@ public class SQLSpout extends AbstractQueryingSpout {
 
     private int maxNumResults;
 
-    private Instant lastNextFetchDate = null;
+//    private Instant lastNextFetchDate = null;
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Override
@@ -104,39 +104,17 @@ public class SQLSpout extends AbstractQueryingSpout {
     @Override
     protected void populateBuffer() {
 
-        if (lastNextFetchDate == null) {
-            lastNextFetchDate = Instant.now();
-            lastTimeResetToNOW = Instant.now();
-        } else if (resetFetchDateAfterNSecs != -1) {
-            Instant changeNeededOn = Instant.ofEpochMilli(lastTimeResetToNOW
-                    .toEpochMilli() + (resetFetchDateAfterNSecs * 1000));
-            if (Instant.now().isAfter(changeNeededOn)) {
-                LOG.info("lastDate reset based on resetFetchDateAfterNSecs {}",
-                        resetFetchDateAfterNSecs);
-                lastNextFetchDate = Instant.now();
-            }
-        }
-
-        // select entries from mysql
-        // https://mariadb.com/kb/en/library/window-functions-overview/
-        // http://www.mysqltutorial.org/mysql-window-functions/mysql-rank-function/
-//
-//        String query = "SELECT * from (select rank() over (partition by host order by nextfetchdate desc, url) as ranking, url, metadata, nextfetchdate from "
-//                + tableName;
-//
-//        query += " WHERE nextfetchdate <= '"
-//                + new Timestamp(lastNextFetchDate.toEpochMilli()) + "'";
-//
-//        // constraint on bucket num
-//        if (bucketNum >= 0) {
-//            query += " AND bucket = '" + bucketNum + "'";
-//        }
-//
-//        query += ") as urls_ranks where (urls_ranks.ranking <= "
-//                + maxDocsPerBucket + ") order by ranking";
-//
-//        if (maxNumResults != -1) {
-//            query += " LIMIT " + this.maxNumResults;
+//        if (lastNextFetchDate == null) {
+//            lastNextFetchDate = Instant.now();
+//            lastTimeResetToNOW = Instant.now();
+//        } else if (resetFetchDateAfterNSecs != -1) {
+//            Instant changeNeededOn = Instant.ofEpochMilli(lastTimeResetToNOW
+//                    .toEpochMilli() + (resetFetchDateAfterNSecs * 1000));
+//            if (Instant.now().isAfter(changeNeededOn)) {
+//                LOG.info("lastDate reset based on resetFetchDateAfterNSecs {}",
+//                        resetFetchDateAfterNSecs);
+//                lastNextFetchDate = Instant.now();
+//            }
 //        }
 
         //MY QUERY
@@ -188,9 +166,9 @@ public class SQLSpout extends AbstractQueryingSpout {
             }
 
             // no results? reset the date
-            if (numhits == 0) {
-                lastNextFetchDate = null;
-            }
+//            if (numhits == 0) {
+//                lastNextFetchDate = null;
+//            }
 
             eventCounter.scope("already_being_processed").incrBy(
                     alreadyprocessed);

@@ -147,8 +147,6 @@ public class URLPartitionerBolt extends BaseRichBolt {
 
         LOG.debug("Partition Key for: {} > {}", url, partitionKey);
 
-//        LOG.info("#################partitioner originalURl:"+originalUrl);
-//        LOG.info("#################partitioner url:"+url);
         _collector.emit(tuple, new Values(originalUrl, url, redirectCount, partitionKey, metadata, collection, record, expectedMimeType));
         _collector.ack(tuple);
     }
