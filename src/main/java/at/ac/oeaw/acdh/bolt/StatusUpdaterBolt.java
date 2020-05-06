@@ -137,9 +137,9 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         }
 
         //couldn't get it from the database
-        if(Configuration.latestFetchDate == null){
+        if (Configuration.latestFetchDate == null) {
             updateURLTableQuery = "UPDATE " + urlTableName + " SET nextfetchdate = NOW() + INTERVAL 4 WEEK, host = ? WHERE url = ?";
-        }else{
+        } else {
             updateURLTableQuery = "UPDATE " + urlTableName + " SET nextfetchdate = ? + INTERVAL ? SECOND, host = ? WHERE url = ?";
         }
 
@@ -197,8 +197,9 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
         Metadata md = (Metadata) t.getValueByField("metadata");
         int statusCode = md.getFirstValue("fetch.statusCode") == null ? 0 : Integer.parseInt(md.getFirstValue("fetch.statusCode"));
-        String contentType = md.getFirstValue("content-type");
-        int byteLength = md.getFirstValue("byte-length") == null ? 0 : Integer.parseInt(md.getFirstValue("byte-length"));
+        String contentType = md.getFirstValue("content-type");//todo investigate
+        String fetchByteLength = md.getFirstValue("fetch.byteLength");
+        Integer byteLength = fetchByteLength == null ? null : fetchByteLength.equalsIgnoreCase("null") ? null : Integer.parseInt(fetchByteLength);
         int loadingTime = md.getFirstValue("fetch.loadingTime") == null ? 0 : Integer.parseInt(md.getFirstValue("fetch.loadingTime"));
         String message = md.getFirstValue("fetch.message");
 
@@ -213,12 +214,20 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         int redirectCount = md.getFirstValue("fetch.redirectCount") == null ? 0 : Integer.parseInt(md.getFirstValue("fetch.redirectCount"));
 
         String methodBool = md.getFirstValue("http.method.head");
-        String method = methodBool==null?"N/A":methodBool.equalsIgnoreCase("true")?"HEAD":"GET";
+        String method = methodBool == null ? "N/A" : methodBool.equalsIgnoreCase("true") ? "HEAD" : "GET";
+
+        //TODO delete
+        LOG.info("url: " + url + " -bytesize: " + byteLength);
+
 
         replacePreparedStmt.setString(1, url);
         replacePreparedStmt.setInt(2, statusCode);
         replacePreparedStmt.setString(3, contentType);
-        replacePreparedStmt.setInt(4, byteLength);
+        if (byteLength == null) {//if HEAD method and no content-length, then it needs to be null
+            replacePreparedStmt.setNull(4, Types.INTEGER);
+        } else {
+            replacePreparedStmt.setInt(4, byteLength);
+        }
         replacePreparedStmt.setInt(5, loadingTime);
         replacePreparedStmt.setTimestamp(6, sqlTimestamp);
         replacePreparedStmt.setInt(7, redirectCount);
@@ -226,17 +235,17 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         replacePreparedStmt.setString(9, collection);
         replacePreparedStmt.setString(10, expectedMimeType);
         replacePreparedStmt.setString(11, message);
-        replacePreparedStmt.setString(12,method);
+        replacePreparedStmt.setString(12, method);
 
         replacePreparedStmt.addBatch();
 
         insertHistoryPreparedStmt.setString(1, url);
         insertHistoryPreparedStmt.addBatch();
 
-        if(Configuration.latestFetchDate==null){
+        if (Configuration.latestFetchDate == null) {
             updatePreparedStmt.setString(1, partitionKey);
             updatePreparedStmt.setString(2, url);
-        }else{
+        } else {
 //          this is the query:
 //          updateURLTableQuery = "UPDATE " + urlTableName + " SET nextfetchdate = ? + INTERVAL ? SECOND, host = ? WHERE url = ?";
             updatePreparedStmt.setTimestamp(1, Configuration.latestFetchDate);

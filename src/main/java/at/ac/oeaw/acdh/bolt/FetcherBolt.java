@@ -51,7 +51,6 @@ import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 
 /**
  * A multithreaded, queue-based fetcher adapted from Apache Nutch. Enforces the
@@ -575,28 +574,24 @@ public class FetcherBolt extends StatusEmitterBolt {
                     //this doesn't take redirects into account, but i dont think thats a problem
                     long timeFetching = System.currentTimeMillis() - start;
 
-                    int byteLength = 0;
-                    //if head then take byte size from content-length header
-                    if (metadata.getFirstValue("http.method.head").equalsIgnoreCase("true")) {
-                        try {
-                            byteLength = Integer.parseInt(response.getMetadata().getFirstValue(HttpHeaders.CONTENT_LENGTH));
-                        }catch (NumberFormatException e){
-                            //do nothing, let byteLength stay 0
-                        }
-                    } else {//if GET, take real length
-                        byteLength = response.getContent().length;
+                    Integer byteLength;
+                    try {
+                        byteLength = Integer.parseInt(response.getMetadata().getFirstValue(HttpHeaders.CONTENT_LENGTH));
+                    } catch (NumberFormatException e) {
+                        byteLength = null;
                     }
 
+                    LOG.info("url: " + url + " -bytesize: " + byteLength);
 
                     averagedMetrics.scope("fetch_time").update(timeFetching);
                     averagedMetrics.scope("time_in_queues")
                             .update(timeInQueues);
-                    averagedMetrics.scope("bytes_fetched").update(byteLength);
+                    averagedMetrics.scope("bytes_fetched").update(byteLength == null ? 0 : byteLength);
                     perSecMetrics.scope("bytes_fetched_perSec").update(
-                            byteLength);
+                            byteLength == null ? 0 : byteLength);
                     perSecMetrics.scope("fetched_perSec").update(1);
                     eventCounter.scope("fetched").incrBy(1);
-                    eventCounter.scope("bytes_fetched").incrBy(byteLength);
+                    eventCounter.scope("bytes_fetched").incrBy(byteLength == null ? 0 : byteLength);
 
                     if (message == null) {
                         if (statusCode == 200 || statusCode == 304) {
@@ -624,7 +619,7 @@ public class FetcherBolt extends StatusEmitterBolt {
                             Integer.toString(response.getStatusCode()));
 
                     mergedMD.setValue("fetch.byteLength",
-                            Integer.toString(byteLength));
+                            byteLength == null ? null : Integer.toString(byteLength));
 
                     mergedMD.setValue("fetch.loadingTime",
                             Long.toString(timeFetching));
@@ -853,8 +848,6 @@ public class FetcherBolt extends StatusEmitterBolt {
             metadata.setValue(Constants.STATUS_ERROR_CAUSE, "malformed URL");
 
             final Values tupleToSend = new Values(originalUrl, url, metadata, Status.ERROR, collection, record, expectedMimeType);
-//            LOG.info("#################fetcher originalURl:"+originalUrl);
-//            LOG.info("#################fetcher url:"+url);
             collector.emit(
                     com.digitalpebble.stormcrawler.Constants.StatusStreamName,
                     input, tupleToSend);
