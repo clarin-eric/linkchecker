@@ -216,10 +216,6 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         String methodBool = md.getFirstValue("http.method.head");
         String method = methodBool == null ? "N/A" : methodBool.equalsIgnoreCase("true") ? "HEAD" : "GET";
 
-        //TODO delete
-        LOG.info("url: " + url + " -bytesize: " + byteLength);
-
-
         replacePreparedStmt.setString(1, url);
         replacePreparedStmt.setInt(2, statusCode);
         replacePreparedStmt.setString(3, contentType);
@@ -286,7 +282,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
         try {
             long start = System.currentTimeMillis();
-            //inserthistoy should be done first because replace deletes old ones
+            //insert histoy should be done first because replace deletes old ones
             insertHistoryPreparedStmt.executeBatch();
             replacePreparedStmt.executeBatch();
             updatePreparedStmt.executeBatch();

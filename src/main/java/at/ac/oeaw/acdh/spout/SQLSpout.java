@@ -121,7 +121,7 @@ public class SQLSpout extends AbstractQueryingSpout {
         String query = "SELECT * FROM " + tableName + " ORDER BY nextfetchdate";
 
         if (maxNumResults != -1) {
-            query += " LIMIT " + this.maxNumResults;
+            query += " LIMIT " + maxNumResults;
         }
         //MY QUERY END
 
@@ -164,11 +164,6 @@ public class SQLSpout extends AbstractQueryingSpout {
 
                 buffer.add(values);
             }
-
-            // no results? reset the date
-//            if (numhits == 0) {
-//                lastNextFetchDate = null;
-//            }
 
             eventCounter.scope("already_being_processed").incrBy(
                     alreadyprocessed);
