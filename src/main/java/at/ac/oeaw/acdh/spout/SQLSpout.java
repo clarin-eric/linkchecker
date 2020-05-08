@@ -46,6 +46,8 @@ public class SQLSpout extends AbstractQueryingSpout {
 
     private Connection connection;
 
+    private boolean random = false;
+
     /**
      * if more than one instance of the spout exist, each one is in charge of a
      * separate bucket value. This is used to ensure a good diversity of URLs.
@@ -105,7 +107,32 @@ public class SQLSpout extends AbstractQueryingSpout {
     protected void populateBuffer() {
 
         //MY QUERY
-        String query = "SELECT * FROM " + tableName + " ORDER BY nextfetchdate";
+        //if the next 1000(maxNumResults) urls all come from the same collection,
+        //then the next query should be randomized to avoid a bottleneck.
+        //when a random query is made, then it should revert back to nextfetchdate based query.
+        //worded differently: alternate between random and nextfetchdate if nextfetchdate results in only one collection and causes a bottleneck
+        String query;
+        if (random) {
+            query = "SELECT * FROM " + tableName + " ORDER BY RAND()";
+            random = false;
+        } else {
+            query = "SELECT * FROM " + tableName + " ORDER BY nextfetchdate";
+
+            //this is the check to determine if random is needed for next round
+            String checkQuery = "SELECT count(distinct(collection)) from (SELECT collection FROM stormychecker.urls ORDER BY nextfetchdate LIMIT " + maxNumResults + ") as collectionTable";
+            try (Statement st = this.connection.createStatement(); ResultSet rs = st.executeQuery(checkQuery)) {
+                if (rs.next()) {//only one result
+                    if (rs.getInt(1) == 1) {
+                        random = true;
+                    }
+                }
+            } catch (SQLException e) {
+                LOG.error("random false??", e);
+                //keep random false
+            }
+
+        }
+
 
         if (maxNumResults != -1) {
             query += " LIMIT " + maxNumResults;
@@ -147,7 +174,7 @@ public class SQLSpout extends AbstractQueryingSpout {
                     continue;
                 }
 
-                Values values = new Values(originalUrl,url,collection,record,expectedMimeType);
+                Values values = new Values(originalUrl, url, collection, record, expectedMimeType);
 
                 buffer.add(values);
             }
