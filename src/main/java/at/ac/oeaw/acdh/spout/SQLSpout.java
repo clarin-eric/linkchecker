@@ -112,21 +112,22 @@ public class SQLSpout extends AbstractQueryingSpout {
         //when a random query is made, then it should revert back to nextfetchdate based query.
         //worded differently: alternate between random and nextfetchdate if nextfetchdate results in only one collection and causes a bottleneck
         String query;
-        if(random){
+        if (random) {
             query = "SELECT * FROM " + tableName + " ORDER BY RAND()";
             random = false;
-        }else{
+        } else {
             query = "SELECT * FROM " + tableName + " ORDER BY nextfetchdate";
 
             //this is the check to determine if random is needed for next round
-            String checkQuery = "SELECT count(distinct(collection)) as count from (SELECT collection FROM stormychecker.urls ORDER BY nextfetchdate LIMIT "+maxNumResults+") as collectionTable";
-            try (Statement st = this.connection.createStatement(); ResultSet rs = st.executeQuery(query)) {
+            String checkQuery = "SELECT count(distinct(collection)) from (SELECT collection FROM stormychecker.urls ORDER BY nextfetchdate LIMIT " + maxNumResults + ") as collectionTable";
+            try (Statement st = this.connection.createStatement(); ResultSet rs = st.executeQuery(checkQuery)) {
                 if (rs.next()) {//only one result
-                    if(rs.getInt("count")==1){
-                        random=true;
+                    if (rs.getInt(1) == 1) {
+                        random = true;
                     }
                 }
             } catch (SQLException e) {
+                LOG.error("random false??", e);
                 //keep random false
             }
 
@@ -173,7 +174,7 @@ public class SQLSpout extends AbstractQueryingSpout {
                     continue;
                 }
 
-                Values values = new Values(originalUrl,url,collection,record,expectedMimeType);
+                Values values = new Values(originalUrl, url, collection, record, expectedMimeType);
 
                 buffer.add(values);
             }
