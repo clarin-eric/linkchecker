@@ -122,12 +122,11 @@ public class SQLSpout extends AbstractQueryingSpout {
             String checkQuery = "SELECT count(distinct(collection)) from (SELECT collection FROM stormychecker.urls ORDER BY nextfetchdate LIMIT " + maxNumResults + ") as collectionTable";
             try (Statement st = this.connection.createStatement(); ResultSet rs = st.executeQuery(checkQuery)) {
                 if (rs.next()) {//only one result
-                    if (rs.getInt(1) == 1) {
+                    if (rs.getInt(1) <= 3) {
                         random = true;
                     }
                 }
             } catch (SQLException e) {
-                LOG.error("random false??", e);
                 //keep random false
             }
 
