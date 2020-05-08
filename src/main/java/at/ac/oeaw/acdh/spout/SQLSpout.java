@@ -61,7 +61,7 @@ public class SQLSpout extends AbstractQueryingSpout {
 
     private int maxNumResults;
 
-    private Instant lastNextFetchDate = null;
+//    private Instant lastNextFetchDate = null;
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Override
@@ -104,24 +104,11 @@ public class SQLSpout extends AbstractQueryingSpout {
     @Override
     protected void populateBuffer() {
 
-        if (lastNextFetchDate == null) {
-            lastNextFetchDate = Instant.now();
-            lastTimeResetToNOW = Instant.now();
-        } else if (resetFetchDateAfterNSecs != -1) {
-            Instant changeNeededOn = Instant.ofEpochMilli(lastTimeResetToNOW
-                    .toEpochMilli() + (resetFetchDateAfterNSecs * 1000));
-            if (Instant.now().isAfter(changeNeededOn)) {
-                LOG.info("lastDate reset based on resetFetchDateAfterNSecs {}",
-                        resetFetchDateAfterNSecs);
-                lastNextFetchDate = Instant.now();
-            }
-        }
-
         //MY QUERY
         String query = "SELECT * FROM " + tableName + " ORDER BY nextfetchdate";
 
         if (maxNumResults != -1) {
-            query += " LIMIT " + this.maxNumResults;
+            query += " LIMIT " + maxNumResults;
         }
         //MY QUERY END
 
@@ -163,11 +150,6 @@ public class SQLSpout extends AbstractQueryingSpout {
                 Values values = new Values(originalUrl,url,collection,record,expectedMimeType);
 
                 buffer.add(values);
-            }
-
-            // no results? reset the date
-            if (numhits == 0) {
-                lastNextFetchDate = null;
             }
 
             eventCounter.scope("already_being_processed").incrBy(

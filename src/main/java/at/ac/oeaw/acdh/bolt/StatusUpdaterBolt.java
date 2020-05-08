@@ -76,7 +76,8 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
     private String replaceStatusTableQuery;
     private String insertHistoryTableQuery;
 
-    private final Map<String, List<Tuple>> waitingAck = new HashMap<>();
+//    private final Map<String, List<Tuple>> waitingAck = new HashMap<>();
+    private final List<Tuple> waitingAck = new ArrayList<>();
 
     public StatusUpdaterBolt(int maxNumBuckets) {
         this.maxNumBuckets = maxNumBuckets;
@@ -112,10 +113,10 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         }
 
 
-        String fields = "url, statusCode, contentType, byteSize, duration, timestamp, redirectCount, record, collection, expectedMimeType, message";
+        String fields = "url, statusCode, contentType, byteSize, duration, timestamp, redirectCount, record, collection, expectedMimeType, message, method";
         //insert into status table
         replaceStatusTableQuery = "REPLACE INTO " + statusTableName + "(" + fields + ")" +
-                " values (?, ?, ? ,? ,? ,? ,?, ?, ?, ?, ?)";
+                " values (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?)";
 
         insertHistoryTableQuery = "INSERT INTO " + historyTableName + " SELECT * FROM " + statusTableName + " WHERE url = ?";
 
@@ -137,9 +138,9 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         }
 
         //couldn't get it from the database
-        if(Configuration.latestFetchDate == null){
+        if (Configuration.latestFetchDate == null) {
             updateURLTableQuery = "UPDATE " + urlTableName + " SET nextfetchdate = NOW() + INTERVAL 4 WEEK, host = ? WHERE url = ?";
-        }else{
+        } else {
             updateURLTableQuery = "UPDATE " + urlTableName + " SET nextfetchdate = ? + INTERVAL ? SECOND, host = ? WHERE url = ?";
         }
 
@@ -169,15 +170,13 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         // check whether the batch needs sending
         checkExecuteBatch();
 
-        boolean isUpdate = !status.equals(Status.DISCOVERED);
 
-        // already have an entry for this DISCOVERED URL
-        if (!isUpdate && waitingAck.containsKey(url)) {
-            List<Tuple> list = waitingAck.get(url);
-            // add the tuple to the list for that url
-            list.add(t);
-            return;
-        }
+//        if (waitingAck.containsKey(url)) {
+//            List<Tuple> list = waitingAck.get(url);
+//            // add the tuple to the list for that url
+//            list.add(t);
+//            return;
+//        }
 
         StringBuilder mdAsString = new StringBuilder();
         for (String mdKey : metadata.keySet()) {
@@ -187,18 +186,13 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
             }
         }
 
-        int partition = 0;
         String partitionKey = partitioner.getPartition(url, metadata);
-        if (maxNumBuckets > 1) {
-            // determine which shard to send to based on the host / domain /
-            // IP
-            partition = Math.abs(partitionKey.hashCode() % maxNumBuckets);
-        }
 
         Metadata md = (Metadata) t.getValueByField("metadata");
         int statusCode = md.getFirstValue("fetch.statusCode") == null ? 0 : Integer.parseInt(md.getFirstValue("fetch.statusCode"));
-        String contentType = md.getFirstValue("content-type");
-        int byteLength = md.getFirstValue("byte-length") == null ? 0 : Integer.parseInt(md.getFirstValue("byte-length"));
+        String contentType = md.getFirstValue("content-type");//todo investigate
+        String fetchByteLength = md.getFirstValue("fetch.byteLength");
+        Integer byteLength = fetchByteLength == null ? null : fetchByteLength.equalsIgnoreCase("null") ? null : Integer.parseInt(fetchByteLength);
         int loadingTime = md.getFirstValue("fetch.loadingTime") == null ? 0 : Integer.parseInt(md.getFirstValue("fetch.loadingTime"));
         String message = md.getFirstValue("fetch.message");
 
@@ -206,50 +200,36 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         String record = t.getStringByField("record");
         String expectedMimeType = t.getStringByField("expectedMimeType");
 
-        String lastProcessedDate = md.getFirstValue("lastProcessedDate");
-        Date timestamp = lastProcessedDate == null ? null : Date.from(Instant.parse(lastProcessedDate));
-        Timestamp sqlTimestamp = timestamp == null ? null : new Timestamp(timestamp.getTime());
-
         int redirectCount = md.getFirstValue("fetch.redirectCount") == null ? 0 : Integer.parseInt(md.getFirstValue("fetch.redirectCount"));
+
+        String methodBool = md.getFirstValue("http.method.head");
+        String method = methodBool == null ? "N/A" : methodBool.equalsIgnoreCase("true") ? "HEAD" : "GET";
 
         replacePreparedStmt.setString(1, url);
         replacePreparedStmt.setInt(2, statusCode);
         replacePreparedStmt.setString(3, contentType);
-        replacePreparedStmt.setInt(4, byteLength);
+        if (byteLength == null) {//if HEAD method and no content-length, then it needs to be null
+            replacePreparedStmt.setNull(4, Types.INTEGER);
+        } else {
+            replacePreparedStmt.setInt(4, byteLength);
+        }
         replacePreparedStmt.setInt(5, loadingTime);
-        replacePreparedStmt.setTimestamp(6, sqlTimestamp);
-        replacePreparedStmt.setInt(7, redirectCount);
-        replacePreparedStmt.setString(8, record);
-        replacePreparedStmt.setString(9, collection);
-        replacePreparedStmt.setString(10, expectedMimeType);
+        replacePreparedStmt.setInt(6, redirectCount);
+        replacePreparedStmt.setString(7, record);
+        replacePreparedStmt.setString(8, collection);
+        replacePreparedStmt.setString(9, expectedMimeType);
+        replacePreparedStmt.setString(10, message);
+        replacePreparedStmt.setString(11, method);
 
-//        //get record collection expectedmimetype info from urls
-//        //this part is curation module specific, and if this code is used later,
-//        //could be taken out and replacepreparedStmt should be modified accordingly
-//        String selectQuery = "SELECT collection,record,expectedMimeType FROM " + urlTableName + " WHERE url=?";
-//        PreparedStatement urlStmt = connection.prepareStatement(selectQuery);
-//        urlStmt.setString(1, url);
-//        ResultSet resultSet = urlStmt.executeQuery();
-//        //only one result
-//        if (resultSet.next()) {
-//            replacePreparedStmt.setString(8, resultSet.getString("record"));
-//            replacePreparedStmt.setString(9, resultSet.getString("collection"));
-//            replacePreparedStmt.setString(10, resultSet.getString("expectedMimeType"));
-//        } else {
-//            replacePreparedStmt.setString(8, null);
-//            replacePreparedStmt.setString(9, null);
-//            replacePreparedStmt.setString(10, null);
-//        }
-        replacePreparedStmt.setString(11, message);
         replacePreparedStmt.addBatch();
 
         insertHistoryPreparedStmt.setString(1, url);
         insertHistoryPreparedStmt.addBatch();
 
-        if(Configuration.latestFetchDate==null){
+        if (Configuration.latestFetchDate == null) {
             updatePreparedStmt.setString(1, partitionKey);
             updatePreparedStmt.setString(2, url);
-        }else{
+        } else {
 //          this is the query:
 //          updateURLTableQuery = "UPDATE " + urlTableName + " SET nextfetchdate = ? + INTERVAL ? SECOND, host = ? WHERE url = ?";
             updatePreparedStmt.setTimestamp(1, Configuration.latestFetchDate);
@@ -266,7 +246,8 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
         // URL gets added to the cache in method ack
         // once this method has returned
-        waitingAck.put(url, new LinkedList<Tuple>());
+//        waitingAck.put(url, new LinkedList<Tuple>());
+        waitingAck.add(t);
 
         currentBatchSize += 2;
 
@@ -290,25 +271,21 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
         try {
             long start = System.currentTimeMillis();
-            //inserthistoy should be done first because replace deletes old ones
+            //insert histoy should be done first because replace deletes old ones
             insertHistoryPreparedStmt.executeBatch();
             replacePreparedStmt.executeBatch();
             updatePreparedStmt.executeBatch();
             long end = System.currentTimeMillis();
 
             LOG.info("Batched {} inserts and updates executed in {} msec", currentBatchSize, end - start);
-            waitingAck.forEach((k, v) -> {
-                for (Tuple t : v) {
-                    super.ack(t, k);
-                }
+            waitingAck.forEach(tuple -> {
+                _collector.ack(tuple);
             });
         } catch (SQLException e) {
             LOG.error(e.getMessage(), e);
             // fail the entire batch
-            waitingAck.forEach((k, v) -> {
-                for (Tuple t : v) {
-                    super._collector.fail(t);
-                }
+            waitingAck.forEach(tuple -> {
+                _collector.ack(tuple);
             });
         }
 

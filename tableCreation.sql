@@ -8,6 +8,7 @@ CREATE TABLE stormychecker.urls (
  record VARCHAR(255),
  collection VARCHAR(255),
  expectedMimeType VARCHAR(255),
+ harvestDate DATE,
  PRIMARY KEY(url)
 );
 
@@ -30,7 +31,7 @@ CREATE TABLE stormychecker.status (
  collection VARCHAR(255),
  expectedMimeType VARCHAR(255),
  message VARCHAR(255),
- FOREIGN KEY (url) REFERENCES urls (url)
+ FOREIGN KEY (url) REFERENCES urls (url) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE INDEX statusCode ON stormychecker.status (statusCode);

@@ -437,13 +437,10 @@ public class FetcherBolt extends StatusEmitterBolt {
                 LOG.debug("[Fetcher #{}] {} : Fetching {}", taskID, getName(),
                         fit.url);
 
-                Metadata metadata = null;
+                Metadata metadata = new Metadata();
 
-                if (fit.t.contains("metadata")) {
-                    metadata = (Metadata) fit.t.getValueByField("metadata");
-                }
-                if (metadata == null) {
-                    metadata = Metadata.empty;
+                if (fit.t.contains("metadata") && fit.t.getValueByField("metadata") != null) {
+                    metadata.putAll((Metadata) fit.t.getValueByField("metadata"));
                 }
 
                 boolean asap = false;
@@ -544,39 +541,55 @@ public class FetcherBolt extends StatusEmitterBolt {
                         }
                     }
 
+                    //first try HEAD
+                    metadata.addValue("http.method.head", "true");
                     response = protocol.getProtocolOutput(
                             url, metadata);
-
                     statusCode = response.getStatusCode();
+
+                    //if its unsuccessful, try GET
+                    //GET is the only reliable method because some servers implement HEAD wrong
+                    //https://stackoverflow.com/questions/7351249/reliability-of-using-head-request-to-check-web-page-status
+                    if (!redirectStatusCodes.contains(statusCode) && statusCode != 200 && statusCode != 304) {
+                        metadata.addValue("http.method.head", "false");
+                        response = protocol.getProtocolOutput(
+                                url, metadata);
+                        statusCode = response.getStatusCode();
+                    }
 
                     status = Status.fromHTTPCode(statusCode);
 
                     boolean redirect = false;
-                    String redirectUrl=null;
+                    String redirectUrl = null;
                     if (redirectStatusCodes.contains(statusCode)) {
                         redirect = true;
                         redirectCount++;
                         if (redirectCount >= HTTP_REDIRECT_LIMIT) {
                             throw new RedirectException("Redirects exceeded " + HTTP_REDIRECT_LIMIT + " redirects for " + originalUrl);
                         }
-                        redirectUrl = convertRelativeToAbsolute(url, response.getMetadata()
-                                .getFirstValue(HttpHeaders.LOCATION));
+                        redirectUrl = convertRelativeToAbsolute(url, response.getMetadata().getFirstValue(HttpHeaders.LOCATION));
                     }
 
 
+                    //this doesn't take redirects into account, but i dont think thats a problem
                     long timeFetching = System.currentTimeMillis() - start;
 
-                    final int byteLength = response == null ? 0 : response.getContent().length;
+                    Integer byteLength;
+                    try {
+                        byteLength = Integer.parseInt(response.getMetadata().getFirstValue(HttpHeaders.CONTENT_LENGTH));
+                    } catch (NumberFormatException e) {
+                        byteLength = null;
+                    }
 
                     averagedMetrics.scope("fetch_time").update(timeFetching);
                     averagedMetrics.scope("time_in_queues")
                             .update(timeInQueues);
-                    averagedMetrics.scope("bytes_fetched").update(byteLength);
+                    averagedMetrics.scope("bytes_fetched").update(byteLength == null ? 0 : byteLength);
                     perSecMetrics.scope("bytes_fetched_perSec").update(
-                            byteLength);
+                            byteLength == null ? 0 : byteLength);
                     perSecMetrics.scope("fetched_perSec").update(1);
                     eventCounter.scope("fetched").incrBy(1);
-                    eventCounter.scope("bytes_fetched").incrBy(byteLength);
+                    eventCounter.scope("bytes_fetched").incrBy(byteLength == null ? 0 : byteLength);
 
                     if (message == null) {
                         if (statusCode == 200 || statusCode == 304) {
@@ -604,7 +617,7 @@ public class FetcherBolt extends StatusEmitterBolt {
                             Integer.toString(response.getStatusCode()));
 
                     mergedMD.setValue("fetch.byteLength",
-                            Integer.toString(byteLength));
+                            byteLength == null ? null : Integer.toString(byteLength));
 
                     mergedMD.setValue("fetch.loadingTime",
                             Long.toString(timeFetching));
@@ -620,7 +633,7 @@ public class FetcherBolt extends StatusEmitterBolt {
                     String streamName;
                     if (redirect) {
                         streamName = Constants.RedirectStreamName;
-                        url=redirectUrl;
+                        url = redirectUrl;
                     } else {
                         streamName = Constants.StatusStreamName;
                     }
@@ -632,7 +645,7 @@ public class FetcherBolt extends StatusEmitterBolt {
 
                 } catch (Exception e) {
                     String errorMessage = e.getMessage();
-                    if (errorMessage == null){
+                    if (errorMessage == null) {
                         errorMessage = "";
                     }
                     LOG.error(errorMessage);
@@ -648,7 +661,6 @@ public class FetcherBolt extends StatusEmitterBolt {
                     final Values tupleToSend = new Values(originalUrl, url, metadata, Status.FETCH_ERROR,
                             collection, record, expectedMimeType);
 
-                    // send to status stream
                     collector.emit(Constants.StatusStreamName, fit.t,
                             tupleToSend);
 
@@ -834,8 +846,6 @@ public class FetcherBolt extends StatusEmitterBolt {
             metadata.setValue(Constants.STATUS_ERROR_CAUSE, "malformed URL");
 
             final Values tupleToSend = new Values(originalUrl, url, metadata, Status.ERROR, collection, record, expectedMimeType);
-//            LOG.info("#################fetcher originalURl:"+originalUrl);
-//            LOG.info("#################fetcher url:"+url);
             collector.emit(
                     com.digitalpebble.stormcrawler.Constants.StatusStreamName,
                     input, tupleToSend);

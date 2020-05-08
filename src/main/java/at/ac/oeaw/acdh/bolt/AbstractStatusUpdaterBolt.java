@@ -152,9 +152,6 @@ public abstract class AbstractStatusUpdaterBolt extends BaseRichBolt {
 
         String url = tuple.getStringByField("originalUrl");
 
-//        LOG.info("#################updater originalUrl:" + originalUrl);
-//        LOG.info("#################updater url:" + url);
-
         Status status = (Status) tuple.getValueByField("status");
 
         boolean potentiallyNew = status.equals(Status.DISCOVERED);
@@ -168,7 +165,6 @@ public abstract class AbstractStatusUpdaterBolt extends BaseRichBolt {
                 // no need to add it to the queue
                 LOG.debug("URL {} already in cache", url);
                 cacheHits++;
-                _collector.ack(tuple);
                 return;
             } else {
                 LOG.debug("URL {} not in cache", url);
@@ -270,8 +266,6 @@ public abstract class AbstractStatusUpdaterBolt extends BaseRichBolt {
         if (useCache) {
             cache.put(url, "");
         }
-
-        _collector.ack(t);
     }
 
     protected abstract void store(String url, Status status, Metadata metadata,

@@ -75,56 +75,56 @@ public abstract class StatusEmitterBolt extends BaseRichBolt {
                 new Fields("originalUrl", "url", "metadata", "status", "collection", "record", "expectedMimeType"));
     }
 
-    /**
-     * Used for redirections or when discovering sitemap URLs. The custom key /
-     * values are added to the target metadata post-filtering.
-     **/
-    protected void emitOutlink(Tuple t, URL sURL, String newUrl,
-                               Metadata sourceMetadata, String... customKeyVals) {
+//    /**
+//     * Used for redirections or when discovering sitemap URLs. The custom key /
+//     * values are added to the target metadata post-filtering.
+//     **/
+//    protected void emitOutlink(Tuple t, URL sURL, String newUrl,
+//                               Metadata sourceMetadata, String... customKeyVals) {
+//
+//        Outlink ol = filterOutlink(sURL, newUrl, sourceMetadata, customKeyVals);
+//        if (ol == null)
+//            return;
+//
+//        collector.emit(
+//                com.digitalpebble.stormcrawler.Constants.StatusStreamName, t,
+//                new Values(ol.getTargetURL(), ol.getMetadata(),
+//                        Status.DISCOVERED));
+//    }
 
-        Outlink ol = filterOutlink(sURL, newUrl, sourceMetadata, customKeyVals);
-        if (ol == null)
-            return;
-
-        collector.emit(
-                com.digitalpebble.stormcrawler.Constants.StatusStreamName, t,
-                new Values(ol.getTargetURL(), ol.getMetadata(),
-                        Status.DISCOVERED));
-    }
-
-    protected Outlink filterOutlink(URL sURL, String newUrl,
-                                    Metadata sourceMetadata, String... customKeyVals) {
-        // build an absolute URL
-        try {
-            URL tmpURL = URLUtil.resolveURL(sURL, newUrl);
-            newUrl = tmpURL.toExternalForm();
-        } catch (MalformedURLException e) {
-            return null;
-        }
-
-        // apply URL filters
-        newUrl = this.urlFilters.filter(sURL, sourceMetadata, newUrl);
-
-        // filtered
-        if (newUrl == null) {
-            return null;
-        }
-
-        Metadata metadata = metadataTransfer.getMetaForOutlink(newUrl,
-                sURL.toExternalForm(), sourceMetadata);
-
-        for (int i = 0; i < customKeyVals.length; i = i + 2) {
-            metadata.addValue(customKeyVals[i], customKeyVals[i + 1]);
-        }
-
-        Outlink l = new Outlink(newUrl);
-        l.setMetadata(metadata);
-        return l;
-    }
-
-    protected boolean allowRedirs() {
-        return allowRedirs;
-    }
+//    protected Outlink filterOutlink(URL sURL, String newUrl,
+//                                    Metadata sourceMetadata, String... customKeyVals) {
+//        // build an absolute URL
+//        try {
+//            URL tmpURL = URLUtil.resolveURL(sURL, newUrl);
+//            newUrl = tmpURL.toExternalForm();
+//        } catch (MalformedURLException e) {
+//            return null;
+//        }
+//
+//        // apply URL filters
+//        newUrl = this.urlFilters.filter(sURL, sourceMetadata, newUrl);
+//
+//        // filtered
+//        if (newUrl == null) {
+//            return null;
+//        }
+//
+//        Metadata metadata = metadataTransfer.getMetaForOutlink(newUrl,
+//                sURL.toExternalForm(), sourceMetadata);
+//
+//        for (int i = 0; i < customKeyVals.length; i = i + 2) {
+//            metadata.addValue(customKeyVals[i], customKeyVals[i + 1]);
+//        }
+//
+//        Outlink l = new Outlink(newUrl);
+//        l.setMetadata(metadata);
+//        return l;
+//    }
+//
+//    protected boolean allowRedirs() {
+//        return allowRedirs;
+//    }
 
 }
 
