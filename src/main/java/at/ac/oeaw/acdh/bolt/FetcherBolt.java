@@ -581,8 +581,6 @@ public class FetcherBolt extends StatusEmitterBolt {
                         byteLength = null;
                     }
 
-                    LOG.info("url: " + url + " -bytesize: " + byteLength);
-
                     averagedMetrics.scope("fetch_time").update(timeFetching);
                     averagedMetrics.scope("time_in_queues")
                             .update(timeInQueues);

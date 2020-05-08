@@ -104,7 +104,7 @@ config:
   # SQL #
   #######
 
-  #todo your mysql parameters go here
+  #your mysql parameters go here
   sql.connection:
     url:
     user:
@@ -122,7 +122,7 @@ config:
   sql.spout.max.results: 1000
 
   # time in secs for which the URLs will be considered for fetching after a ack of fail
-  spout.ttl.purgatory: 3000
+  spout.ttl.purgatory: 300
 
     #  #Max time to allow between 2 successive queries to the backend. Value in msecs, default 20000.
     spout.max.delay.queries: 1000000

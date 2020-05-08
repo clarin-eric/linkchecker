@@ -91,7 +91,7 @@ public abstract class AbstractQueryingSpout extends BaseRichSpout {
     protected MultiCountMetric eventCounter;
 
     protected Queue<Values> buffer = new LinkedList<>();
-    protected HashSet<String> in_buffer = new HashSet<>();
+//    protected HashSet<String> in_buffer = new HashSet<>();
 
     protected SpoutOutputCollector _collector;
 
@@ -201,7 +201,7 @@ public abstract class AbstractQueryingSpout extends BaseRichSpout {
                 String url = values.get(1).toString();
                 this._collector.emit(values, url);
                 beingProcessed.put(url, null);
-                in_buffer.remove(url);
+//                in_buffer.remove(url);
                 eventCounter.scope("emitted").incrBy(1);
                 return;
             } else if (timestampEmptyBuffer == -1) {

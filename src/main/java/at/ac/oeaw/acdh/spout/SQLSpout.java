@@ -104,19 +104,6 @@ public class SQLSpout extends AbstractQueryingSpout {
     @Override
     protected void populateBuffer() {
 
-//        if (lastNextFetchDate == null) {
-//            lastNextFetchDate = Instant.now();
-//            lastTimeResetToNOW = Instant.now();
-//        } else if (resetFetchDateAfterNSecs != -1) {
-//            Instant changeNeededOn = Instant.ofEpochMilli(lastTimeResetToNOW
-//                    .toEpochMilli() + (resetFetchDateAfterNSecs * 1000));
-//            if (Instant.now().isAfter(changeNeededOn)) {
-//                LOG.info("lastDate reset based on resetFetchDateAfterNSecs {}",
-//                        resetFetchDateAfterNSecs);
-//                lastNextFetchDate = Instant.now();
-//            }
-//        }
-
         //MY QUERY
         String query = "SELECT * FROM " + tableName + " ORDER BY nextfetchdate";
 
