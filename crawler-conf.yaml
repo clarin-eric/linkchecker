@@ -125,7 +125,7 @@ config:
   spout.ttl.purgatory: 300
 
     #  #Max time to allow between 2 successive queries to the backend. Value in msecs, default 20000.
-    spout.max.delay.queries: 1000000
+    spout.max.delay.queries: 100000
 
   # Min time (in msecs) to allow between 2 successive queries to SQL
   spout.min.delay.queries: 2000
