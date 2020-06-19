@@ -8,7 +8,7 @@ CREATE TABLE stormychecker.urls (
  record VARCHAR(255),
  collection VARCHAR(255),
  expectedMimeType VARCHAR(255),
- harvestDate DATE,
+ harvestDate BIGINT(255),
  PRIMARY KEY(url)
 );
 
