@@ -116,7 +116,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         String fields = "url, statusCode, contentType, byteSize, duration, timestamp, redirectCount, record, collection, expectedMimeType, message, method, category";
         //insert into status table
         replaceStatusTableQuery = "REPLACE INTO " + statusTableName + "(" + fields + ")" +
-                " values (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?)";
+                " values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         insertHistoryTableQuery = "INSERT INTO " + historyTableName + " SELECT * FROM " + statusTableName + " WHERE url = ?";
 
@@ -169,7 +169,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
                                    Metadata metadata, Date nextFetch, Tuple t) throws Exception {
         // check whether the batch needs sending
         checkExecuteBatch();
-        
+
 
         StringBuilder mdAsString = new StringBuilder();
         for (String mdKey : metadata.keySet()) {
@@ -189,6 +189,9 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         int loadingTime = md.getFirstValue("fetch.loadingTime") == null ? 0 : Integer.parseInt(md.getFirstValue("fetch.loadingTime"));
         String message = md.getFirstValue("fetch.message");
         String category = md.getFirstValue("fetch.category");
+
+        Long timestampLong = md.getFirstValue("fetch.timestamp") == null ? System.currentTimeMillis() : Long.parseLong(md.getFirstValue("fetch.timestamp"));
+        Timestamp timestamp = new Timestamp(timestampLong);
 
         String collection = t.getStringByField("collection");
         String record = t.getStringByField("record");
@@ -212,13 +215,14 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
             replacePreparedStmt.setInt(4, byteLength);
         }
         replacePreparedStmt.setInt(5, loadingTime);
-        replacePreparedStmt.setInt(6, redirectCount);
-        replacePreparedStmt.setString(7, record);
-        replacePreparedStmt.setString(8, collection);
-        replacePreparedStmt.setString(9, expectedMimeType);
-        replacePreparedStmt.setString(10, message);
-        replacePreparedStmt.setString(11, method);
-        replacePreparedStmt.setString(12, category);
+        replacePreparedStmt.setTimestamp(6,timestamp);
+        replacePreparedStmt.setInt(7, redirectCount);
+        replacePreparedStmt.setString(8, record);
+        replacePreparedStmt.setString(9, collection);
+        replacePreparedStmt.setString(10, expectedMimeType);
+        replacePreparedStmt.setString(11, message);
+        replacePreparedStmt.setString(12, method);
+        replacePreparedStmt.setString(13, category);
 
         replacePreparedStmt.addBatch();
 

@@ -540,16 +540,18 @@ public class FetcherBolt extends StatusEmitterBolt {
                         }
                     }
 
-                    while(Configuration.loginPagesLock.isLocked()){
+                    while (Configuration.loginPagesLock.isLocked()) {
                         //to nothing, wait until it is unlocked to read
                     }
-                    if(Configuration.loginPageUrls.contains(url)){
+                    if (Configuration.loginPageUrls.contains(url)) {
                         //this next if check means that the harvested page was not the login page.
                         //if the login page is harvested as a url, then it should be handled normally
-                        if(!url.equals(originalUrl)){
+                        if (!url.equals(originalUrl)) {
                             throw new LoginPageException(originalUrl + " points to a login page, therefore has restricted access.");
                         }
                     }
+
+                    Long timestamp = System.currentTimeMillis();
 
                     //first try HEAD
                     metadata.addValue("http.method.head", "true");
@@ -641,6 +643,8 @@ public class FetcherBolt extends StatusEmitterBolt {
                     mergedMD.setValue("fetch.message", message);
 
                     mergedMD.setValue("fetch.category", category);
+
+                    mergedMD.setValue("fetch.timestamp", timestamp.toString());
 
                     //if redirect, go back to partitioner bolt, if not pass it to status updater bolt
                     String streamName;
