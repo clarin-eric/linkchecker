@@ -18,9 +18,11 @@
 
 package at.ac.oeaw.acdh.bolt;
 
+import at.ac.oeaw.acdh.config.Configuration;
 import at.ac.oeaw.acdh.config.Constants;
 import at.ac.oeaw.acdh.exception.CrawlDelayTooLongException;
 import at.ac.oeaw.acdh.exception.DeniedByRobotsException;
+import at.ac.oeaw.acdh.exception.LoginPageException;
 import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.persistence.Status;
 import com.digitalpebble.stormcrawler.protocol.*;
@@ -91,10 +93,12 @@ public class FetcherBolt extends StatusEmitterBolt {
 
     private String[] beingFetched;
 
-    private List<Integer> redirectStatusCodes = new ArrayList<>(Arrays.asList(301, 302, 303, 307, 308));
+    private final List<Integer> okStatusCodes = new ArrayList<>(Arrays.asList(200, 304));
+
+    private final List<Integer> redirectStatusCodes = new ArrayList<>(Arrays.asList(301, 302, 303, 307, 308));
 
     //this determines what status codes will not be considered broken links. urls with these codes will also not factor into the url-scores
-    private List<Integer> undeterminedStatusCodes = new ArrayList<>(Arrays.asList(401, 405, 429));
+    private final List<Integer> undeterminedStatusCodes = new ArrayList<>(Arrays.asList(401, 405, 429));
 
     /**
      * This class described the item to be fetched.
@@ -444,7 +448,8 @@ public class FetcherBolt extends StatusEmitterBolt {
                 }
 
                 boolean asap = false;
-                String message = null;
+                String message;
+                String category;
 
                 String collection = fit.t.getStringByField("collection");
                 String record = fit.t.getStringByField("record");
@@ -489,10 +494,6 @@ public class FetcherBolt extends StatusEmitterBolt {
                         metadata.setValue(Constants.STATUS_ERROR_CAUSE,
                                 "robots.txt");
 
-                        response = new ProtocolResponse(new byte[0], 0, null);
-                        message = "Denied by robots.txt: " + url;
-                        status = Status.ERROR;
-
                         // no need to wait next time as we won't request from
                         // that site
                         asap = true;
@@ -520,12 +521,10 @@ public class FetcherBolt extends StatusEmitterBolt {
                                 metadata.setValue(Constants.STATUS_ERROR_CAUSE,
                                         "crawl_delay");
 
-                                response = new ProtocolResponse(new byte[0], 0, null);
-                                status = Status.ERROR;
                                 // no need to wait next time as we won't request
                                 // from that site
                                 asap = true;
-                                throw new CrawlDelayTooLongException("crawl delay too long.");
+                                throw new CrawlDelayTooLongException("Crawl delay too long.");
                             }
                         } else if (rules.getCrawlDelay() < fetchQueues.crawlDelay
                                 && crawlDelayForce) {
@@ -538,6 +537,17 @@ public class FetcherBolt extends StatusEmitterBolt {
                             LOG.info(
                                     "Crawl delay for queue: {}  is set to {} as per robots.txt. url: {}",
                                     fit.queueID, fiq.crawlDelay, url);
+                        }
+                    }
+
+                    while(Configuration.loginPagesLock.isLocked()){
+                        //to nothing, wait until it is unlocked to read
+                    }
+                    if(Configuration.loginPageUrls.contains(url)){
+                        //this next if check means that the harvested page was not the login page.
+                        //if the login page is harvested as a url, then it should be handled normally
+                        if(!url.equals(originalUrl)){
+                            throw new LoginPageException(originalUrl + " points to a login page, therefore has restricted access.");
                         }
                     }
 
@@ -591,14 +601,15 @@ public class FetcherBolt extends StatusEmitterBolt {
                     eventCounter.scope("fetched").incrBy(1);
                     eventCounter.scope("bytes_fetched").incrBy(byteLength == null ? 0 : byteLength);
 
-                    if (message == null) {
-                        if (statusCode == 200 || statusCode == 304) {
-                            message = "Ok";
-                        } else if (undeterminedStatusCodes.contains(statusCode)) {
-                            message = "Undetermined";
-                        } else {
-                            message = "Broken";
-                        }
+                    if (okStatusCodes.contains(statusCode)) {
+                        message = "Ok";
+                        category = message;
+                    } else if (undeterminedStatusCodes.contains(statusCode)) {
+                        message = "Undetermined";
+                        category = message;
+                    } else {
+                        message = "Broken";
+                        category = message;
                     }
 
                     LOG.info(
@@ -629,6 +640,8 @@ public class FetcherBolt extends StatusEmitterBolt {
 
                     mergedMD.setValue("fetch.message", message);
 
+                    mergedMD.setValue("fetch.category", category);
+
                     //if redirect, go back to partitioner bolt, if not pass it to status updater bolt
                     String streamName;
                     if (redirect) {
@@ -643,6 +656,7 @@ public class FetcherBolt extends StatusEmitterBolt {
 
                     collector.emit(streamName, fit.t, tupleToSend);
 
+                    //TODO seperate different exceptions according to https://docs.google.com/spreadsheets/d/18EyqXjL5-e7tc0kpvTHQNaG5ObXr_WNIfdvrcJRiTAg/edit#gid=0
                 } catch (Exception e) {
                     String errorMessage = e.getMessage();
                     if (errorMessage == null) {

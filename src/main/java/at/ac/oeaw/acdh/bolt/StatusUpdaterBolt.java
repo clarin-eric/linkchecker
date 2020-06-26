@@ -76,7 +76,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
     private String replaceStatusTableQuery;
     private String insertHistoryTableQuery;
 
-//    private final Map<String, List<Tuple>> waitingAck = new HashMap<>();
+    //    private final Map<String, List<Tuple>> waitingAck = new HashMap<>();
     private final List<Tuple> waitingAck = new ArrayList<>();
 
     public StatusUpdaterBolt(int maxNumBuckets) {
@@ -113,10 +113,10 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         }
 
 
-        String fields = "url, statusCode, contentType, byteSize, duration, timestamp, redirectCount, record, collection, expectedMimeType, message, method";
+        String fields = "url, statusCode, contentType, byteSize, duration, timestamp, redirectCount, record, collection, expectedMimeType, message, method, category";
         //insert into status table
         replaceStatusTableQuery = "REPLACE INTO " + statusTableName + "(" + fields + ")" +
-                " values (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?)";
+                " values (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?)";
 
         insertHistoryTableQuery = "INSERT INTO " + historyTableName + " SELECT * FROM " + statusTableName + " WHERE url = ?";
 
@@ -169,14 +169,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
                                    Metadata metadata, Date nextFetch, Tuple t) throws Exception {
         // check whether the batch needs sending
         checkExecuteBatch();
-
-
-//        if (waitingAck.containsKey(url)) {
-//            List<Tuple> list = waitingAck.get(url);
-//            // add the tuple to the list for that url
-//            list.add(t);
-//            return;
-//        }
+        
 
         StringBuilder mdAsString = new StringBuilder();
         for (String mdKey : metadata.keySet()) {
@@ -189,12 +182,13 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         String partitionKey = partitioner.getPartition(url, metadata);
 
         Metadata md = (Metadata) t.getValueByField("metadata");
-        int statusCode = md.getFirstValue("fetch.statusCode") == null ? 0 : Integer.parseInt(md.getFirstValue("fetch.statusCode"));
+        Integer statusCode = md.getFirstValue("fetch.statusCode") == null ? null : Integer.parseInt(md.getFirstValue("fetch.statusCode"));
         String contentType = md.getFirstValue("content-type");//todo investigate
         String fetchByteLength = md.getFirstValue("fetch.byteLength");
         Integer byteLength = fetchByteLength == null ? null : fetchByteLength.equalsIgnoreCase("null") ? null : Integer.parseInt(fetchByteLength);
         int loadingTime = md.getFirstValue("fetch.loadingTime") == null ? 0 : Integer.parseInt(md.getFirstValue("fetch.loadingTime"));
         String message = md.getFirstValue("fetch.message");
+        String category = md.getFirstValue("fetch.category");
 
         String collection = t.getStringByField("collection");
         String record = t.getStringByField("record");
@@ -206,7 +200,11 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         String method = methodBool == null ? "N/A" : methodBool.equalsIgnoreCase("true") ? "HEAD" : "GET";
 
         replacePreparedStmt.setString(1, url);
-        replacePreparedStmt.setInt(2, statusCode);
+        if (statusCode == null) {
+            replacePreparedStmt.setNull(2, Types.INTEGER);
+        } else {
+            replacePreparedStmt.setInt(2, statusCode);
+        }
         replacePreparedStmt.setString(3, contentType);
         if (byteLength == null) {//if HEAD method and no content-length, then it needs to be null
             replacePreparedStmt.setNull(4, Types.INTEGER);
@@ -220,6 +218,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         replacePreparedStmt.setString(9, expectedMimeType);
         replacePreparedStmt.setString(10, message);
         replacePreparedStmt.setString(11, method);
+        replacePreparedStmt.setString(12, category);
 
         replacePreparedStmt.addBatch();
 
