@@ -24,7 +24,6 @@ import at.ac.oeaw.acdh.exception.CrawlDelayTooLongException;
 import at.ac.oeaw.acdh.exception.DeniedByRobotsException;
 import at.ac.oeaw.acdh.exception.LoginPageException;
 import com.digitalpebble.stormcrawler.Metadata;
-import com.digitalpebble.stormcrawler.persistence.Status;
 import com.digitalpebble.stormcrawler.protocol.*;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.digitalpebble.stormcrawler.util.PerSecondReducer;
@@ -43,6 +42,7 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 import org.slf4j.LoggerFactory;
+import sun.rmi.runtime.Log;
 
 import java.io.File;
 import java.net.*;
@@ -464,7 +464,6 @@ public class FetcherBolt extends StatusEmitterBolt {
                 try {
                     int statusCode = 0;
                     ProtocolResponse response = null;
-                    Status status = null;
 
                     long start = System.currentTimeMillis();
                     long timeInQueues = start - fit.creationTime;
@@ -541,7 +540,7 @@ public class FetcherBolt extends StatusEmitterBolt {
                     }
 
                     while (Configuration.loginPagesLock.isLocked()) {
-                        //to nothing, wait until it is unlocked to read
+                        //do nothing, wait until it is unlocked to read
                     }
                     if (Configuration.loginPageUrls.contains(url)) {
                         //this next if check means that the harvested page was not the login page.
@@ -568,8 +567,6 @@ public class FetcherBolt extends StatusEmitterBolt {
                                 url, metadata);
                         statusCode = response.getStatusCode();
                     }
-
-                    status = Status.fromHTTPCode(statusCode);
 
                     boolean redirect = false;
                     String redirectUrl = null;
@@ -656,12 +653,28 @@ public class FetcherBolt extends StatusEmitterBolt {
                     }
 
                     final Values tupleToSend = new Values(originalUrl, url, mergedMD,
-                            status, collection, record, expectedMimeType);
+                            collection, record, expectedMimeType);
 
                     collector.emit(streamName, fit.t, tupleToSend);
 
-                    //TODO seperate different exceptions according to https://docs.google.com/spreadsheets/d/18EyqXjL5-e7tc0kpvTHQNaG5ObXr_WNIfdvrcJRiTAg/edit#gid=0
-                } catch (Exception e) {
+                    //TODO separate different exceptions according to https://docs.google.com/spreadsheets/d/18EyqXjL5-e7tc0kpvTHQNaG5ObXr_WNIfdvrcJRiTAg/edit#gid=0
+                    //RESTRICTED ACCESS for login page exception
+                    //blocked by ROBOTS.TXT for denied by robots exception and crawl delay too long exception
+                } catch(LoginPageException e){
+                    if (metadata.size() == 0) {
+                        metadata = new Metadata();
+                    }
+                    metadata.setValue("fetch.message", e.getMessage());
+
+                    final Values tupleToSend = new Values(originalUrl, url, metadata,
+                            collection, record, expectedMimeType);
+
+                    collector.emit(Constants.StatusStreamName, fit.t,
+                            tupleToSend);
+
+                    eventCounter.scope("exception").incrBy(1);
+
+                } catch(Exception e) {
                     String errorMessage = e.getMessage();
                     if (errorMessage == null) {
                         errorMessage = "";
@@ -676,7 +689,7 @@ public class FetcherBolt extends StatusEmitterBolt {
 
                     metadata.setValue("fetch.message", e.getMessage());
 
-                    final Values tupleToSend = new Values(originalUrl, url, metadata, Status.FETCH_ERROR,
+                    final Values tupleToSend = new Values(originalUrl, url, metadata,
                             collection, record, expectedMimeType);
 
                     collector.emit(Constants.StatusStreamName, fit.t,
@@ -801,7 +814,7 @@ public class FetcherBolt extends StatusEmitterBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         super.declareOutputFields(declarer);
-        declarer.declare(new Fields("originalUrl", "url", "metadata", "status", "collection", "record", "expectedMimeType"));
+        declarer.declare(new Fields("originalUrl", "url", "metadata", "collection", "record", "expectedMimeType"));
     }
 
     @Override
@@ -851,10 +864,12 @@ public class FetcherBolt extends StatusEmitterBolt {
 
         URL u;
 
+
         try {
             u = new URL(url);
         } catch (MalformedURLException e) {
             LOG.error("{} is a malformed URL", url);
+            //todo here all the malformedurl exceptions
 
             Metadata metadata = (Metadata) input.getValueByField("metadata");
             if (metadata == null) {
@@ -863,7 +878,7 @@ public class FetcherBolt extends StatusEmitterBolt {
             // Report to status stream and ack
             metadata.setValue(Constants.STATUS_ERROR_CAUSE, "malformed URL");
 
-            final Values tupleToSend = new Values(originalUrl, url, metadata, Status.ERROR, collection, record, expectedMimeType);
+            final Values tupleToSend = new Values(originalUrl, url, metadata, collection, record, expectedMimeType);
             collector.emit(
                     com.digitalpebble.stormcrawler.Constants.StatusStreamName,
                     input, tupleToSend);

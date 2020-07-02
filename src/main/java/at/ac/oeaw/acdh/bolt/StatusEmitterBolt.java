@@ -18,26 +18,17 @@ package at.ac.oeaw.acdh.bolt;
  * NOTICE: This code was modified in ACDH - Austrian Academy of Sciences, based on Stormcrawler source code.
  */
 
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.Map;
-
 import at.ac.oeaw.acdh.config.Constants;
+import com.digitalpebble.stormcrawler.filtering.URLFilters;
+import com.digitalpebble.stormcrawler.util.ConfUtils;
+import com.digitalpebble.stormcrawler.util.MetadataTransfer;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.tuple.Fields;
-import org.apache.storm.tuple.Tuple;
-import org.apache.storm.tuple.Values;
 
-import com.digitalpebble.stormcrawler.Metadata;
-import com.digitalpebble.stormcrawler.filtering.URLFilters;
-import com.digitalpebble.stormcrawler.parse.Outlink;
-import com.digitalpebble.stormcrawler.persistence.Status;
-import com.digitalpebble.stormcrawler.util.ConfUtils;
-import com.digitalpebble.stormcrawler.util.MetadataTransfer;
-import com.digitalpebble.stormcrawler.util.URLUtil;
+import java.util.Map;
 
 /**
  * Provides common functionalities for Bolts which emit tuples to the status

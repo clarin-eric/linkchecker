@@ -21,7 +21,6 @@ package at.ac.oeaw.acdh.bolt;
 import at.ac.oeaw.acdh.config.Configuration;
 import at.ac.oeaw.acdh.config.Constants;
 import com.digitalpebble.stormcrawler.Metadata;
-import com.digitalpebble.stormcrawler.persistence.Status;
 import com.digitalpebble.stormcrawler.sql.SQLUtil;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.digitalpebble.stormcrawler.util.URLPartitioner;
@@ -33,9 +32,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.*;
-import java.time.Instant;
-import java.util.*;
-import java.util.Date;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -165,8 +164,8 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
     }
 
     @Override
-    public synchronized void store(String url, Status status,
-                                   Metadata metadata, Date nextFetch, Tuple t) throws Exception {
+    public synchronized void store(String url,
+                                   Metadata metadata, Tuple t) throws Exception {
         // check whether the batch needs sending
         checkExecuteBatch();
 

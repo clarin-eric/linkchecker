@@ -18,16 +18,13 @@
 
 package at.ac.oeaw.acdh.bolt;
 
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-
+import com.digitalpebble.stormcrawler.Constants;
+import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.persistence.Scheduler;
-import com.digitalpebble.stormcrawler.persistence.Status;
-import org.apache.commons.lang.time.DateUtils;
+import com.digitalpebble.stormcrawler.util.ConfUtils;
+import com.digitalpebble.stormcrawler.util.MetadataTransfer;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import org.apache.storm.metric.api.IMetric;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
@@ -35,16 +32,13 @@ import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
-import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.digitalpebble.stormcrawler.Constants;
-import com.digitalpebble.stormcrawler.Metadata;
-import com.digitalpebble.stormcrawler.util.ConfUtils;
-import com.digitalpebble.stormcrawler.util.MetadataTransfer;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
+import java.time.format.DateTimeFormatter;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Abstract bolt used to store the status of URLs. Uses the DefaultScheduler and
@@ -152,109 +146,37 @@ public abstract class AbstractStatusUpdaterBolt extends BaseRichBolt {
 
         String url = tuple.getStringByField("originalUrl");
 
-        Status status = (Status) tuple.getValueByField("status");
-
-        boolean potentiallyNew = status.equals(Status.DISCOVERED);
-
-        // if the URL is a freshly discovered one
-        // check whether it is already known in the cache
-        // if so we've already seen it and don't need to
-        // store it again
-        if (potentiallyNew && useCache) {
-            if (cache.getIfPresent(url) != null) {
-                // no need to add it to the queue
-                LOG.debug("URL {} already in cache", url);
-                cacheHits++;
-                return;
-            } else {
-                LOG.debug("URL {} not in cache", url);
-                cacheMisses++;
-            }
-        }
+//        boolean potentiallyNew = status.equals(Status.DISCOVERED);
+//
+//        // if the URL is a freshly discovered one
+//        // check whether it is already known in the cache
+//        // if so we've already seen it and don't need to
+//        // store it again
+//        if (potentiallyNew && useCache) {
+//            if (cache.getIfPresent(url) != null) {
+//                // no need to add it to the queue
+//                LOG.debug("URL {} already in cache", url);
+//                cacheHits++;
+//                return;
+//            } else {
+//                LOG.debug("URL {} not in cache", url);
+//                cacheMisses++;
+//            }
+//        }
 
         Metadata metadata = (Metadata) tuple.getValueByField("metadata");
-
-        // store directly with the date specified in the metadata without
-        // changing the status or scheduling.
-        String dateInMetadata = metadata
-                .getFirstValue(AS_IS_NEXTFETCHDATE_METADATA);
-        if (dateInMetadata != null) {
-            Date nextFetch = Date.from(Instant.parse(dateInMetadata));
-            try {
-                store(url, status, mdTransfer.filter(metadata), nextFetch,
-                        tuple);
-                return;
-            } catch (Exception e) {
-                LOG.error("Exception caught when storing", e);
-                _collector.fail(tuple);
-                return;
-            }
-        }
-
-        // store last processed or discovery date in UTC
-        final String nowAsString = Instant.now().toString();
-        if (status.equals(Status.DISCOVERED)) {
-            metadata.setValue("discoveryDate", nowAsString);
-        } else {
-            metadata.setValue("lastProcessedDate", nowAsString);
-        }
-
-        // too many fetch errors?
-        if (status.equals(Status.FETCH_ERROR)) {
-            String errorCount = metadata
-                    .getFirstValue(Constants.fetchErrorCountParamName);
-            int count = 0;
-            try {
-                count = Integer.parseInt(errorCount);
-            } catch (NumberFormatException e) {
-            }
-            count++;
-            if (count >= maxFetchErrors) {
-                status = Status.ERROR;
-                metadata.setValue(Constants.STATUS_ERROR_CAUSE,
-                        "maxFetchErrors");
-            } else {
-                metadata.setValue(Constants.fetchErrorCountParamName,
-                        Integer.toString(count));
-            }
-        }
-
-        // delete any existing error count metadata
-        // e.g. status changed
-        if (!status.equals(Status.FETCH_ERROR)) {
-            metadata.remove(Constants.fetchErrorCountParamName);
-        }
-        // https://github.com/DigitalPebble/storm-crawler/issues/415
-        // remove error related key values in case of success
-        if (status.equals(Status.FETCHED) || status.equals(Status.REDIRECTION)) {
-            metadata.remove(Constants.STATUS_ERROR_CAUSE);
-            metadata.remove(Constants.STATUS_ERROR_MESSAGE);
-            metadata.remove(Constants.STATUS_ERROR_SOURCE);
-        }
-        // gone? notify any deleters. Doesn't need to be anchored
-        else if (status == Status.ERROR) {
-            _collector.emit(Constants.DELETION_STREAM_NAME, new Values(url,
-                    metadata));
-        }
-
-        // determine the value of the next fetch based on the status
-        Date nextFetch = scheduler.schedule(status, metadata);
 
         // filter metadata just before storing it, so that non-persisted
         // metadata is available to fetch schedulers
         metadata = mdTransfer.filter(metadata);
 
-        // round next fetch date
-        nextFetch = DateUtils.round(nextFetch, this.roundDateUnit);
-
         // extensions of this class will handle the storage
         // on a per document basis
         try {
-            store(url, status, metadata, nextFetch, tuple);
+            store(url, metadata, tuple);
         } catch (Exception e) {
             LOG.error("Exception caught when storing", e);
             _collector.fail(tuple);
-            return;
         }
     }
 
@@ -268,8 +190,7 @@ public abstract class AbstractStatusUpdaterBolt extends BaseRichBolt {
         }
     }
 
-    protected abstract void store(String url, Status status, Metadata metadata,
-                                  Date nextFetch, Tuple t) throws Exception;
+    protected abstract void store(String url, Metadata metadata, Tuple t) throws Exception;
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
