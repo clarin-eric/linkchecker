@@ -18,6 +18,7 @@
 
 package at.ac.oeaw.acdh.bolt;
 
+import at.ac.oeaw.acdh.config.Category;
 import at.ac.oeaw.acdh.config.Configuration;
 import at.ac.oeaw.acdh.config.Constants;
 import at.ac.oeaw.acdh.exception.CrawlDelayTooLongException;
@@ -30,6 +31,8 @@ import com.digitalpebble.stormcrawler.util.PerSecondReducer;
 import crawlercommons.domains.PaidLevelDomain;
 import crawlercommons.robots.BaseRobotRules;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.ConnectionClosedException;
+import org.apache.http.NoHttpResponseException;
 import org.apache.http.client.RedirectException;
 import org.apache.storm.Config;
 import org.apache.storm.metric.api.MeanReducer;
@@ -43,8 +46,11 @@ import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 import org.slf4j.LoggerFactory;
 import sun.rmi.runtime.Log;
+import sun.security.validator.ValidatorException;
 
+import javax.net.ssl.SSLHandshakeException;
 import java.io.File;
+import java.io.IOException;
 import java.net.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -92,13 +98,6 @@ public class FetcherBolt extends StatusEmitterBolt {
     private int maxNumberURLsInQueues = -1;
 
     private String[] beingFetched;
-
-    private final List<Integer> okStatusCodes = new ArrayList<>(Arrays.asList(200, 304));
-
-    private final List<Integer> redirectStatusCodes = new ArrayList<>(Arrays.asList(301, 302, 303, 307, 308));
-
-    //this determines what status codes will not be considered broken links. urls with these codes will also not factor into the url-scores
-    private final List<Integer> undeterminedStatusCodes = new ArrayList<>(Arrays.asList(401, 405, 429));
 
     /**
      * This class described the item to be fetched.
@@ -561,7 +560,7 @@ public class FetcherBolt extends StatusEmitterBolt {
                     //if its unsuccessful, try GET
                     //GET is the only reliable method because some servers implement HEAD wrong
                     //https://stackoverflow.com/questions/7351249/reliability-of-using-head-request-to-check-web-page-status
-                    if (!redirectStatusCodes.contains(statusCode) && statusCode != 200 && statusCode != 304) {
+                    if (!Constants.redirectStatusCodes.contains(statusCode) && statusCode != 200 && statusCode != 304) {
                         metadata.addValue("http.method.head", "false");
                         response = protocol.getProtocolOutput(
                                 url, metadata);
@@ -570,7 +569,7 @@ public class FetcherBolt extends StatusEmitterBolt {
 
                     boolean redirect = false;
                     String redirectUrl = null;
-                    if (redirectStatusCodes.contains(statusCode)) {
+                    if (Constants.redirectStatusCodes.contains(statusCode)) {
                         redirect = true;
                         redirectCount++;
                         if (redirectCount >= HTTP_REDIRECT_LIMIT) {
@@ -600,15 +599,15 @@ public class FetcherBolt extends StatusEmitterBolt {
                     eventCounter.scope("fetched").incrBy(1);
                     eventCounter.scope("bytes_fetched").incrBy(byteLength == null ? 0 : byteLength);
 
-                    if (okStatusCodes.contains(statusCode)) {
-                        message = "Ok";
+                    if (Constants.okStatusCodes.contains(statusCode)) {
+                        message = Category.Ok.name();
                         category = message;
-                    } else if (undeterminedStatusCodes.contains(statusCode)) {
-                        message = "Undetermined";
-                        category = message;
+                    } else if (Constants.undeterminedStatusCodes.contains(statusCode)) {
+                        message = "Undetermined, Status code: " + statusCode;
+                        category = Category.Undetermined.name();
                     } else {
-                        message = "Broken";
-                        category = message;
+                        message = "Broken, Status code: " + statusCode;
+                        category = Category.Broken.name();
                     }
 
                     LOG.info(
@@ -657,35 +656,12 @@ public class FetcherBolt extends StatusEmitterBolt {
 
                     collector.emit(streamName, fit.t, tupleToSend);
 
-                    //TODO separate different exceptions according to https://docs.google.com/spreadsheets/d/18EyqXjL5-e7tc0kpvTHQNaG5ObXr_WNIfdvrcJRiTAg/edit#gid=0
-                    //RESTRICTED ACCESS for login page exception
-                    //blocked by ROBOTS.TXT for denied by robots exception and crawl delay too long exception
-                } catch(LoginPageException e){
+                } catch (Exception e) {
                     if (metadata.size() == 0) {
                         metadata = new Metadata();
                     }
-                    metadata.setValue("fetch.message", e.getMessage());
 
-                    final Values tupleToSend = new Values(originalUrl, url, metadata,
-                            collection, record, expectedMimeType);
-
-                    collector.emit(Constants.StatusStreamName, fit.t,
-                            tupleToSend);
-
-                    eventCounter.scope("exception").incrBy(1);
-
-                } catch(Exception e) {
-                    String errorMessage = e.getMessage();
-                    if (errorMessage == null) {
-                        errorMessage = "";
-                    }
-                    LOG.error(errorMessage);
-
-                    if (metadata.size() == 0) {
-                        metadata = new Metadata();
-                    }
-                    // add the reason of the failure in the metadata
-                    metadata.setValue("fetch.exception", errorMessage);
+                    metadata.setValue("fetch.category", getCategoryFromException(e, url).name());
 
                     metadata.setValue("fetch.message", e.getMessage());
 
@@ -704,6 +680,44 @@ public class FetcherBolt extends StatusEmitterBolt {
                     beingFetched[threadNum] = "";
                 }
             }
+        }
+    }
+
+    //Different exceptions according to https://docs.google.com/spreadsheets/d/18EyqXjL5-e7tc0kpvTHQNaG5ObXr_WNIfdvrcJRiTAg/edit#gid=0
+    //the order of these is important as some of them extend others below
+    //cant do a switch case with instanceof so it is if else...
+    private Category getCategoryFromException(Exception e, String url) {
+        if (e instanceof RedirectException) {
+            return Category.Undetermined;
+        } else if (e instanceof LoginPageException) {
+            return Category.Restricted_Access;
+        } else if (e instanceof DeniedByRobotsException) {
+            return Category.Blocked_By_Robots_txt;
+        } else if (e instanceof CrawlDelayTooLongException) {
+            return Category.Blocked_By_Robots_txt;
+        } else if (e instanceof ConnectException) {
+            return Category.Broken;
+        } else if (e instanceof SocketTimeoutException) {
+            return Category.Broken;
+        } else if (e instanceof NoHttpResponseException) {
+            return Category.Broken;
+        } else if (e instanceof UnknownHostException) {
+            return Category.Broken;
+        } else if (e instanceof SSLHandshakeException) {
+            return Category.Undetermined;
+        } else if (e instanceof ValidatorException) {
+            return Category.Undetermined;
+        } else if (e instanceof NoRouteToHostException) {
+            return Category.Broken;
+        } else if (e instanceof SocketException) {
+            return Category.Undetermined;
+        } else if (e instanceof ConnectionClosedException) {
+            return Category.Broken;
+        } else {
+            //TODO after running the program for a while, search in the logs for this text and improve it with the exception
+            LOG.info("For the URL: " + url + "there was a yet undefined exception: " + e.getClass().toString() +
+                    " with the message: " + e.getMessage() + ". Please add this new exception into the code");
+            return Category.Undetermined; // we dont know the exception, then we can't determine it: Undetermined.
         }
     }
 
@@ -868,20 +882,22 @@ public class FetcherBolt extends StatusEmitterBolt {
         try {
             u = new URL(url);
         } catch (MalformedURLException e) {
-            LOG.error("{} is a malformed URL", url);
-            //todo here all the malformedurl exceptions
 
             Metadata metadata = (Metadata) input.getValueByField("metadata");
             if (metadata == null) {
                 metadata = new Metadata();
             }
-            // Report to status stream and ack
-            metadata.setValue(Constants.STATUS_ERROR_CAUSE, "malformed URL");
 
-            final Values tupleToSend = new Values(originalUrl, url, metadata, collection, record, expectedMimeType);
-            collector.emit(
-                    com.digitalpebble.stormcrawler.Constants.StatusStreamName,
-                    input, tupleToSend);
+            metadata.setValue("fetch.category", getCategoryFromException(e).name());
+
+            metadata.setValue("fetch.message", e.getMessage());
+
+            final Values tupleToSend = new Values(originalUrl, url, metadata,
+                    collection, record, expectedMimeType);
+
+            collector.emit(Constants.StatusStreamName, input,
+                    tupleToSend);
+
             collector.ack(input);
             return;
         }
