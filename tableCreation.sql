@@ -52,7 +52,8 @@ CREATE TABLE stormychecker.history (
  record VARCHAR(255),
  collection VARCHAR(255),
  expectedMimeType VARCHAR(255),
- message VARCHAR(255)
+ message VARCHAR(255),
+ category VARCHAR(50)
 );
 
 CREATE TABLE stormychecker.metrics (
