@@ -34,6 +34,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.http.ConnectionClosedException;
 import org.apache.http.NoHttpResponseException;
 import org.apache.http.client.RedirectException;
+import org.apache.http.conn.ConnectTimeoutException;
 import org.apache.storm.Config;
 import org.apache.storm.metric.api.MeanReducer;
 import org.apache.storm.metric.api.MultiCountMetric;
@@ -48,7 +49,9 @@ import org.slf4j.LoggerFactory;
 import sun.rmi.runtime.Log;
 import sun.security.validator.ValidatorException;
 
+import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLPeerUnverifiedException;
 import java.io.File;
 import java.io.IOException;
 import java.net.*;
@@ -687,7 +690,11 @@ public class FetcherBolt extends StatusEmitterBolt {
     //the order of these is important as some of them extend others below
     //cant do a switch case with instanceof so it is if else...
     private Category getCategoryFromException(Exception e, String url) {
-        if (e instanceof RedirectException) {
+        if (e instanceof MalformedURLException) {
+            return Category.Broken;
+        } else if (e instanceof IllegalArgumentException) {
+            return Category.Broken;
+        } else if (e instanceof RedirectException) {
             return Category.Undetermined;
         } else if (e instanceof LoginPageException) {
             return Category.Restricted_Access;
@@ -701,9 +708,17 @@ public class FetcherBolt extends StatusEmitterBolt {
             return Category.Broken;
         } else if (e instanceof NoHttpResponseException) {
             return Category.Broken;
+        } else if (e instanceof ConnectTimeoutException) {
+            return Category.Broken;
         } else if (e instanceof UnknownHostException) {
             return Category.Broken;
-        } else if (e instanceof SSLHandshakeException) {
+            //These next two exceptions are both child classes of SSLException.
+            //Since they all have the same category, we don't need to have the code for them separately
+//        } else if (e instanceof SSLHandshakeException) {
+//            return Category.Undetermined;
+//        }else if (e instanceof SSLPeerUnverifiedException) {
+//            return Category.Undetermined;
+        } else if (e instanceof SSLException) {
             return Category.Undetermined;
         } else if (e instanceof ValidatorException) {
             return Category.Undetermined;
@@ -715,7 +730,7 @@ public class FetcherBolt extends StatusEmitterBolt {
             return Category.Broken;
         } else {
             //TODO after running the program for a while, search in the logs for this text and improve it with the exception
-            LOG.info("For the URL: " + url + "there was a yet undefined exception: " + e.getClass().toString() +
+            LOG.info("For the URL: \"" + url + "\" there was a yet undefined exception: " + e.getClass().toString() +
                     " with the message: " + e.getMessage() + ". Please add this new exception into the code");
             return Category.Undetermined; // we dont know the exception, then we can't determine it: Undetermined.
         }
@@ -888,7 +903,7 @@ public class FetcherBolt extends StatusEmitterBolt {
                 metadata = new Metadata();
             }
 
-            metadata.setValue("fetch.category", getCategoryFromException(e).name());
+            metadata.setValue("fetch.category", getCategoryFromException(e, url).name());
 
             metadata.setValue("fetch.message", e.getMessage());
 
