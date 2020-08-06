@@ -18,7 +18,6 @@
 
 package at.ac.oeaw.acdh.bolt;
 
-import at.ac.oeaw.acdh.config.Category;
 import at.ac.oeaw.acdh.config.Configuration;
 import at.ac.oeaw.acdh.config.Constants;
 import at.ac.oeaw.acdh.exception.CrawlDelayTooLongException;
@@ -30,6 +29,7 @@ import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.digitalpebble.stormcrawler.util.PerSecondReducer;
 import crawlercommons.domains.PaidLevelDomain;
 import crawlercommons.robots.BaseRobotRules;
+import eu.clarin.cmdi.rasa.helpers.statusCodeMapper.Category;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.ConnectionClosedException;
 import org.apache.http.NoHttpResponseException;
@@ -46,14 +46,9 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 import org.slf4j.LoggerFactory;
-import sun.rmi.runtime.Log;
-import sun.security.validator.ValidatorException;
 
 import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLHandshakeException;
-import javax.net.ssl.SSLPeerUnverifiedException;
 import java.io.File;
-import java.io.IOException;
 import java.net.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -712,16 +707,16 @@ public class FetcherBolt extends StatusEmitterBolt {
             return Category.Broken;
         } else if (e instanceof UnknownHostException) {
             return Category.Broken;
-            //These next two exceptions are both child classes of SSLException.
+            //These next three exceptions are both child classes of SSLException.
             //Since they all have the same category, we don't need to have the code for them separately
 //        } else if (e instanceof SSLHandshakeException) {
 //            return Category.Undetermined;
 //        }else if (e instanceof SSLPeerUnverifiedException) {
 //            return Category.Undetermined;
+//        } else if (e instanceof ValidatorException) {
+//            return Category.Undetermined;//
         } else if (e instanceof SSLException) {
-            return Category.Undetermined;
-        } else if (e instanceof ValidatorException) {
-            return Category.Undetermined;
+            return Category.Undetermined;//TODO when stormychecker is deployed to clarin, make this broken
         } else if (e instanceof NoRouteToHostException) {
             return Category.Broken;
         } else if (e instanceof SocketException) {
