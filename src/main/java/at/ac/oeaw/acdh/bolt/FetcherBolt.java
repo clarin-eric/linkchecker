@@ -18,6 +18,7 @@
 
 package at.ac.oeaw.acdh.bolt;
 
+import at.ac.oeaw.acdh.config.Category;
 import at.ac.oeaw.acdh.config.Configuration;
 import at.ac.oeaw.acdh.config.Constants;
 import at.ac.oeaw.acdh.exception.CrawlDelayTooLongException;
@@ -29,7 +30,6 @@ import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.digitalpebble.stormcrawler.util.PerSecondReducer;
 import crawlercommons.domains.PaidLevelDomain;
 import crawlercommons.robots.BaseRobotRules;
-import eu.clarin.cmdi.rasa.helpers.statusCodeMapper.Category;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.ConnectionClosedException;
 import org.apache.http.NoHttpResponseException;
