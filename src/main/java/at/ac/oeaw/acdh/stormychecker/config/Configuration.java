@@ -1,4 +1,4 @@
-package at.ac.oeaw.acdh.config;
+package at.ac.oeaw.acdh.stormychecker.config;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;

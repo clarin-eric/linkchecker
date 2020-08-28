@@ -16,7 +16,7 @@
  * NOTICE: This code was modified in ACDH - Austrian Academy of Sciences, based on Stormcrawler source code.
  */
 
-package at.ac.oeaw.acdh.bolt;
+package at.ac.oeaw.acdh.stormychecker.bolt;
 
 import com.digitalpebble.stormcrawler.Constants;
 import com.digitalpebble.stormcrawler.Metadata;

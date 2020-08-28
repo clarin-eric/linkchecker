@@ -1,4 +1,4 @@
-package at.ac.oeaw.acdh.spout;
+package at.ac.oeaw.acdh.stormychecker.spout;
 
 /**
  * Licensed to DigitalPebble Ltd under one or more

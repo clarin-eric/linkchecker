@@ -16,10 +16,10 @@
  * NOTICE: This code was modified in ACDH - Austrian Academy of Sciences, based on Stormcrawler source code.
  */
 
-package at.ac.oeaw.acdh.spout;
+package at.ac.oeaw.acdh.stormychecker.spout;
 
 
-import at.ac.oeaw.acdh.config.Constants;
+import at.ac.oeaw.acdh.stormychecker.config.Constants;
 import com.digitalpebble.stormcrawler.sql.SQLUtil;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.digitalpebble.stormcrawler.util.StringTabScheme;

@@ -16,7 +16,7 @@
  * NOTICE: This code was modified in ACDH - Austrian Academy of Sciences.
  */
 
-package at.ac.oeaw.acdh.config;
+package at.ac.oeaw.acdh.stormychecker.config;
 
 import java.util.ArrayList;
 import java.util.Arrays;

@@ -1,4 +1,4 @@
-package at.ac.oeaw.acdh.bolt;
+package at.ac.oeaw.acdh.stormychecker.bolt;
 
 /**
  * Licensed to DigitalPebble Ltd under one or more
@@ -18,7 +18,7 @@ package at.ac.oeaw.acdh.bolt;
  * NOTICE: This code was modified in ACDH - Austrian Academy of Sciences, based on Stormcrawler source code.
  */
 
-import at.ac.oeaw.acdh.config.Constants;
+import at.ac.oeaw.acdh.stormychecker.config.Constants;
 import com.digitalpebble.stormcrawler.filtering.URLFilters;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.digitalpebble.stormcrawler.util.MetadataTransfer;

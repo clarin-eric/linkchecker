@@ -1,4 +1,4 @@
-package at.ac.oeaw.acdh.config;
+package at.ac.oeaw.acdh.stormychecker.config;
 
 public enum Category {
     Ok,

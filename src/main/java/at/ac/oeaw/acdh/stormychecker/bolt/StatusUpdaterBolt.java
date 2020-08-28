@@ -16,10 +16,10 @@
  * NOTICE: This code was modified in ACDH - Austrian Academy of Sciences, based on Stormcrawler source code.
  */
 
-package at.ac.oeaw.acdh.bolt;
+package at.ac.oeaw.acdh.stormychecker.bolt;
 
-import at.ac.oeaw.acdh.config.Configuration;
-import at.ac.oeaw.acdh.config.Constants;
+import at.ac.oeaw.acdh.stormychecker.config.Configuration;
+import at.ac.oeaw.acdh.stormychecker.config.Constants;
 import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.sql.SQLUtil;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
