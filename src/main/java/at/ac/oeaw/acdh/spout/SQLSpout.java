@@ -18,7 +18,8 @@
 
 package at.ac.oeaw.acdh.spout;
 
-import com.digitalpebble.stormcrawler.sql.Constants;
+
+import at.ac.oeaw.acdh.config.Constants;
 import com.digitalpebble.stormcrawler.sql.SQLUtil;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.digitalpebble.stormcrawler.util.StringTabScheme;
@@ -32,7 +33,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.*;
-import java.time.Instant;
 import java.util.Map;
 
 @SuppressWarnings("serial")
@@ -42,7 +42,8 @@ public class SQLSpout extends AbstractQueryingSpout {
 
     private static final Scheme SCHEME = new StringTabScheme();
 
-    private String tableName;
+    private String urlsTableName;
+    private String statusTableName;
 
     private Connection connection;
 
@@ -75,8 +76,10 @@ public class SQLSpout extends AbstractQueryingSpout {
         maxDocsPerBucket = ConfUtils.getInt(conf,
                 Constants.SQL_MAX_DOCS_BUCKET_PARAM_NAME, 5);
 
-        tableName = ConfUtils.getString(conf,
+        urlsTableName = ConfUtils.getString(conf,
                 Constants.SQL_STATUS_TABLE_PARAM_NAME, "urls");
+
+        statusTableName = ConfUtils.getString(conf, Constants.SQL_STATUS_RESULT_TABLE_PARAM_NAME, "status");
 
         maxNumResults = ConfUtils.getInt(conf,
                 Constants.SQL_MAXRESULTS_PARAM_NAME, 100);
@@ -113,16 +116,16 @@ public class SQLSpout extends AbstractQueryingSpout {
         //worded differently: alternate between random and nextfetchdate if nextfetchdate results in only one collection and causes a bottleneck
         String query;
         if (random) {
-            query = "SELECT * FROM " + tableName + " ORDER BY RAND()";
+            query = "SELECT * FROM " + urlsTableName + " ORDER BY RAND()";
             random = false;
         } else {
-            query = "SELECT * FROM " + tableName + " ORDER BY nextfetchdate";
+            query = "SELECT * FROM " + urlsTableName + " ORDER BY nextfetchdate";
 
             //this is the check to determine if random is needed for next round
             String checkQuery = "SELECT count(distinct(collection)) from (SELECT collection FROM stormychecker.urls ORDER BY nextfetchdate LIMIT " + maxNumResults + ") as collectionTable";
             try (Statement st = this.connection.createStatement(); ResultSet rs = st.executeQuery(checkQuery)) {
                 if (rs.next()) {//only one result
-                    if (rs.getInt(1) <= 3) {
+                    if (rs.getInt(1) == 1) {
                         random = true;
                     }
                 }

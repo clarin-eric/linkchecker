@@ -273,7 +273,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
         try {
             long start = System.currentTimeMillis();
-            //insert histoy should be done first because replace deletes old ones
+            //insert history should be done first because replace deletes old ones
             insertHistoryPreparedStmt.executeBatch();
             replacePreparedStmt.executeBatch();
             updatePreparedStmt.executeBatch();
