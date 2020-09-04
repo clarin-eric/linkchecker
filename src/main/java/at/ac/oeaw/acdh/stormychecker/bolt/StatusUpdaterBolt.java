@@ -181,8 +181,9 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         String partitionKey = partitioner.getPartition(url, metadata);
 
         Metadata md = (Metadata) t.getValueByField("metadata");
-        Integer statusCode = md.getFirstValue("fetch.statusCode") == null ? null : Integer.parseInt(md.getFirstValue("fetch.statusCode"));
-        String contentType = md.getFirstValue("content-type");//todo investigate
+        String fetchStatusCode = md.getFirstValue("fetch.statusCode");
+        Integer statusCode = fetchStatusCode == null ? null : fetchStatusCode.equalsIgnoreCase("null") ? null : Integer.parseInt(fetchStatusCode);
+        String contentType = md.getFirstValue("content-type");
         String fetchByteLength = md.getFirstValue("fetch.byteLength");
         Integer byteLength = fetchByteLength == null ? null : fetchByteLength.equalsIgnoreCase("null") ? null : Integer.parseInt(fetchByteLength);
         int loadingTime = md.getFirstValue("fetch.loadingTime") == null ? 0 : Integer.parseInt(md.getFirstValue("fetch.loadingTime"));
@@ -214,7 +215,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
             replacePreparedStmt.setInt(4, byteLength);
         }
         replacePreparedStmt.setInt(5, loadingTime);
-        replacePreparedStmt.setTimestamp(6,timestamp);
+        replacePreparedStmt.setTimestamp(6, timestamp);
         replacePreparedStmt.setInt(7, redirectCount);
         replacePreparedStmt.setString(8, record);
         replacePreparedStmt.setString(9, collection);

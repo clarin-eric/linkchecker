@@ -32,10 +32,7 @@ import com.digitalpebble.stormcrawler.util.PerSecondReducer;
 import crawlercommons.domains.PaidLevelDomain;
 import crawlercommons.robots.BaseRobotRules;
 import org.apache.commons.lang.StringUtils;
-import org.apache.http.ConnectionClosedException;
-import org.apache.http.NoHttpResponseException;
 import org.apache.http.client.RedirectException;
-import org.apache.http.conn.ConnectTimeoutException;
 import org.apache.storm.Config;
 import org.apache.storm.metric.api.MeanReducer;
 import org.apache.storm.metric.api.MultiCountMetric;
@@ -48,7 +45,6 @@ import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 import org.slf4j.LoggerFactory;
 
-import javax.net.ssl.SSLException;
 import java.io.File;
 import java.net.*;
 import java.text.SimpleDateFormat;
@@ -659,6 +655,12 @@ public class FetcherBolt extends StatusEmitterBolt {
                     if (metadata.size() == 0) {
                         metadata = new Metadata();
                     }
+
+                    metadata.setValue("fetch.statusCode", null);
+
+                    metadata.setValue("fetch.byteLength", null);
+
+                    metadata.setValue("fetch.content-type", null);
 
                     metadata.setValue("fetch.category", CategoryException.getCategoryFromException(e, url).name());
 
