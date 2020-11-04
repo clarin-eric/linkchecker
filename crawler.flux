@@ -6,7 +6,7 @@ includes:
       override: false
 
     - resource: false
-      file: "/usr/local/stormychecker/conf/crawler-conf.yaml"
+      file: "/app/stormychecker/crawler.flux"
       override: true
 
 spouts:
