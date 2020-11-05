@@ -106,9 +106,9 @@ config:
 
   #your mysql parameters go here
   sql.connection:
-    url:{{DATABASE_URI}}
-    user:{{DATABASE_USERNAME}}
-    password:{{DATABASE_PASSWORD}}
+    url: "{{DATABASE_URI}}"
+    user: "{{DATABASE_USERNAME}}"
+    password: "{{DATABASE_PASSWORD}}"
     rewriteBatchedStatements: "true"
     useBatchMultiSend: "true"
     autoReconnect:  "true"
