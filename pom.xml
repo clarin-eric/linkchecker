@@ -13,6 +13,17 @@
 		<stormcrawler.version>1.14</stormcrawler.version>
 	</properties>
 
+	<distributionManagement>
+		<snapshotRepository>
+			<id>CLARIN-Snapshot</id>
+			<url>https://nexus.clarin.eu/content/repositories/clarin-snapshot/</url>
+		</snapshotRepository>
+		<repository>
+			<id>CLARIN</id>
+			<url>https://nexus.clarin.eu/content/repositories/Clarin/</url>
+		</repository>
+	</distributionManagement>
+
 	<build>
 		<plugins>
 			<plugin>
@@ -122,4 +133,20 @@
 			<version>1.2.3</version>
 		</dependency>
 	</dependencies>
+
+	<repositories>
+		<repository>
+			<id>CLARIN</id>
+			<name>CLARIN Repository</name>
+			<url>https://nexus.clarin.eu/content/repositories/Clarin/</url>
+		</repository>
+		<repository>
+			<id>CLARIN-Snapshot</id>
+			<name>CLARIN Snapshot Repository</name>
+			<url>https://nexus.clarin.eu/content/repositories/clarin-snapshot/</url>
+			<releases>
+				<enabled>false</enabled>
+			</releases>
+		</repository>
+	</repositories>
 </project>

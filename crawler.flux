@@ -6,23 +6,23 @@ includes:
       override: false
 
     - resource: false
-      file: "/usr/local/stormychecker/conf/crawler-conf.yaml"
+      file: "/app/stormychecker/crawler-conf.yaml"
       override: true
 
 spouts:
   - id: "spout"
-    className: "at.ac.oeaw.acdh.spout.SQLSpout"
+    className: "at.ac.oeaw.acdh.stormychecker.spout.SQLSpout"
     parallelism: 1
 
 bolts:
   - id: "partitioner"
-    className: "at.ac.oeaw.acdh.bolt.URLPartitionerBolt"
+    className: "at.ac.oeaw.acdh.stormychecker.bolt.URLPartitionerBolt"
     parallelism: 1
   - id: "fetcher"
-    className: "at.ac.oeaw.acdh.bolt.FetcherBolt"
+    className: "at.ac.oeaw.acdh.stormychecker.bolt.FetcherBolt"
     parallelism: 10
   - id: "status"
-    className: "at.ac.oeaw.acdh.bolt.StatusUpdaterBolt"
+    className: "at.ac.oeaw.acdh.stormychecker.bolt.StatusUpdaterBolt"
     parallelism: 1
 
 streams:

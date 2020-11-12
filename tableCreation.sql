@@ -1,9 +1,6 @@
 CREATE TABLE stormychecker.urls (
  url VARCHAR(255),
- status VARCHAR(16) DEFAULT 'DISCOVERED',
  nextfetchdate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
- metadata TEXT,
- bucket SMALLINT DEFAULT 0,
  host VARCHAR(128),
  record VARCHAR(255),
  collection VARCHAR(255),
@@ -31,6 +28,7 @@ CREATE TABLE stormychecker.status (
  collection VARCHAR(255),
  expectedMimeType VARCHAR(255),
  message VARCHAR(255),
+ category VARCHAR(50),
  FOREIGN KEY (url) REFERENCES urls (url) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -54,7 +52,8 @@ CREATE TABLE stormychecker.history (
  record VARCHAR(255),
  collection VARCHAR(255),
  expectedMimeType VARCHAR(255),
- message VARCHAR(255)
+ message VARCHAR(255),
+ category VARCHAR(50)
 );
 
 CREATE TABLE stormychecker.metrics (

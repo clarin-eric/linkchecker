@@ -16,12 +16,11 @@
  * NOTICE: This code was modified in ACDH - Austrian Academy of Sciences, based on Stormcrawler source code.
  */
 
-package at.ac.oeaw.acdh.bolt;
+package at.ac.oeaw.acdh.stormychecker.bolt;
 
-import at.ac.oeaw.acdh.config.Configuration;
-import at.ac.oeaw.acdh.config.Constants;
+import at.ac.oeaw.acdh.stormychecker.config.Configuration;
+import at.ac.oeaw.acdh.stormychecker.config.Constants;
 import com.digitalpebble.stormcrawler.Metadata;
-import com.digitalpebble.stormcrawler.persistence.Status;
 import com.digitalpebble.stormcrawler.sql.SQLUtil;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.digitalpebble.stormcrawler.util.URLPartitioner;
@@ -33,9 +32,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.*;
-import java.time.Instant;
-import java.util.*;
-import java.util.Date;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -76,7 +75,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
     private String replaceStatusTableQuery;
     private String insertHistoryTableQuery;
 
-//    private final Map<String, List<Tuple>> waitingAck = new HashMap<>();
+    //    private final Map<String, List<Tuple>> waitingAck = new HashMap<>();
     private final List<Tuple> waitingAck = new ArrayList<>();
 
     public StatusUpdaterBolt(int maxNumBuckets) {
@@ -113,10 +112,10 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         }
 
 
-        String fields = "url, statusCode, contentType, byteSize, duration, timestamp, redirectCount, record, collection, expectedMimeType, message, method";
+        String fields = "url, statusCode, contentType, byteSize, duration, timestamp, redirectCount, record, collection, expectedMimeType, message, method, category";
         //insert into status table
         replaceStatusTableQuery = "REPLACE INTO " + statusTableName + "(" + fields + ")" +
-                " values (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?)";
+                " values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         insertHistoryTableQuery = "INSERT INTO " + historyTableName + " SELECT * FROM " + statusTableName + " WHERE url = ?";
 
@@ -165,18 +164,11 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
     }
 
     @Override
-    public synchronized void store(String url, Status status,
-                                   Metadata metadata, Date nextFetch, Tuple t) throws Exception {
+    public synchronized void store(String url,
+                                   Metadata metadata, Tuple t) throws Exception {
         // check whether the batch needs sending
         checkExecuteBatch();
 
-
-//        if (waitingAck.containsKey(url)) {
-//            List<Tuple> list = waitingAck.get(url);
-//            // add the tuple to the list for that url
-//            list.add(t);
-//            return;
-//        }
 
         StringBuilder mdAsString = new StringBuilder();
         for (String mdKey : metadata.keySet()) {
@@ -189,12 +181,17 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         String partitionKey = partitioner.getPartition(url, metadata);
 
         Metadata md = (Metadata) t.getValueByField("metadata");
-        int statusCode = md.getFirstValue("fetch.statusCode") == null ? 0 : Integer.parseInt(md.getFirstValue("fetch.statusCode"));
-        String contentType = md.getFirstValue("content-type");//todo investigate
+        String fetchStatusCode = md.getFirstValue("fetch.statusCode");
+        Integer statusCode = fetchStatusCode == null ? null : fetchStatusCode.equalsIgnoreCase("null") ? null : Integer.parseInt(fetchStatusCode);
+        String contentType = md.getFirstValue("content-type");
         String fetchByteLength = md.getFirstValue("fetch.byteLength");
         Integer byteLength = fetchByteLength == null ? null : fetchByteLength.equalsIgnoreCase("null") ? null : Integer.parseInt(fetchByteLength);
         int loadingTime = md.getFirstValue("fetch.loadingTime") == null ? 0 : Integer.parseInt(md.getFirstValue("fetch.loadingTime"));
         String message = md.getFirstValue("fetch.message");
+        String category = md.getFirstValue("fetch.category");
+
+        Long timestampLong = md.getFirstValue("fetch.timestamp") == null ? System.currentTimeMillis() : Long.parseLong(md.getFirstValue("fetch.timestamp"));
+        Timestamp timestamp = new Timestamp(timestampLong);
 
         String collection = t.getStringByField("collection");
         String record = t.getStringByField("record");
@@ -206,7 +203,11 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         String method = methodBool == null ? "N/A" : methodBool.equalsIgnoreCase("true") ? "HEAD" : "GET";
 
         replacePreparedStmt.setString(1, url);
-        replacePreparedStmt.setInt(2, statusCode);
+        if (statusCode == null) {
+            replacePreparedStmt.setNull(2, Types.INTEGER);
+        } else {
+            replacePreparedStmt.setInt(2, statusCode);
+        }
         replacePreparedStmt.setString(3, contentType);
         if (byteLength == null) {//if HEAD method and no content-length, then it needs to be null
             replacePreparedStmt.setNull(4, Types.INTEGER);
@@ -214,12 +215,14 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
             replacePreparedStmt.setInt(4, byteLength);
         }
         replacePreparedStmt.setInt(5, loadingTime);
-        replacePreparedStmt.setInt(6, redirectCount);
-        replacePreparedStmt.setString(7, record);
-        replacePreparedStmt.setString(8, collection);
-        replacePreparedStmt.setString(9, expectedMimeType);
-        replacePreparedStmt.setString(10, message);
-        replacePreparedStmt.setString(11, method);
+        replacePreparedStmt.setTimestamp(6, timestamp);
+        replacePreparedStmt.setInt(7, redirectCount);
+        replacePreparedStmt.setString(8, record);
+        replacePreparedStmt.setString(9, collection);
+        replacePreparedStmt.setString(10, expectedMimeType);
+        replacePreparedStmt.setString(11, message);
+        replacePreparedStmt.setString(12, method);
+        replacePreparedStmt.setString(13, category);
 
         replacePreparedStmt.addBatch();
 
@@ -271,7 +274,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
         try {
             long start = System.currentTimeMillis();
-            //insert histoy should be done first because replace deletes old ones
+            //insert history should be done first because replace deletes old ones
             insertHistoryPreparedStmt.executeBatch();
             replacePreparedStmt.executeBatch();
             updatePreparedStmt.executeBatch();

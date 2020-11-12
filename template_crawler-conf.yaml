@@ -106,9 +106,9 @@ config:
 
   #your mysql parameters go here
   sql.connection:
-    url:
-    user:
-    password:
+    url: "{{DATABASE_URI}}"
+    user: "{{DATABASE_USERNAME}}"
+    password: "{{DATABASE_PASSWORD}}"
     rewriteBatchedStatements: "true"
     useBatchMultiSend: "true"
     autoReconnect:  "true"
@@ -126,10 +126,6 @@ config:
 
   #  #Max time to allow between 2 successive queries to the backend. Value in msecs, default 20000.
   spout.max.delay.queries: 600000
-
-  #6 minutes
-  #Max time to allow between 2 successive queries to the backend. Value in msecs, default 20000.
-  spout.max.delay.queries: 1000000
 
   # Min time (in msecs) to allow between 2 successive queries to SQL
   spout.min.delay.queries: 2000

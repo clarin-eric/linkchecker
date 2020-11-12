@@ -5,9 +5,9 @@
  * DigitalPebble licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,7 +16,11 @@
  * NOTICE: This code was modified in ACDH - Austrian Academy of Sciences.
  */
 
-package at.ac.oeaw.acdh.config;
+package at.ac.oeaw.acdh.stormychecker.config;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class Constants {
     public static final String SQL_STATUS_TABLE_PARAM_NAME = "sql.status.table";
@@ -43,6 +47,13 @@ public class Constants {
     public static final String errorFetchIntervalParamName = "fetchInterval.error";
     public static final String defaultFetchIntervalParamName = "fetchInterval.default";
     public static final String fetchErrorCountParamName = "fetch.error.count";
+
+    public static final List<Integer> okStatusCodes = new ArrayList<>(Arrays.asList(200, 304));
+
+    public static final List<Integer> redirectStatusCodes = new ArrayList<>(Arrays.asList(301, 302, 303, 307, 308));
+
+    //this determines what status codes will not be considered broken links. urls with these codes will also not factor into the url-scores
+    public static final List<Integer> undeterminedStatusCodes = new ArrayList<>(Arrays.asList(401, 405, 429));
 
     private Constants() {
     }

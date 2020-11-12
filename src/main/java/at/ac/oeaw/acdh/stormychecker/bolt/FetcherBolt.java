@@ -16,13 +16,16 @@
  * NOTICE: This code was modified in ACDH - Austrian Academy of Sciences, based on Stormcrawler source code.
  */
 
-package at.ac.oeaw.acdh.bolt;
+package at.ac.oeaw.acdh.stormychecker.bolt;
 
-import at.ac.oeaw.acdh.config.Constants;
-import at.ac.oeaw.acdh.exception.CrawlDelayTooLongException;
-import at.ac.oeaw.acdh.exception.DeniedByRobotsException;
+import at.ac.oeaw.acdh.stormychecker.config.Category;
+import at.ac.oeaw.acdh.stormychecker.config.Configuration;
+import at.ac.oeaw.acdh.stormychecker.config.Constants;
+import at.ac.oeaw.acdh.stormychecker.exception.CategoryException;
+import at.ac.oeaw.acdh.stormychecker.exception.CrawlDelayTooLongException;
+import at.ac.oeaw.acdh.stormychecker.exception.DeniedByRobotsException;
+import at.ac.oeaw.acdh.stormychecker.exception.LoginPageException;
 import com.digitalpebble.stormcrawler.Metadata;
-import com.digitalpebble.stormcrawler.persistence.Status;
 import com.digitalpebble.stormcrawler.protocol.*;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.digitalpebble.stormcrawler.util.PerSecondReducer;
@@ -90,11 +93,6 @@ public class FetcherBolt extends StatusEmitterBolt {
     private int maxNumberURLsInQueues = -1;
 
     private String[] beingFetched;
-
-    private List<Integer> redirectStatusCodes = new ArrayList<>(Arrays.asList(301, 302, 303, 307, 308));
-
-    //this determines what status codes will not be considered broken links. urls with these codes will also not factor into the url-scores
-    private List<Integer> undeterminedStatusCodes = new ArrayList<>(Arrays.asList(401, 405, 429));
 
     /**
      * This class described the item to be fetched.
@@ -444,7 +442,8 @@ public class FetcherBolt extends StatusEmitterBolt {
                 }
 
                 boolean asap = false;
-                String message = null;
+                String message;
+                String category;
 
                 String collection = fit.t.getStringByField("collection");
                 String record = fit.t.getStringByField("record");
@@ -459,7 +458,6 @@ public class FetcherBolt extends StatusEmitterBolt {
                 try {
                     int statusCode = 0;
                     ProtocolResponse response = null;
-                    Status status = null;
 
                     long start = System.currentTimeMillis();
                     long timeInQueues = start - fit.creationTime;
@@ -489,10 +487,6 @@ public class FetcherBolt extends StatusEmitterBolt {
                         metadata.setValue(Constants.STATUS_ERROR_CAUSE,
                                 "robots.txt");
 
-                        response = new ProtocolResponse(new byte[0], 0, null);
-                        message = "Denied by robots.txt: " + url;
-                        status = Status.ERROR;
-
                         // no need to wait next time as we won't request from
                         // that site
                         asap = true;
@@ -520,12 +514,10 @@ public class FetcherBolt extends StatusEmitterBolt {
                                 metadata.setValue(Constants.STATUS_ERROR_CAUSE,
                                         "crawl_delay");
 
-                                response = new ProtocolResponse(new byte[0], 0, null);
-                                status = Status.ERROR;
                                 // no need to wait next time as we won't request
                                 // from that site
                                 asap = true;
-                                throw new CrawlDelayTooLongException("crawl delay too long.");
+                                throw new CrawlDelayTooLongException("Crawl delay too long.");
                             }
                         } else if (rules.getCrawlDelay() < fetchQueues.crawlDelay
                                 && crawlDelayForce) {
@@ -541,6 +533,19 @@ public class FetcherBolt extends StatusEmitterBolt {
                         }
                     }
 
+                    while (Configuration.loginPagesLock.isLocked()) {
+                        //do nothing, wait until it is unlocked to read
+                    }
+                    if (Configuration.loginPageUrls.contains(url)) {
+                        //this next if check means that the harvested page was not the login page.
+                        //if the login page is harvested as a url, then it should be handled normally
+                        if (!url.equals(originalUrl)) {
+                            throw new LoginPageException(originalUrl + " points to a login page, therefore has restricted access.");
+                        }
+                    }
+
+                    Long timestamp = System.currentTimeMillis();
+
                     //first try HEAD
                     metadata.addValue("http.method.head", "true");
                     response = protocol.getProtocolOutput(
@@ -550,18 +555,16 @@ public class FetcherBolt extends StatusEmitterBolt {
                     //if its unsuccessful, try GET
                     //GET is the only reliable method because some servers implement HEAD wrong
                     //https://stackoverflow.com/questions/7351249/reliability-of-using-head-request-to-check-web-page-status
-                    if (!redirectStatusCodes.contains(statusCode) && statusCode != 200 && statusCode != 304) {
+                    if (!Constants.redirectStatusCodes.contains(statusCode) && statusCode != 200 && statusCode != 304) {
                         metadata.addValue("http.method.head", "false");
                         response = protocol.getProtocolOutput(
                                 url, metadata);
                         statusCode = response.getStatusCode();
                     }
 
-                    status = Status.fromHTTPCode(statusCode);
-
                     boolean redirect = false;
                     String redirectUrl = null;
-                    if (redirectStatusCodes.contains(statusCode)) {
+                    if (Constants.redirectStatusCodes.contains(statusCode)) {
                         redirect = true;
                         redirectCount++;
                         if (redirectCount >= HTTP_REDIRECT_LIMIT) {
@@ -591,14 +594,15 @@ public class FetcherBolt extends StatusEmitterBolt {
                     eventCounter.scope("fetched").incrBy(1);
                     eventCounter.scope("bytes_fetched").incrBy(byteLength == null ? 0 : byteLength);
 
-                    if (message == null) {
-                        if (statusCode == 200 || statusCode == 304) {
-                            message = "Ok";
-                        } else if (undeterminedStatusCodes.contains(statusCode)) {
-                            message = "Undetermined";
-                        } else {
-                            message = "Broken";
-                        }
+                    if (Constants.okStatusCodes.contains(statusCode)) {
+                        message = Category.Ok.name();
+                        category = message;
+                    } else if (Constants.undeterminedStatusCodes.contains(statusCode)) {
+                        message = "Undetermined, Status code: " + statusCode;
+                        category = Category.Undetermined.name();
+                    } else {
+                        message = "Broken, Status code: " + statusCode;
+                        category = Category.Broken.name();
                     }
 
                     LOG.info(
@@ -629,6 +633,10 @@ public class FetcherBolt extends StatusEmitterBolt {
 
                     mergedMD.setValue("fetch.message", message);
 
+                    mergedMD.setValue("fetch.category", category);
+
+                    mergedMD.setValue("fetch.timestamp", timestamp.toString());
+
                     //if redirect, go back to partitioner bolt, if not pass it to status updater bolt
                     String streamName;
                     if (redirect) {
@@ -639,26 +647,26 @@ public class FetcherBolt extends StatusEmitterBolt {
                     }
 
                     final Values tupleToSend = new Values(originalUrl, url, mergedMD,
-                            status, collection, record, expectedMimeType);
+                            collection, record, expectedMimeType);
 
                     collector.emit(streamName, fit.t, tupleToSend);
 
                 } catch (Exception e) {
-                    String errorMessage = e.getMessage();
-                    if (errorMessage == null) {
-                        errorMessage = "";
-                    }
-                    LOG.error(errorMessage);
-
                     if (metadata.size() == 0) {
                         metadata = new Metadata();
                     }
-                    // add the reason of the failure in the metadata
-                    metadata.setValue("fetch.exception", errorMessage);
+
+                    metadata.setValue("fetch.statusCode", null);
+
+                    metadata.setValue("fetch.byteLength", null);
+
+                    metadata.setValue("fetch.content-type", null);
+
+                    metadata.setValue("fetch.category", CategoryException.getCategoryFromException(e, url).name());
 
                     metadata.setValue("fetch.message", e.getMessage());
 
-                    final Values tupleToSend = new Values(originalUrl, url, metadata, Status.FETCH_ERROR,
+                    final Values tupleToSend = new Values(originalUrl, url, metadata,
                             collection, record, expectedMimeType);
 
                     collector.emit(Constants.StatusStreamName, fit.t,
@@ -783,7 +791,7 @@ public class FetcherBolt extends StatusEmitterBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         super.declareOutputFields(declarer);
-        declarer.declare(new Fields("originalUrl", "url", "metadata", "status", "collection", "record", "expectedMimeType"));
+        declarer.declare(new Fields("originalUrl", "url", "metadata", "collection", "record", "expectedMimeType"));
     }
 
     @Override
@@ -833,22 +841,26 @@ public class FetcherBolt extends StatusEmitterBolt {
 
         URL u;
 
+
         try {
             u = new URL(url);
         } catch (MalformedURLException e) {
-            LOG.error("{} is a malformed URL", url);
 
             Metadata metadata = (Metadata) input.getValueByField("metadata");
             if (metadata == null) {
                 metadata = new Metadata();
             }
-            // Report to status stream and ack
-            metadata.setValue(Constants.STATUS_ERROR_CAUSE, "malformed URL");
 
-            final Values tupleToSend = new Values(originalUrl, url, metadata, Status.ERROR, collection, record, expectedMimeType);
-            collector.emit(
-                    com.digitalpebble.stormcrawler.Constants.StatusStreamName,
-                    input, tupleToSend);
+            metadata.setValue("fetch.category", CategoryException.getCategoryFromException(e, url).name());
+
+            metadata.setValue("fetch.message", e.getMessage());
+
+            final Values tupleToSend = new Values(originalUrl, url, metadata,
+                    collection, record, expectedMimeType);
+
+            collector.emit(Constants.StatusStreamName, input,
+                    tupleToSend);
+
             collector.ack(input);
             return;
         }
