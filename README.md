@@ -1,9 +1,12 @@
 # Link Checker
-The Link checker is a Storm Crawler adaptation for URL checking. Instead of crawling, it checks the status of URLs and persists them in a database (currently mysql)
+The Link checker is a [StormCrawler](https://github.com/DigitalPebble/storm-crawler) 
+adaptation for URL checking. Instead of crawling, it checks the status of URLs and
+persists them in a database (currently mysql)
 
 # How to setup and run
 
-0. Before you can run linkchecker, you need to install ApacheStorm: Download Apache Storm 1.2.2 (current supported version) from this link: https://archive.apache.org/dist/storm/apache-storm-1.2.2/apache-storm-1.2.2.tar.gz
+0. Before you can run linkchecker, you need to install [Apache Storm](https://storm.apache.org/):
+Download Apache Storm 1.2.2 (current supported version) from this link: https://archive.apache.org/dist/storm/apache-storm-1.2.2/apache-storm-1.2.2.tar.gz
 
 1. Clone this repository.
 
