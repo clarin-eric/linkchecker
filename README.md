@@ -1,9 +1,9 @@
-# Stormychecker
-Stormychecker is a Storm Crawler adaptation for URL checking. Instead of crawling, it checks the status of URLs and persists them in a database (currently mysql)
+# Link Checker
+The Link checker is a Storm Crawler adaptation for URL checking. Instead of crawling, it checks the status of URLs and persists them in a database (currently mysql)
 
 # How to setup and run
 
-0. Before you can run stormychecker, you need to install ApacheStorm: Download Apache Storm 1.2.2 (current supported version) from this link: https://archive.apache.org/dist/storm/apache-storm-1.2.2/apache-storm-1.2.2.tar.gz
+0. Before you can run linkchecker, you need to install ApacheStorm: Download Apache Storm 1.2.2 (current supported version) from this link: https://archive.apache.org/dist/storm/apache-storm-1.2.2/apache-storm-1.2.2.tar.gz
 
 1. Clone this repository.
 
@@ -33,15 +33,15 @@ Stormychecker is a Storm Crawler adaptation for URL checking. Instead of crawlin
   ```
   Note: If you set it "crawler-conf.yaml", then you can directly use the crawler-conf.yaml in this repository.
 
-6. To start stormychecker on local mode, run `apache-storm-1.2.2/bin/storm jar path/to/this/repository/target/stormychecker-1.0-SNAPSHOT.jar  org.apache.storm.flux.Flux --local path/to/this/repository/crawler.flux --sleep 86400000`
+6. To start the link checker on local mode, run `apache-storm-1.2.2/bin/storm jar path/to/this/repository/target/stormychecker-1.0-SNAPSHOT.jar  org.apache.storm.flux.Flux --local path/to/this/repository/crawler.flux --sleep 86400000`
   Note: For now, it is on SNAPSHOT level because this repository containst just a very basic implementation.
   
   
 # Simple Explanation of Current Implementation
 
 Our MYSQL database has 3 tables:
-1. **urls:** This is the table that stormychecker reads from. So this will be populated by another application(in our case curation-module).
-2. **status:** This is the table that stormychecker saves the results into.
+1. **urls:** This is the table that linkchecker reads from. So this will be populated by another application(in our case curation-module).
+2. **status:** This is the table that linkchecker saves the results into.
 3. **metrics:** This table is filled by default storm-crawler behaviour in FetcherBolt and has some statistics information.
 
 *crawler.flux* defines our topology. It defines all the spouts, bolts and streams.
