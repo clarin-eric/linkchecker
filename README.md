@@ -1,7 +1,7 @@
 # Link Checker
 The Link checker is a [StormCrawler](https://github.com/DigitalPebble/storm-crawler) 
 adaptation for URL checking. Instead of crawling, it checks the status of URLs and
-persists them in a database (currently mysql)
+persists them in a database (currently MariaDB/MySQL)
 
 # How to setup and run
 
@@ -12,14 +12,14 @@ Download Apache Storm 1.2.2 (current supported version) from this link: https://
 
 2. Run `mvn install` in the working directory
 
-3. Run *tableCreation.sql* on your mysql database. It requires a database with the name *stormychecker*. You can change the database name and the table names in the script but then you would have to change the *crawler-conf.yaml* configuration for those parameters as well.
+3. Run *tableCreation.sql* on your database. It requires a database with the name *stormychecker*. You can change the database name and the table names in the script but then you would have to change the *crawler-conf.yaml* configuration for those parameters as well.
 
-4. Add your mysql url and login parameters to *crawler-conf.yaml* (and change any other parameters you wish, ex: http.agent):
+4. Add your database url and login parameters to *crawler-conf.yaml* (and change any other parameters you wish, ex: http.agent):
   ```
   sql.connection:
-  url: {your mysql url, ex: "jdbc:mysql://localhost:3307/stormychecker"}
-  user: {your mysql username}
-  password: {your mysql password}
+  url: {your database url, ex: "jdbc:mysql://localhost:3307/stormychecker"}
+  user: {your database username}
+  password: {your database password}
   rewriteBatchedStatements: "true"
   useBatchMultiSend: "true"
   ```
@@ -42,7 +42,7 @@ Download Apache Storm 1.2.2 (current supported version) from this link: https://
   
 # Simple Explanation of Current Implementation
 
-Our MYSQL database has 3 tables:
+Our SQL database has 3 tables:
 1. **urls:** This is the table that linkchecker reads from. So this will be populated by another application(in our case curation-module).
 2. **status:** This is the table that linkchecker saves the results into.
 3. **metrics:** This table is filled by default storm-crawler behaviour in FetcherBolt and has some statistics information.
