@@ -34,12 +34,12 @@ config:
     - isSitemap
     - isFeed
 
-  http.agent.name: "CLARIN Linkchecker: https://www.clarin.eu/linkchecker"
-  http.agent.version: "2.0"
-  http.agent.description: "built with StormCrawler Archetype 1.14"
-  http.agent.url: "https://www.clarin.eu/linkchecker"
-  http.agent.email: "acdh-tech@oeaw.ac.at"
-  http.redirectLimit: 5
+  http.agent.name: "{{HTTP_AGENT_NAME}}"
+  http.agent.version: "{{HTTP_AGENT_VERSION}}"
+  http.agent.description: "{{HTTP_AGENT_DESCRIPTION}}"
+  http.agent.url: "{{HTTP_AGENT_URL}}"
+  http.agent.email: "{{HTTP_AGENT_EMAIL}}"
+  http.redirectLimit: "{{HTTP_REDIRECT_LIMIT}}"
 
   #default 1 already
   #fetcher.server.delay: 1
