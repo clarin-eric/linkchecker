@@ -16,13 +16,15 @@
  * NOTICE: This code was modified in ACDH - Austrian Academy of Sciences, based on Stormcrawler source code.
  */
 
-package at.ac.oeaw.acdh.stormychecker.spout;
+package at.ac.oeaw.acdh.linkchecker.spout;
 
 
-import at.ac.oeaw.acdh.stormychecker.config.Constants;
 import com.digitalpebble.stormcrawler.sql.SQLUtil;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.digitalpebble.stormcrawler.util.StringTabScheme;
+
+import at.ac.oeaw.acdh.linkchecker.config.Constants;
+
 import org.apache.storm.spout.Scheme;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;

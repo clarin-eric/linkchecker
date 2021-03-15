@@ -1,28 +1,28 @@
-name: "stormychecker"
+name: "linkchecker"
 
 includes:
     - resource: true
       file: "/crawler-default.yaml"
       override: false
 
-    - resource: false
-      file: "/app/stormychecker/crawler-conf.yaml"
+    - resource: true
+      file: "/crawler-conf.yaml"
       override: true
 
 spouts:
   - id: "spout"
-    className: "at.ac.oeaw.acdh.stormychecker.spout.SQLSpout"
+    className: "at.ac.oeaw.acdh.linkchecker.spout.SQLSpout"
     parallelism: 1
 
 bolts:
   - id: "partitioner"
-    className: "at.ac.oeaw.acdh.stormychecker.bolt.URLPartitionerBolt"
+    className: "at.ac.oeaw.acdh.linkchecker.bolt.URLPartitionerBolt"
     parallelism: 1
   - id: "fetcher"
-    className: "at.ac.oeaw.acdh.stormychecker.bolt.FetcherBolt"
+    className: "at.ac.oeaw.acdh.linkchecker.bolt.FetcherBolt"
     parallelism: 10
   - id: "status"
-    className: "at.ac.oeaw.acdh.stormychecker.bolt.StatusUpdaterBolt"
+    className: "at.ac.oeaw.acdh.linkchecker.bolt.StatusUpdaterBolt"
     parallelism: 1
 
 streams:

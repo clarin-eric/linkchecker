@@ -16,15 +16,16 @@
  * NOTICE: This code was modified in ACDH - Austrian Academy of Sciences, based on Stormcrawler source code.
  */
 
-package at.ac.oeaw.acdh.stormychecker.bolt;
+package at.ac.oeaw.acdh.linkchecker.bolt;
 
-import at.ac.oeaw.acdh.stormychecker.config.Category;
-import at.ac.oeaw.acdh.stormychecker.config.Configuration;
-import at.ac.oeaw.acdh.stormychecker.config.Constants;
-import at.ac.oeaw.acdh.stormychecker.exception.CategoryException;
-import at.ac.oeaw.acdh.stormychecker.exception.CrawlDelayTooLongException;
-import at.ac.oeaw.acdh.stormychecker.exception.DeniedByRobotsException;
-import at.ac.oeaw.acdh.stormychecker.exception.LoginPageException;
+import at.ac.oeaw.acdh.linkchecker.config.Category;
+import at.ac.oeaw.acdh.linkchecker.config.Configuration;
+import at.ac.oeaw.acdh.linkchecker.config.Constants;
+import at.ac.oeaw.acdh.linkchecker.exception.CategoryException;
+import at.ac.oeaw.acdh.linkchecker.exception.CrawlDelayTooLongException;
+import at.ac.oeaw.acdh.linkchecker.exception.DeniedByRobotsException;
+import at.ac.oeaw.acdh.linkchecker.exception.LoginPageException;
+
 import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.protocol.*;
 import com.digitalpebble.stormcrawler.util.ConfUtils;

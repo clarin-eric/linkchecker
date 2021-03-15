@@ -16,14 +16,16 @@
  * NOTICE: This code was modified in ACDH - Austrian Academy of Sciences, based on Stormcrawler source code.
  */
 
-package at.ac.oeaw.acdh.stormychecker.bolt;
+package at.ac.oeaw.acdh.linkchecker.bolt;
 
-import at.ac.oeaw.acdh.stormychecker.config.Configuration;
-import at.ac.oeaw.acdh.stormychecker.config.Constants;
 import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.sql.SQLUtil;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.digitalpebble.stormcrawler.util.URLPartitioner;
+
+import at.ac.oeaw.acdh.linkchecker.config.Configuration;
+import at.ac.oeaw.acdh.linkchecker.config.Constants;
+
 import org.apache.storm.metric.api.MultiCountMetric;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;

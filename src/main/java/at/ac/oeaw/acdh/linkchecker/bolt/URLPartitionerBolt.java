@@ -1,4 +1,4 @@
-package at.ac.oeaw.acdh.stormychecker.bolt;
+package at.ac.oeaw.acdh.linkchecker.bolt;
 
 /**
  * Licensed to DigitalPebble Ltd under one or more
