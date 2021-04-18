@@ -113,7 +113,7 @@ config:
     useBatchMultiSend: "true"
     autoReconnect:  "true"
 
-  sql.max.urls.per.bucket: 1000
+  sql.max.urls.per.bucket: 100
 
   sql.status.table: "urls"
   sql.status.resultTable: "status"
