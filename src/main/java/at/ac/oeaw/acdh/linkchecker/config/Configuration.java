@@ -1,4 +1,4 @@
-package at.ac.oeaw.acdh.stormychecker.config;
+package at.ac.oeaw.acdh.linkchecker.config;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -6,6 +6,10 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.slf4j.LoggerFactory;
+
+import eu.clarin.cmdi.rasa.helpers.RasaFactory;
+import eu.clarin.cmdi.rasa.linkResources.CheckedLinkResource;
+import eu.clarin.cmdi.rasa.linkResources.LinkToBeCheckedResource;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -16,6 +20,8 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -41,6 +47,10 @@ public class Configuration {
     private static String loginListURL = "https://raw.githubusercontent.com/clarin-eric/login-pages/master/list.txt";
     private static String loginListContent;
 
+    private static RasaFactory factory;
+    public static LinkToBeCheckedResource linkToBeCheckedResource;
+    public static CheckedLinkResource checkedLinkResource;
+
     static {
         fillLoginPageUrls();
 
@@ -50,6 +60,18 @@ public class Configuration {
         long oneAM = LocalDateTime.now().until(LocalDate.now().plusDays(1).atTime(1, 0), ChronoUnit.MINUTES);
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
         scheduler.scheduleAtFixedRate(loginPageUrlUpdater, oneAM, TimeUnit.DAYS.toMinutes(1), MINUTES);
+        
+        //
+        
+    }
+    
+    public static void openConnectionPool(Map conf) {
+    	final Properties hikari = new Properties();
+
+    }
+    
+    public static void closeConnectionPool() {
+    	factory.tearDown();
     }
 
     private static void fillLoginPageUrls() {

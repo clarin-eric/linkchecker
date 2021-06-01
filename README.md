@@ -6,13 +6,13 @@ persists them in a database (currently MariaDB/MySQL)
 # How to setup and run
 
 0. Before you can run linkchecker, you need to install [Apache Storm](https://storm.apache.org/):
-Download Apache Storm 1.2.2 (current supported version) from this link: https://archive.apache.org/dist/storm/apache-storm-1.2.2/apache-storm-1.2.2.tar.gz
+Download Apache Storm 2.1.0 (current supported version) from this link: https://archive.apache.org/dist/storm/apache-storm-2.1.0/apache-storm-2.1.0.tar.gz
 
 1. Clone this repository.
 
 2. Run `mvn install` in the working directory
 
-3. Run *tableCreation.sql* on your database. It requires a database with the name *stormychecker*. You can change the database name and the table names in the script but then you would have to change the *crawler-conf.yaml* configuration for those parameters as well.
+3. ...
 
 4. Add your database url and login parameters to *crawler-conf.yaml* (and change any other parameters you wish, ex: http.agent):
   ```
@@ -36,8 +36,8 @@ Download Apache Storm 1.2.2 (current supported version) from this link: https://
   ```
   Note: If you set it "crawler-conf.yaml", then you can directly use the crawler-conf.yaml in this repository.
 
-6. To start the link checker on local mode, run `apache-storm-1.2.2/bin/storm jar path/to/this/repository/target/stormychecker-1.0-SNAPSHOT.jar  org.apache.storm.flux.Flux --local path/to/this/repository/crawler.flux --sleep 86400000`
-  Note: For now, it is on SNAPSHOT level because this repository containst just a very basic implementation.
+6. To start the link checker on local mode, run `apache-storm-2.2.0/bin/storm storm local path/to/this/repository/target/linkchecker-2.1.0.jar  org.apache.storm.flux.Flux --local path/to/this/repository/crawler.flux --local-ttl 3600`
+
   
   
 # Simple Explanation of Current Implementation

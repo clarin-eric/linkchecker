@@ -16,15 +16,16 @@
  * NOTICE: This code was modified in ACDH - Austrian Academy of Sciences, based on Stormcrawler source code.
  */
 
-package at.ac.oeaw.acdh.stormychecker.bolt;
+package at.ac.oeaw.acdh.linkchecker.bolt;
 
-import at.ac.oeaw.acdh.stormychecker.config.Category;
-import at.ac.oeaw.acdh.stormychecker.config.Configuration;
-import at.ac.oeaw.acdh.stormychecker.config.Constants;
-import at.ac.oeaw.acdh.stormychecker.exception.CategoryException;
-import at.ac.oeaw.acdh.stormychecker.exception.CrawlDelayTooLongException;
-import at.ac.oeaw.acdh.stormychecker.exception.DeniedByRobotsException;
-import at.ac.oeaw.acdh.stormychecker.exception.LoginPageException;
+import at.ac.oeaw.acdh.linkchecker.config.Category;
+import at.ac.oeaw.acdh.linkchecker.config.Configuration;
+import at.ac.oeaw.acdh.linkchecker.config.Constants;
+import at.ac.oeaw.acdh.linkchecker.exception.CategoryException;
+import at.ac.oeaw.acdh.linkchecker.exception.CrawlDelayTooLongException;
+import at.ac.oeaw.acdh.linkchecker.exception.DeniedByRobotsException;
+import at.ac.oeaw.acdh.linkchecker.exception.LoginPageException;
+
 import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.protocol.*;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
@@ -791,7 +792,7 @@ public class FetcherBolt extends StatusEmitterBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         super.declareOutputFields(declarer);
-        declarer.declare(new Fields("originalUrl", "url", "metadata", "collection", "record", "expectedMimeType"));
+        declarer.declare(new Fields("linkId", "originalUrl", "url", "metadata"));
     }
 
     @Override
@@ -826,11 +827,10 @@ public class FetcherBolt extends StatusEmitterBolt {
             debugfiletrigger.delete();
         }
 
+        Long linkId = input.getLongByField("linkId");
         String originalUrl = input.getStringByField("originalUrl");
         final String url = input.getStringByField("url");
-        String collection = input.getStringByField("collection");
-        String record = input.getStringByField("record");
-        String expectedMimeType = input.getStringByField("expectedMimeType");
+
         if (StringUtils.isBlank(url)) {
             LOG.info("[Fetcher #{}] Missing value for field url in tuple {}",
                     taskID, input);
@@ -855,8 +855,7 @@ public class FetcherBolt extends StatusEmitterBolt {
 
             metadata.setValue("fetch.message", e.getMessage());
 
-            final Values tupleToSend = new Values(originalUrl, url, metadata,
-                    collection, record, expectedMimeType);
+            final Values tupleToSend = new Values(linkId, originalUrl, url, metadata);
 
             collector.emit(Constants.StatusStreamName, input,
                     tupleToSend);

@@ -1,4 +1,4 @@
-package at.ac.oeaw.acdh.stormychecker.bolt;
+package at.ac.oeaw.acdh.linkchecker.bolt;
 
 /**
  * Licensed to DigitalPebble Ltd under one or more
@@ -62,11 +62,9 @@ public class URLPartitionerBolt extends BaseRichBolt {
 
     @Override
     public void execute(Tuple tuple) {
+    	Long linkId = tuple.getLongByField("linkId");
         String url = tuple.getStringByField("url");
         String originalUrl = tuple.getStringByField("originalUrl");
-        String collection = tuple.getStringByField("collection");
-        String record = tuple.getStringByField("record");
-        String expectedMimeType = tuple.getStringByField("expectedMimeType");
         Metadata metadata = null;
 
         Integer redirectCount;
@@ -147,13 +145,13 @@ public class URLPartitionerBolt extends BaseRichBolt {
 
         LOG.debug("Partition Key for: {} > {}", url, partitionKey);
 
-        _collector.emit(tuple, new Values(originalUrl, url, redirectCount, partitionKey, metadata, collection, record, expectedMimeType));
+        _collector.emit(tuple, new Values(linkId, originalUrl, url, redirectCount, partitionKey, metadata));
         _collector.ack(tuple);
     }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("originalUrl", "url", "redirectCount", "key", "metadata", "collection", "record", "expectedMimeType"));
+        declarer.declare(new Fields("linkId, originalUrl", "url", "redirectCount", "key", "metadata"));
     }
 
     @Override
