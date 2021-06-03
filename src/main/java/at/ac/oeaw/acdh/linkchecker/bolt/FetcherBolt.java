@@ -18,7 +18,6 @@
 
 package at.ac.oeaw.acdh.linkchecker.bolt;
 
-import at.ac.oeaw.acdh.linkchecker.config.Category;
 import at.ac.oeaw.acdh.linkchecker.config.Configuration;
 import at.ac.oeaw.acdh.linkchecker.config.Constants;
 import at.ac.oeaw.acdh.linkchecker.exception.CategoryException;
@@ -32,6 +31,8 @@ import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.digitalpebble.stormcrawler.util.PerSecondReducer;
 import crawlercommons.domains.PaidLevelDomain;
 import crawlercommons.robots.BaseRobotRules;
+import eu.clarin.cmdi.rasa.helpers.statusCodeMapper.Category;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.client.RedirectException;
 import org.apache.storm.Config;
@@ -408,7 +409,7 @@ public class FetcherBolt extends StatusEmitterBolt {
 
         @Override
         public void run() {
-            while (true) {
+            while (Configuration.isActive()) {
                 FetchItem fit = fetchQueues.getFetchItem();
                 if (fit == null) {
                     LOG.debug("{} spin-waiting ...", getName());

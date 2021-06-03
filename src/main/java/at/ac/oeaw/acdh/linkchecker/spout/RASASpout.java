@@ -23,7 +23,6 @@ import com.digitalpebble.stormcrawler.util.ConfUtils;
 
 import at.ac.oeaw.acdh.linkchecker.config.Configuration;
 import at.ac.oeaw.acdh.linkchecker.config.Constants;
-import eu.clarin.cmdi.rasa.linkResources.LinkToBeCheckedResource;
 
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
@@ -39,25 +38,12 @@ import java.util.Optional;
 
 @SuppressWarnings("serial")
 public class RASASpout extends AbstractQueryingSpout {
-
-    public final Logger logger = LoggerFactory.getLogger(getClass());
-
-
-//    private Connection connection;
-
-
-    /**
-     * if more than one instance of the spout exist, each one is in charge of a
-     * separate bucket value. This is used to ensure a good diversity of URLs.
-     **/
-    private int bucketNum = -1;
+    public static final Logger LOG = LoggerFactory.getLogger(at.ac.oeaw.acdh.linkchecker.spout.RASASpout.class);
 
     /**
      * Used to distinguish between instances in the logs
      **/
     protected String logIdprefix = "";
-
-    private int maxDocsPerBucket;
 
     private int maxNumResults;
 
@@ -69,9 +55,8 @@ public class RASASpout extends AbstractQueryingSpout {
                      SpoutOutputCollector collector) {
 
         super.open(conf, context, collector);
-
-        maxDocsPerBucket = ConfUtils.getInt(conf,
-                Constants.SQL_MAX_DOCS_BUCKET_PARAM_NAME, 5);
+        
+        Configuration.setActive(conf, true);
 
 
         maxNumResults = ConfUtils.getInt(conf,
@@ -84,52 +69,61 @@ public class RASASpout extends AbstractQueryingSpout {
         if (totalTasks > 1) {
             logIdprefix = "[" + context.getThisComponentId() + " #"
                     + context.getThisTaskIndex() + "] ";
-            bucketNum = context.getThisTaskIndex();
         }
-        
-        Configuration.openConnectionPool(conf);
     }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("linkId", "originalUrl", "url", "host"));
+        declarer.declare(new Fields("linkId, originalUrl", "url", "collection", "record", "expectedMimeType"));
     }
 
     @Override
     protected void populateBuffer() {
-    	
-    	LinkToBeCheckedResource linkToBeCheckedResource = Configuration.linkToBeCheckedResource; 
-        
+
+        if (maxNumResults != -1) {
+        	maxNumResults = 100;
+        	LOG.info("setting maxNumResults=100");
+        }
+
+        long timeStartQuery = System.currentTimeMillis();
+
         try {
-        	linkToBeCheckedResource.get(Optional.empty()).limit(maxNumResults).forEach(link -> buffer.add(
-            		new Values(
-            				link.getLinkId(), 
-            				link.getUrl(),
-            				link.getUrl(),
-            				link.getHost()
-        				)
-            		)
-        		);
- 
+        	Configuration
+        		.linkToBeCheckedResource
+        		.get(Optional.empty())
+        		.limit(maxNumResults)
+        		.filter(link -> !beingProcessed.containsKey(link.getUrl()))
+        		.forEach(link -> buffer.add(
+        				new Values(link.getLinkId(), link.getUrl(), link.getUrl()))
+    				);
+
+            long timeTaken = System.currentTimeMillis() - timeStartQuery;
+            queryTimes.addMeasurement(timeTaken);
+
+            LOG.info("{} SQL query returned {} URLs to check", logIdprefix, buffer.size());
+
         } 
         catch (SQLException e) {
-           logger.error("Exception while querying table", e);
+            LOG.error("Exception while querying LinkToBeCheckedRessource.get()", e);
         } 
     }
 
     @Override
     public void ack(Object msgId) {
-        logger.debug("{}  Ack for {}", logIdprefix, msgId);
+        LOG.debug("{}  Ack for {}", logIdprefix, msgId);
         super.ack(msgId);
     }
 
     @Override
     public void fail(Object msgId) {
-        logger.info("{}  Fail for {}", logIdprefix, msgId);
+        LOG.info("{}  Fail for {}", logIdprefix, msgId);
         super.fail(msgId);
     }
 
     @Override
     public void close() {
+        super.close();
+        
+        Configuration.setActive(null, false);
     }
 }

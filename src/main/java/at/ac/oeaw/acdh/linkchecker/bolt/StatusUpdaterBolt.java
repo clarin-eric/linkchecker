@@ -49,27 +49,19 @@ import java.util.Map;
 @SuppressWarnings("serial")
 public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
-    public final Logger logger = LoggerFactory.getLogger(getClass());
+    public final Logger LOG = LoggerFactory.getLogger(StatusUpdaterBolt.class);
 
     private MultiCountMetric eventCounter;
 
     private URLPartitioner partitioner;
-    private int maxNumBuckets = -1;
-
-    private int batchMaxSize = 1000;
-    private float batchMaxIdleMsec = 10000;
-
-    private int currentBatchSize = 0;
-
-    private long lastInsertBatchTime = -1;
+    
+    private long fetchIntervalInMs;
 
 
     //    private final Map<String, List<Tuple>> waitingAck = new HashMap<>();
     private final List<Tuple> waitingAck = new ArrayList<>();
 
-    public StatusUpdaterBolt(int maxNumBuckets) {
-        this.maxNumBuckets = maxNumBuckets;
-    }
+
 
     /**
      * Does not shard based on the total number of queues
@@ -86,14 +78,8 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         partitioner.configure(stormConf);
 
         this.eventCounter = context.registerMetric("counter", new MultiCountMetric(), 10);
-
-        batchMaxSize = ConfUtils.getInt(stormConf, Constants.SQL_UPDATE_BATCH_SIZE_PARAM_NAME, 1000);
-
-
-
-        //update urls table for nextfetchdate
-
-        //set the latestFetchdate if not set
+        
+        this.fetchIntervalInMs = ConfUtils.getLong(stormConf, Constants.defaultFetchIntervalParamName, 1440) *1000;
 
     }
 
@@ -109,7 +95,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         }
         
         CheckedLink checkedLink = new CheckedLink();
-        checkedLink.setLinkId((Long) t.getValue(0));
+        checkedLink.setLinkId(t.getLongByField("linkId"));
 
         String partitionKey = partitioner.getPartition(url, metadata);
 
@@ -135,7 +121,16 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         String method = methodBool == null ? "N/A" : methodBool.equalsIgnoreCase("true") ? "HEAD" : "GET";
         checkedLink.setMethod(method);
         
-        Configuration.checkedLinkResource.save(checkedLink);
+        try {
+        	Configuration.checkedLinkResource.save(checkedLink);
+        	Configuration.linkToBeCheckedResource.updateNextFetchDate(
+        			checkedLink.getLinkId(), 
+        			new Timestamp(System.currentTimeMillis() + this.fetchIntervalInMs)
+				);
+        }
+        catch(SQLException ex) {
+        	LOG.error("can't save checked link \n{}", checkedLink);
+        }
 
 
         // URL gets added to the cache in method ack

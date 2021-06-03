@@ -5,7 +5,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>at.ac.oeaw.acdh</groupId>
 	<artifactId>linkchecker</artifactId>
-	<version>2.1.0</version>
+	<version>2.1</version>
 	<packaging>jar</packaging>
 
 	<properties>
@@ -129,11 +129,11 @@
 			<artifactId>flux-core</artifactId>
 			<version>${storm.version}</version>
 		</dependency>
-		<dependency>
-			<groupId>com.digitalpebble.stormcrawler</groupId>
-			<artifactId>storm-crawler-tika</artifactId>
-			<version>${stormcrawler.version}</version>
-		</dependency>
+<dependency>
+    <groupId>com.fasterxml.jackson.core</groupId>
+    <artifactId>jackson-core</artifactId>
+    <version>2.12.3</version>
+</dependency>
 		<dependency>
 			<groupId>eu.clarin.cmdi</groupId>
 			<artifactId>rasa-api</artifactId>

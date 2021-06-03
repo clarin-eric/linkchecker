@@ -8,6 +8,7 @@ import org.apache.http.util.EntityUtils;
 import org.slf4j.LoggerFactory;
 
 import eu.clarin.cmdi.rasa.helpers.RasaFactory;
+import eu.clarin.cmdi.rasa.helpers.impl.ACDHRasaFactory;
 import eu.clarin.cmdi.rasa.linkResources.CheckedLinkResource;
 import eu.clarin.cmdi.rasa.linkResources.LinkToBeCheckedResource;
 
@@ -48,6 +49,7 @@ public class Configuration {
     private static String loginListContent;
 
     private static RasaFactory factory;
+    private static boolean isActive = false;
     public static LinkToBeCheckedResource linkToBeCheckedResource;
     public static CheckedLinkResource checkedLinkResource;
 
@@ -65,13 +67,27 @@ public class Configuration {
         
     }
     
-    public static void openConnectionPool(Map conf) {
-    	final Properties hikari = new Properties();
-
+    @SuppressWarnings("unchecked")
+	public static void setActive(Map conf, boolean active) {
+    	if(active) {
+        	final Properties props = new Properties();
+        	
+        	((Map<String,Object>) conf.get("HIKARI")).forEach((k,v) -> props.setProperty(k, String.valueOf(v)));
+        	
+        	RasaFactory factory = new ACDHRasaFactory(props);
+        	linkToBeCheckedResource = factory.getLinkToBeCheckedResource();
+        	checkedLinkResource = factory.getCheckedLinkResource();
+        	
+        	isActive = true;    		
+    	}
+    	else {
+    		factory.tearDown();
+        	isActive = false;
+    	}
     }
     
-    public static void closeConnectionPool() {
-    	factory.tearDown();
+    public static boolean isActive() {
+    	return isActive;
     }
 
     private static void fillLoginPageUrls() {

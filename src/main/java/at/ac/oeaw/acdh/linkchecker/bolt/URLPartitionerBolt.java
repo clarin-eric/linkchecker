@@ -49,7 +49,12 @@ import crawlercommons.domains.PaidLevelDomain;
  */
 public class URLPartitionerBolt extends BaseRichBolt {
 
-    private static final Logger LOG = LoggerFactory
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	private static final Logger LOG = LoggerFactory
             .getLogger(URLPartitionerBolt.class);
 
     private OutputCollector _collector;
@@ -62,7 +67,7 @@ public class URLPartitionerBolt extends BaseRichBolt {
 
     @Override
     public void execute(Tuple tuple) {
-    	Long linkId = tuple.getLongByField("linkId");
+    	String linkId = tuple.getStringByField("linkId");
         String url = tuple.getStringByField("url");
         String originalUrl = tuple.getStringByField("originalUrl");
         Metadata metadata = null;

@@ -1,7 +1,7 @@
 package at.ac.oeaw.acdh.linkchecker.exception;
 
 import at.ac.oeaw.acdh.linkchecker.bolt.FetcherBolt;
-import at.ac.oeaw.acdh.linkchecker.config.Category;
+import eu.clarin.cmdi.rasa.helpers.statusCodeMapper.Category;
 
 import org.apache.http.ConnectionClosedException;
 import org.apache.http.NoHttpResponseException;

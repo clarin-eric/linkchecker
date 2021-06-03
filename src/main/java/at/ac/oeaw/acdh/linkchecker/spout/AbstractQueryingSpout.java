@@ -20,7 +20,6 @@ package at.ac.oeaw.acdh.linkchecker.spout;
 
 import java.time.Instant;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -292,10 +291,4 @@ public abstract class AbstractQueryingSpout extends BaseRichSpout {
         beingProcessed.remove(msgId);
         eventCounter.scope("failed").incrBy(1);
     }
-
-    @Override
-    public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("originalUrl", "url", "collection", "record", "expectedMimeType"));
-    }
-
 }
