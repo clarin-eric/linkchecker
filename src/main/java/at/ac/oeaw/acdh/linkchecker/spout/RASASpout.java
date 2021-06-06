@@ -74,7 +74,7 @@ public class RASASpout extends AbstractQueryingSpout {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("linkId, originalUrl", "url", "collection", "record", "expectedMimeType"));
+        declarer.declare(new Fields("linkId", "originalUrl", "url"));
     }
 
     @Override

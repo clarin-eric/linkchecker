@@ -8,7 +8,7 @@ import org.apache.http.util.EntityUtils;
 import org.slf4j.LoggerFactory;
 
 import eu.clarin.cmdi.rasa.helpers.RasaFactory;
-import eu.clarin.cmdi.rasa.helpers.impl.ACDHRasaFactory;
+import eu.clarin.cmdi.rasa.helpers.impl.RasaFactoryBuilderImpl;
 import eu.clarin.cmdi.rasa.linkResources.CheckedLinkResource;
 import eu.clarin.cmdi.rasa.linkResources.LinkToBeCheckedResource;
 
@@ -68,19 +68,19 @@ public class Configuration {
     }
     
     @SuppressWarnings("unchecked")
-	public static void setActive(Map conf, boolean active) {
+	public static synchronized void setActive(Map conf, boolean active) {
     	if(active) {
         	final Properties props = new Properties();
         	
         	((Map<String,Object>) conf.get("HIKARI")).forEach((k,v) -> props.setProperty(k, String.valueOf(v)));
         	
-        	RasaFactory factory = new ACDHRasaFactory(props);
+        	RasaFactory factory = new RasaFactoryBuilderImpl().getRasaFactory(props);
         	linkToBeCheckedResource = factory.getLinkToBeCheckedResource();
         	checkedLinkResource = factory.getCheckedLinkResource();
         	
         	isActive = true;    		
     	}
-    	else {
+    	else if(isActive){
     		factory.tearDown();
         	isActive = false;
     	}
