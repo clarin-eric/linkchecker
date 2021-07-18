@@ -23,6 +23,7 @@ import com.digitalpebble.stormcrawler.util.ConfUtils;
 
 import at.ac.oeaw.acdh.linkchecker.config.Configuration;
 import at.ac.oeaw.acdh.linkchecker.config.Constants;
+import eu.clarin.cmdi.rasa.filters.LinkToBeCheckedFilter;
 
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
@@ -34,7 +35,6 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.*;
 import java.util.Map;
-import java.util.Optional;
 
 @SuppressWarnings("serial")
 public class RASASpout extends AbstractQueryingSpout {
@@ -56,6 +56,7 @@ public class RASASpout extends AbstractQueryingSpout {
 
         super.open(conf, context, collector);
         
+        Configuration.init(conf);
         Configuration.setActive(conf, true);
 
 
@@ -74,13 +75,13 @@ public class RASASpout extends AbstractQueryingSpout {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("linkId", "originalUrl", "url"));
+        declarer.declare(new Fields("originalUrl", "url", "urlId"));
     }
 
     @Override
     protected void populateBuffer() {
 
-        if (maxNumResults != -1) {
+        if (maxNumResults == -1) {
         	maxNumResults = 100;
         	LOG.info("setting maxNumResults=100");
         }
@@ -88,14 +89,16 @@ public class RASASpout extends AbstractQueryingSpout {
         long timeStartQuery = System.currentTimeMillis();
 
         try {
+        	LinkToBeCheckedFilter filter = Configuration.linkToBeCheckedResource.getLinkToBeCheckedFilter().setIsActive(true).setDoOrder(true);
+        	
         	Configuration
         		.linkToBeCheckedResource
-        		.get(Optional.empty())
+        		.get(filter)
         		.limit(maxNumResults)
         		.filter(link -> !beingProcessed.containsKey(link.getUrl()))
         		.forEach(link -> buffer.add(
-        				new Values(link.getLinkId(), link.getUrl(), link.getUrl()))
-    				);
+        				new Values(link.getUrl(), link.getUrl(), link.getUrlId())
+    				));
 
             long timeTaken = System.currentTimeMillis() - timeStartQuery;
             queryTimes.addMeasurement(timeTaken);

@@ -195,7 +195,7 @@ public abstract class AbstractStatusUpdaterBolt extends BaseRichBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         declarer.declareStream(Constants.DELETION_STREAM_NAME, new Fields(
-                "url", "metadata"));
+                "urlId", "url", "metadata"));
     }
 }
 

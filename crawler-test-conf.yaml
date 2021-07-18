@@ -7,10 +7,10 @@
 config:
   topology.workers: 1
   topology.message.timeout.secs: 3600 # 1hour
-  topology.max.spout.pending: 1000
-  topology.debug: false
+  topology.max.spout.pending: 100
+  topology.debug: true
 
-  fetcher.threads.number: 50
+  fetcher.threads.number: 1
 
   # override the JVM parameters for the workers
   topology.worker.childopts: "-Xmx2g -Djava.net.preferIPv4Stack=true"
@@ -36,10 +36,11 @@ config:
 
   http.agent.name: "CLARIN Linkchecker: https://www.clarin.eu/linkchecker"
   http.agent.version: "2.1"
-  http.agent.description: "built with StormCrawler Archetype 2.1"
+  http.agent.description: "built with StormCrawler Archetype 1.14"
   http.agent.url: "https://www.clarin.eu/linkchecker"
-  http.agent.email: "acdh-tech@oeaw.ac.at"
+  http.agent.email: "linkchecker@clarin.eu"
   http.redirectLimit: 5
+
 
   #default 1 already
   #fetcher.server.delay: 1
@@ -104,15 +105,15 @@ config:
       parallelism.hint: 1
 
   #######
-  # SQL #
+  # HIKARI connection pool #
   #######
 
-  #your mysql parameters go here
+  #your hikari properties go here
   HIKARI:
     driverClassName: com.mysql.cj.jdbc.Driver
-    jdbcUrl: 
-    username: 
-    password: 
+    jdbcUrl: "jdbc:mysql://localhost:3306/linkchecker_test"
+    username: testUser
+    password: testPassword
     maximumPoolSize: 10
 
   sql.spout.max.results: 1000

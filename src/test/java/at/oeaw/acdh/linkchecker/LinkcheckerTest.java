@@ -12,16 +12,14 @@ public class LinkcheckerTest {
 		
 		TopologyDef def = FluxParser.parseFile("crawler.flux", false, true, null, false);
 		
-		
 		  try (LocalCluster cluster = new LocalCluster()) {
-			  cluster.submitTopology(def.getName(), def.getConfig(), FluxBuilder.buildTopology(new ExecutionContext(def, FluxBuilder.buildConfig(def))));
-			  Thread.sleep(10000);
+			  cluster.submitTopology(def.getName(), def.getConfig(),
+			  FluxBuilder.buildTopology(new ExecutionContext(def,
+			  FluxBuilder.buildConfig(def)))); 
+			  Thread.sleep(100000);
 			  
-			  cluster.deactivate(def.getName());
-			  cluster.close();
+			  cluster.killTopology(def.getName());		  
+			  cluster.close(); 
 		  }
-		 
-		 
 	}
-
 }

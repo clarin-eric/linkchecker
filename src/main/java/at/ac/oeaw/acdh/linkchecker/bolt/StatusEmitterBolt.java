@@ -44,10 +44,10 @@ public abstract class StatusEmitterBolt extends BaseRichBolt {
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         declarer.declareStream(
                 Constants.StatusStreamName,
-                new Fields("linkId, originalUrl", "url", "metadata"));
+                new Fields("originalUrl", "url", "metadata", "urlId"));
         declarer.declareStream(
                 Constants.RedirectStreamName,
-                new Fields("linkId, originalUrl", "url", "metadata"));
+                new Fields("originalUrl", "url", "metadata", "urlId"));
     }
 
 }

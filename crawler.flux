@@ -6,7 +6,7 @@ includes:
       override: false
 
     - resource: false
-      file: "./crawler-conf.yaml"
+      file: "./crawler-test-conf.yaml"
       override: true
 
 spouts:
@@ -20,7 +20,7 @@ bolts:
     parallelism: 1
   - id: "fetcher"
     className: "at.ac.oeaw.acdh.linkchecker.bolt.FetcherBolt"
-    parallelism: 10
+    parallelism: 1
   - id: "status"
     className: "at.ac.oeaw.acdh.linkchecker.bolt.StatusUpdaterBolt"
     parallelism: 1

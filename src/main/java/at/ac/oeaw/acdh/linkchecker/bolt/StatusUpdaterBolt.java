@@ -85,6 +85,10 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
     @Override
     public synchronized void store(String url, Metadata metadata, Tuple t) throws Exception {
+    	
+    	LOG.debug("url: {}", url);
+    	LOG.debug("metadata: {}", metadata);
+    	LOG.debug("tuple: {}", t);
 
         StringBuilder mdAsString = new StringBuilder();
         for (String mdKey : metadata.keySet()) {
@@ -95,7 +99,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         }
         
         CheckedLink checkedLink = new CheckedLink();
-        checkedLink.setLinkId(t.getLongByField("linkId"));
+        checkedLink.setUrlId(t.getLongByField("urlId"));
 
         String partitionKey = partitioner.getPartition(url, metadata);
 
@@ -124,7 +128,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         try {
         	Configuration.checkedLinkResource.save(checkedLink);
         	Configuration.linkToBeCheckedResource.updateNextFetchDate(
-        			checkedLink.getLinkId(), 
+        			checkedLink.getUrlId(), 
         			new Timestamp(System.currentTimeMillis() + this.fetchIntervalInMs)
 				);
         }

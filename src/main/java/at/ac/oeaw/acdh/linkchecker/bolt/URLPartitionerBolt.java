@@ -67,9 +67,10 @@ public class URLPartitionerBolt extends BaseRichBolt {
 
     @Override
     public void execute(Tuple tuple) {
-    	Long linkId = tuple.getLongByField("linkId");
+    	
+    	Long urlId = tuple.getLongByField("urlId");
+    	String originalUrl = tuple.getStringByField("originalUrl");
         String url = tuple.getStringByField("url");
-        String originalUrl = tuple.getStringByField("originalUrl");
         Metadata metadata = null;
 
         Integer redirectCount;
@@ -150,13 +151,13 @@ public class URLPartitionerBolt extends BaseRichBolt {
 
         LOG.debug("Partition Key for: {} > {}", url, partitionKey);
 
-        _collector.emit(tuple, new Values(linkId, originalUrl, url, redirectCount, partitionKey, metadata));
+        _collector.emit(tuple, new Values(originalUrl, url, redirectCount, partitionKey, metadata, urlId));
         _collector.ack(tuple);
     }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("linkId", "originalUrl", "url", "redirectCount", "key", "metadata"));
+        declarer.declare(new Fields("originalUrl", "url", "redirectCount", "key", "metadata", "urlId"));
     }
 
     @Override
