@@ -19,16 +19,13 @@
 package at.ac.oeaw.acdh.linkchecker.bolt;
 
 import com.digitalpebble.stormcrawler.Metadata;
-import com.digitalpebble.stormcrawler.util.ConfUtils;
-import com.digitalpebble.stormcrawler.util.URLPartitioner;
+import com.digitalpebble.stormcrawler.persistence.AbstractStatusUpdaterBolt;
+import com.digitalpebble.stormcrawler.persistence.Status;
 
 import at.ac.oeaw.acdh.linkchecker.config.Configuration;
-import at.ac.oeaw.acdh.linkchecker.config.Constants;
 import eu.clarin.cmdi.rasa.DAO.CheckedLink;
 
 import eu.clarin.cmdi.rasa.helpers.statusCodeMapper.Category;
-
-import org.apache.storm.metric.api.MultiCountMetric;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.tuple.Tuple;
@@ -36,9 +33,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Date;
 import java.util.Map;
+import java.util.Optional;
 
 
 /**
@@ -51,40 +48,21 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
     public final Logger LOG = LoggerFactory.getLogger(StatusUpdaterBolt.class);
 
-    private MultiCountMetric eventCounter;
-
-    private URLPartitioner partitioner;
-    
-    private long fetchIntervalInMs;
-
-
-    //    private final Map<String, List<Tuple>> waitingAck = new HashMap<>();
-    private final List<Tuple> waitingAck = new ArrayList<>();
-
-
-
     /**
      * Does not shard based on the total number of queues
      **/
     public StatusUpdaterBolt() {
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @SuppressWarnings({"rawtypes"})
     @Override
     public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
         super.prepare(stormConf, context, collector);
-
-        partitioner = new URLPartitioner();
-        partitioner.configure(stormConf);
-
-        this.eventCounter = context.registerMetric("counter", new MultiCountMetric(), 10);
-        
-        this.fetchIntervalInMs = ConfUtils.getLong(stormConf, Constants.defaultFetchIntervalParamName, 1440) *1000;
-
     }
 
     @Override
-    public synchronized void store(String url, Metadata metadata, Tuple t) throws Exception {
+    public synchronized void store(String url, Status status,
+          Metadata metadata, Optional<Date> nextFetch, Tuple t) throws Exception {
     	
     	LOG.debug("url: {}", url);
     	LOG.debug("metadata: {}", metadata);
@@ -99,11 +77,12 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         }
         
         CheckedLink checkedLink = new CheckedLink();
-        checkedLink.setUrlId(t.getLongByField("urlId"));
-
-        String partitionKey = partitioner.getPartition(url, metadata);
+ 
 
         Metadata md = (Metadata) t.getValueByField("metadata");
+        
+        checkedLink.setUrlId(Long.valueOf(md.getFirstValue("urlId")));
+        
         String fetchStatusCode = md.getFirstValue("fetch.statusCode");
         checkedLink.setStatus(fetchStatusCode == null ? null : fetchStatusCode.equalsIgnoreCase("null") ? null : Integer.parseInt(fetchStatusCode));
         checkedLink.setContentType(md.getFirstValue("content-type"));
@@ -127,20 +106,12 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         
         try {
         	Configuration.checkedLinkResource.save(checkedLink);
-        	Configuration.linkToBeCheckedResource.updateNextFetchDate(
-        			checkedLink.getUrlId(), 
-        			new Timestamp(System.currentTimeMillis() + this.fetchIntervalInMs)
-				);
+        	_collector.ack(t);
         }
         catch(SQLException ex) {
         	LOG.error("can't save checked link \n{}", checkedLink);
+        	_collector.fail(t);
         }
-
-
-        // URL gets added to the cache in method ack
-        // once this method has returned
-//        waitingAck.put(url, new LinkedList<Tuple>());
-        waitingAck.add(t);
     }
 
 

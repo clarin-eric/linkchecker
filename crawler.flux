@@ -16,7 +16,7 @@ spouts:
 
 bolts:
   - id: "partitioner"
-    className: "at.ac.oeaw.acdh.linkchecker.bolt.URLPartitionerBolt"
+    className: "com.digitalpebble.stormcrawler.bolt.URLPartitionerBolt"
     parallelism: 1
   - id: "fetcher"
     className: "at.ac.oeaw.acdh.linkchecker.bolt.FetcherBolt"
@@ -42,12 +42,10 @@ streams:
     grouping:
       type: FIELDS
       args: ["url"]
-      streamId: "status"
-
+      streamId: "status"  
+      
   - from: "fetcher"
     to: "partitioner"
     grouping:
       type: SHUFFLE
       streamId: "redirect"
-
-

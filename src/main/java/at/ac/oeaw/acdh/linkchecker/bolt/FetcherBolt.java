@@ -23,9 +23,10 @@ import at.ac.oeaw.acdh.linkchecker.exception.DeniedByRobotsException;
 import at.ac.oeaw.acdh.linkchecker.exception.LoginPageException;
 
 import com.digitalpebble.stormcrawler.Metadata;
+import com.digitalpebble.stormcrawler.bolt.StatusEmitterBolt;
+import com.digitalpebble.stormcrawler.persistence.Status;
 import com.digitalpebble.stormcrawler.protocol.*;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
-import com.digitalpebble.stormcrawler.util.PerSecondReducer;
 import crawlercommons.domains.PaidLevelDomain;
 import crawlercommons.robots.BaseRobotRules;
 import eu.clarin.cmdi.rasa.helpers.statusCodeMapper.Category;
@@ -33,9 +34,6 @@ import eu.clarin.cmdi.rasa.helpers.statusCodeMapper.Category;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.client.RedirectException;
 import org.apache.storm.Config;
-import org.apache.storm.metric.api.MeanReducer;
-import org.apache.storm.metric.api.MultiCountMetric;
-import org.apache.storm.metric.api.MultiReducedMetric;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -70,8 +68,6 @@ public class FetcherBolt extends StatusEmitterBolt {
 
    private FetchItemQueues fetchQueues;
 
-   private MultiCountMetric eventCounter;
-   private MultiReducedMetric averagedMetrics;
 
    private ProtocolFactory protocolFactory;
 
@@ -80,8 +76,6 @@ public class FetcherBolt extends StatusEmitterBolt {
    private int taskID = -1;
 
    boolean sitemapsAutoDiscovery = false;
-
-   private MultiReducedMetric perSecMetrics;
 
    private File debugfiletrigger;
 
@@ -370,14 +364,9 @@ public class FetcherBolt extends StatusEmitterBolt {
 
       @Override
       public void run() {
-         try {
-            Thread.sleep(5000);
-         } catch (InterruptedException e1) {
-            // TODO Auto-generated catch block
-            e1.printStackTrace();
-         }
+
          LOG.debug("Configuration.isActive(): {}", Configuration.isActive());
-         while (Configuration.isActive()) {
+         while (true) {
             FetchItem fit = fetchQueues.getFetchItem();
             if (fit == null) {
                LOG.debug("{} spin-waiting ...", getName());
@@ -412,11 +401,11 @@ public class FetcherBolt extends StatusEmitterBolt {
             String message;
             String category;
 
-            String originalUrl = fit.t.getStringByField("originalUrl");
+            String originalUrl = metadata.getFirstValue("originalUrl");
 
-            Integer redirectCount = fit.t.getIntegerByField("redirectCount");
+            String redirectCountStr = metadata.getFirstValue("redirectCount");
 
-            Long urlId = fit.t.getLongByField("urlId");
+            int redirectCount = (redirectCountStr != null ? Integer.valueOf(redirectCountStr) : 0);
 
             String url = fit.url;
 
@@ -424,12 +413,7 @@ public class FetcherBolt extends StatusEmitterBolt {
                int statusCode = 0;
                ProtocolResponse response = null;
 
-               long start = System.currentTimeMillis();
-               long timeInQueues = start - fit.creationTime;
 
-               if (redirectCount == null) {
-                  redirectCount = 0;
-               }
 
                URL u = new URL(url); // here it checks for malformed url and throws an exception, which is
                // handled below
@@ -440,11 +424,6 @@ public class FetcherBolt extends StatusEmitterBolt {
                   throw new RuntimeException("No protocol implementation found for " + url);
                }
                BaseRobotRules rules = protocol.getRobotRules(url);
-               if (rules instanceof RobotRules && ((RobotRules) rules).getContentLengthFetched().length == 0) {
-                  eventCounter.scope("robots.fromCache").incrBy(1);
-               } else {
-                  eventCounter.scope("robots.fetched").incrBy(1);
-               }
 
                if (!rules.isAllowed(url)) {
                   LOG.info("Denied by robots.txt: {}", url);
@@ -505,6 +484,9 @@ public class FetcherBolt extends StatusEmitterBolt {
 
                // first try HEAD
                metadata.setValue("http.method.head", "true");
+               
+               long start = System.currentTimeMillis();
+
                response = protocol.getProtocolOutput(url, metadata);
                statusCode = response.getStatusCode();
 
@@ -512,11 +494,13 @@ public class FetcherBolt extends StatusEmitterBolt {
                // GET is the only reliable method because some servers implement HEAD wrong
                // https://stackoverflow.com/questions/7351249/reliability-of-using-head-request-to-check-web-page-status
                if (!Configuration.redirectStatusCodes.contains(statusCode) && statusCode != 200 && statusCode != 304) {
+                  start = System.currentTimeMillis();
                   metadata.setValue("http.method.head", "false");
                   response = protocol.getProtocolOutput(url, metadata);
                   statusCode = response.getStatusCode();
                }
-
+               long timeInQueues = start - fit.creationTime;
+               
                boolean redirect = false;
                String redirectUrl = null;
                if (Configuration.redirectStatusCodes.contains(statusCode)) {
@@ -540,23 +524,13 @@ public class FetcherBolt extends StatusEmitterBolt {
                   byteLength = null;
                }
 
-               averagedMetrics.scope("fetch_time").update(timeFetching);
-               averagedMetrics.scope("time_in_queues").update(timeInQueues);
-               averagedMetrics.scope("bytes_fetched").update(byteLength == null ? 0 : byteLength);
-               perSecMetrics.scope("bytes_fetched_perSec").update(byteLength == null ? 0 : byteLength);
-               perSecMetrics.scope("fetched_perSec").update(1);
-               eventCounter.scope("fetched").incrBy(1);
-               eventCounter.scope("bytes_fetched").incrBy(byteLength == null ? 0 : byteLength);
-
                if (Configuration.okStatusCodes.contains(statusCode)) {
                   message = Category.Ok.name();
                   category = message;
-               } 
-               else if (Configuration.undeterminedStatusCodes.contains(statusCode)) {
+               } else if (Configuration.undeterminedStatusCodes.contains(statusCode)) {
                   message = "Undetermined, Status code: " + statusCode;
                   category = Category.Undetermined.name();
-               } 
-               else {
+               } else {
                   message = "Broken, Status code: " + statusCode;
                   category = Category.Broken.name();
                }
@@ -597,7 +571,7 @@ public class FetcherBolt extends StatusEmitterBolt {
                   streamName = Constants.StatusStreamName;
                }
 
-               final Values tupleToSend = new Values(originalUrl, url, mergedMD, urlId);
+               final Values tupleToSend = new Values(url, mergedMD, Status.DISCOVERED);
 
                collector.emit(streamName, fit.t, tupleToSend);
 
@@ -616,11 +590,10 @@ public class FetcherBolt extends StatusEmitterBolt {
 
                metadata.setValue("fetch.message", e.getMessage());
 
-               final Values tupleToSend = new Values(originalUrl, url, metadata, urlId);
+               final Values tupleToSend = new Values(url, metadata, Status.DISCOVERED);
 
                collector.emit(Constants.StatusStreamName, fit.t, tupleToSend);
 
-               eventCounter.scope("exception").incrBy(1);
             } finally {
                fetchQueues.finishFetchItem(fit, asap);
                activeThreads.decrementAndGet(); // count threads
@@ -662,34 +635,6 @@ public class FetcherBolt extends StatusEmitterBolt {
       long start = System.currentTimeMillis();
       LOG.info("[Fetcher #{}] : starting at {}", taskID, sdf.format(start));
 
-      int metricsTimeBucketSecs = ConfUtils.getInt(conf, "fetcher.metrics.time.bucket.secs", 10);
-
-      // Register a "MultiCountMetric" to count different events in this bolt
-      // Storm will emit the counts every n seconds to a special bolt via a
-      // system stream
-      // The data can be accessed by registering a "MetricConsumer" in the
-      // topology
-      this.eventCounter = context.registerMetric("fetcher_counter", new MultiCountMetric(), metricsTimeBucketSecs);
-
-      // create gauges
-      context.registerMetric("activethreads", () -> {
-         return activeThreads.get();
-      }, metricsTimeBucketSecs);
-
-      context.registerMetric("in_queues", () -> {
-         return fetchQueues.inQueues.get();
-      }, metricsTimeBucketSecs);
-
-      context.registerMetric("num_queues", () -> {
-         return fetchQueues.queues.size();
-      }, metricsTimeBucketSecs);
-
-      this.averagedMetrics = context.registerMetric("fetcher_average_perdoc", new MultiReducedMetric(new MeanReducer()),
-            metricsTimeBucketSecs);
-
-      this.perSecMetrics = context.registerMetric("fetcher_average_persec",
-            new MultiReducedMetric(new PerSecondReducer()), metricsTimeBucketSecs);
-
       protocolFactory = new ProtocolFactory(conf);
 
       this.fetchQueues = new FetchItemQueues(conf);
@@ -723,84 +668,71 @@ public class FetcherBolt extends StatusEmitterBolt {
    }
 
    @Override
-   public void declareOutputFields(OutputFieldsDeclarer declarer) {
-      super.declareOutputFields(declarer);
-      declarer.declare(new Fields("originalUrl", "url", "metadata", "urlId"));
-   }
-
-   @Override
    public void cleanup() {
       protocolFactory.cleanup();
    }
 
-  @Override
-  public void execute(Tuple input) {
-    LOG.debug("tuple: {}", input);  
-    if (this.maxNumberURLsInQueues != -1) {
-      while (this.activeThreads.get() + this.fetchQueues.inQueues.get() >= maxNumberURLsInQueues) {
-        try {
-          Thread.sleep(500);
-        } catch (InterruptedException e) {
-          LOG.error("Interrupted exception caught in execute method");
-          Thread.currentThread().interrupt();
-        }
-        LOG.debug(
-            "[Fetcher #{}] Threads : {}\tqueues : {}\tin_queues : {}",
-            taskID,
-            this.activeThreads.get(),
-            this.fetchQueues.queues.size(),
-            this.fetchQueues.inQueues.get());
-      }
-    }
-
-    // detect whether there is a file indicating that we should
-    // dump the content of the queues to the log
-    if (debugfiletrigger != null && debugfiletrigger.exists()) {
-      LOG.info("Found trigger file {}", debugfiletrigger);
-      logQueuesContent();
-      debugfiletrigger.delete();
-    }
-
-    Long urlId = input.getLongByField("urlId");
-    String originalUrl = input.getStringByField("originalUrl");
-    final String url = input.getStringByField("url");
-
-    if (StringUtils.isBlank(url)) {
-      LOG.info("[Fetcher #{}] Missing value for field url in tuple {}", taskID, input);
-      // ignore silently
-      collector.ack(input);
-      return;
-    }
-
-    URL u;
-
-    try {
-      u = new URL(url);
-    } catch (MalformedURLException e) {
-
-      Metadata metadata = (Metadata) input.getValueByField("metadata");
-      if (metadata == null) {
-        metadata = new Metadata();
+   @Override
+   public void execute(Tuple input) {
+      LOG.debug("tuple: {}", input);
+      if (this.maxNumberURLsInQueues != -1) {
+         while (this.activeThreads.get() + this.fetchQueues.inQueues.get() >= maxNumberURLsInQueues) {
+            try {
+               Thread.sleep(500);
+            } catch (InterruptedException e) {
+               LOG.error("Interrupted exception caught in execute method");
+               Thread.currentThread().interrupt();
+            }
+            LOG.debug("[Fetcher #{}] Threads : {}\tqueues : {}\tin_queues : {}", taskID, this.activeThreads.get(),
+                  this.fetchQueues.queues.size(), this.fetchQueues.inQueues.get());
+         }
       }
 
-      metadata.setValue(
-          "fetch.category", CategoryException.getCategoryFromException(e, url).name());
+      // detect whether there is a file indicating that we should
+      // dump the content of the queues to the log
+      if (debugfiletrigger != null && debugfiletrigger.exists()) {
+         LOG.info("Found trigger file {}", debugfiletrigger);
+         logQueuesContent();
+         debugfiletrigger.delete();
+      }
 
-      metadata.setValue("fetch.message", e.getMessage());
+      final String url = input.getStringByField("url");
 
-      final Values tupleToSend = new Values(originalUrl, url, metadata, urlId);
+      if (StringUtils.isBlank(url)) {
+         LOG.info("[Fetcher #{}] Missing value for field url in tuple {}", taskID, input);
+         // ignore silently
+         collector.ack(input);
+         return;
+      }
 
-      collector.emit(Constants.StatusStreamName, input, tupleToSend);
+      URL u;
 
-      collector.ack(input);
-      return;
-    }
+      try {
+         u = new URL(url);
+      } catch (MalformedURLException e) {
 
-    boolean added = fetchQueues.addFetchItem(u, url, input);
-    if (!added) {
-      collector.fail(input);
-    }
-  }
+         Metadata metadata = (Metadata) input.getValueByField("metadata");
+         if (metadata == null) {
+            metadata = new Metadata();
+         }
+
+         metadata.setValue("fetch.category", CategoryException.getCategoryFromException(e, url).name());
+
+         metadata.setValue("fetch.message", e.getMessage());
+
+         final Values tupleToSend = new Values(url, metadata, Status.DISCOVERED);
+
+         collector.emit(Constants.StatusStreamName, input, tupleToSend);
+
+         collector.ack(input);
+         return;
+      }
+
+      boolean added = fetchQueues.addFetchItem(u, url, input);
+      if (!added) {
+         collector.fail(input);
+      }
+   }
 
    private String convertRelativeToAbsolute(String url, String locationHeader)
          throws URISyntaxException, MalformedURLException {
@@ -852,5 +784,14 @@ public class FetcherBolt extends StatusEmitterBolt {
          }
          LOG.info("URLs being fetched {}", sb2.toString());
       }
+   }
+   @Override
+   public void declareOutputFields(OutputFieldsDeclarer declarer) {
+       declarer.declareStream(
+               Constants.StatusStreamName,
+               new Fields("url", "metadata", "status"));
+       declarer.declareStream(
+               Constants.RedirectStreamName,
+               new Fields("originalUrl", "url", "status"));
    }
 }

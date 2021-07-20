@@ -33,17 +33,23 @@ config:
     - error.source
     - isSitemap
     - isFeed
+    - urlId
+    - redirectCount
 
   http.agent.name: "CLARIN Linkchecker: https://www.clarin.eu/linkchecker"
   http.agent.version: "2.1"
-  http.agent.description: "built with StormCrawler Archetype 1.14"
+  http.agent.description: "built with StormCrawler Archetype 2.1"
   http.agent.url: "https://www.clarin.eu/linkchecker"
   http.agent.email: "linkchecker@clarin.eu"
   http.redirectLimit: 5
 
 
-  #default 1 already
-  #fetcher.server.delay: 1
+  # Defines delay between crawls in the same queue
+  fetcher.server.delay: 2
+  # Defines the delay between crawls in the same queue if a queue has > 1 thread (fetcher.server.delay is use otherwise)
+  fetcher.server.min.delay: 2
+  # Defines the behavior of fetcher when the crawl-delay in the robots.txt is smaller than the value configured in fetcher.server.delay. 
+  # If false the shorter crawl-delay from the robots.txt is used. If true the longer configured delay is forced.
   fetcher.server.delay.force: true
 
   # The maximum number of bytes for returned HTTP response bodies.
