@@ -100,7 +100,7 @@ public class RASASpout extends AbstractQueryingSpout {
             long timeTaken = System.currentTimeMillis() - timeStartQuery;
             queryTimes.addMeasurement(timeTaken);
 
-            LOG.info("{} SQL query returned {} hits in {} msec", logIdprefix, maxNumResults, timeTaken);
+            LOG.info("{} SQL query returned {} hits, distributed on {} queues in {} msec", logIdprefix, buffer.size(), buffer.numQueues(), timeTaken);
 
         } 
         catch (SQLException e) {
@@ -123,7 +123,5 @@ public class RASASpout extends AbstractQueryingSpout {
     @Override
     public void close() {
        super.close();
-       
-       Configuration.setActive(null, false);
     }
 }

@@ -6,7 +6,7 @@
         </Console>
     </Appenders>
     <Loggers>
-        <Logger name="at.ac.oeaw.acdh.linkchecker.bolt.StatusUpdaterBolt" level="debug">
+        <Logger name="at.ac.oeaw.acdh.linkchecker.spout.RASASpout" level="debug">
             <AppenderRef ref="STDOUT"/>
         </Logger>
         <Root level="error">

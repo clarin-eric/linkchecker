@@ -563,15 +563,19 @@ public class FetcherBolt extends StatusEmitterBolt {
 
                // if redirect, go back to partitioner bolt, if not pass it to status updater
                // bolt
+               Values tupleToSend;
+               
                String streamName;
                if (redirect) {
                   streamName = Constants.RedirectStreamName;
                   url = redirectUrl;
+                  tupleToSend = new Values(url, mergedMD);
                } else {
                   streamName = Constants.StatusStreamName;
+                  tupleToSend = new Values(url, mergedMD, Status.DISCOVERED);
                }
 
-               final Values tupleToSend = new Values(url, mergedMD, Status.DISCOVERED);
+
 
                collector.emit(streamName, fit.t, tupleToSend);
 
@@ -792,6 +796,6 @@ public class FetcherBolt extends StatusEmitterBolt {
                new Fields("url", "metadata", "status"));
        declarer.declareStream(
                Constants.RedirectStreamName,
-               new Fields("originalUrl", "url", "status"));
+               new Fields("url", "metadata"));
    }
 }

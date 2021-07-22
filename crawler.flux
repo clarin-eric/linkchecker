@@ -6,7 +6,7 @@ includes:
       override: false
 
     - resource: false
-      file: "./crawler-test-conf.yaml"
+      file: "./crawler-conf.yaml"
       override: true
 
 spouts:
@@ -20,7 +20,7 @@ bolts:
     parallelism: 1
   - id: "fetcher"
     className: "at.ac.oeaw.acdh.linkchecker.bolt.FetcherBolt"
-    parallelism: 1
+    parallelism: 30
   - id: "status"
     className: "at.ac.oeaw.acdh.linkchecker.bolt.StatusUpdaterBolt"
     parallelism: 1
@@ -30,20 +30,17 @@ streams:
     to: "partitioner"
     grouping:
       type: SHUFFLE
-
   - from: "partitioner"
     to: "fetcher"
     grouping:
       type: FIELDS
       args: ["key"]
-
   - from: "fetcher"
     to: "status"
     grouping:
       type: FIELDS
       args: ["url"]
-      streamId: "status"  
-      
+      streamId: "status"        
   - from: "fetcher"
     to: "partitioner"
     grouping:

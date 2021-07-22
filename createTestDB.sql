@@ -33,7 +33,6 @@ CREATE TABLE `context` (
 CREATE TABLE `url` (
   `id` int NOT NULL AUTO_INCREMENT,
   `url` varchar(1024) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  `nextFetchDate` datetime NOT NULL DEFAULT NOW(),
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_url` (`url`)
 );
