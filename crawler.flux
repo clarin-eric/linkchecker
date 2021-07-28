@@ -6,7 +6,7 @@ includes:
       override: false
 
     - resource: false
-      file: "./crawler-conf.yaml"
+      file: "${ENV-LINKCHECKER_DIRECTORY}/crawler-conf.yaml"
       override: true
 
 spouts:

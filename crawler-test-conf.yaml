@@ -9,6 +9,8 @@ config:
   topology.message.timeout.secs: 3600 # 1hour
   topology.max.spout.pending: 100
   topology.debug: true
+  
+  urlbuffer.class: "at.ac.oeaw.acdh.linkchecker.spout.QueueLimitURLBuffer"
 
   fetcher.threads.number: 1
 
@@ -41,7 +43,8 @@ config:
   http.agent.description: "built with StormCrawler Archetype 2.1"
   http.agent.url: "https://www.clarin.eu/linkchecker"
   http.agent.email: "linkchecker@clarin.eu"
-  http.redirectLimit: 5
+  http.redirectLimit: 5  
+  http.timeout: 5000
 
 
   # Defines delay between crawls in the same queue
@@ -120,9 +123,10 @@ config:
     jdbcUrl: "jdbc:mysql://localhost:3306/linkchecker_test"
     username: testUser
     password: testPassword
-    maximumPoolSize: 10
+    maximumPoolSize: 5
+    minimumIdle: 0
 
-  sql.spout.max.results: 1000
+  sql.spout.max.results: 250000
 
   # time in secs for which the URLs will be considered for fetching after a ack of fail
   spout.ttl.purgatory: 300
