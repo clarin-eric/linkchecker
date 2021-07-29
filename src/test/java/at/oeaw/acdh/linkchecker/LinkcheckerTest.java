@@ -10,7 +10,7 @@ public class LinkcheckerTest {
 
 	public static void main(final String[] args) throws Exception {
 		
-		TopologyDef def = FluxParser.parseFile("crawler.flux", false, true, null, false);
+		TopologyDef def = FluxParser.parseFile("crawler-test.flux", false, true, null, false);
 		
 		  try (LocalCluster cluster = new LocalCluster()) {
 			  cluster.submitTopology(def.getName(), def.getConfig(),

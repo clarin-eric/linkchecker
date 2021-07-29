@@ -17,10 +17,15 @@
     </Appenders>
     <Loggers>
         <Logger name="at.ac.oeaw.acdh.linkchecker.spout.RASASpout" level="debug">
-            <AppenderRef ref="FILE"/>
+            <AppenderRef ref="STDOUT"/>
         </Logger>
+       <!--  
+        <Logger name="eu.clarin.cmdi.rasa.linkResources.impl.LinkToBeCheckedResourceImpl" level="debug">
+            <AppenderRef ref="STDOUT"/>
+        </Logger> 
+         -->       
         <Root level="error">
-            <Appender-Ref ref="FILE"/>
+            <Appender-Ref ref="STDOUT"/>
         </Root>
     </Loggers>
 </Configuration>
