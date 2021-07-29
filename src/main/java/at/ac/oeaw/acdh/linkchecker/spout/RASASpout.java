@@ -40,6 +40,9 @@ public class RASASpout extends AbstractQueryingSpout {
     public static final Logger LOG = LoggerFactory.getLogger(RASASpout.class);
 
     private static final Scheme SCHEME = new StringTabScheme();
+    
+    // flag necessary to prevent an accumulation of time intensive queries 
+    private boolean activeQuery = false;
 
 
     /** Used to distinguish between instances in the logs **/
@@ -76,7 +79,13 @@ public class RASASpout extends AbstractQueryingSpout {
 
     @Override
     protected void populateBuffer() {
-
+       synchronized(this) {
+          if(this.activeQuery) {
+             return;
+          }
+          
+          this.activeQuery = true;
+       }
 
 
         long timeStartQuery = System.currentTimeMillis();
@@ -106,6 +115,8 @@ public class RASASpout extends AbstractQueryingSpout {
         catch (SQLException e) {
             LOG.error("Exception while querying table", e);
         }
+        
+        this.activeQuery = false;
     }
 
     @Override
