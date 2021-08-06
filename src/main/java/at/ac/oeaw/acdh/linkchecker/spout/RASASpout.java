@@ -40,9 +40,6 @@ public class RASASpout extends AbstractQueryingSpout {
     public static final Logger LOG = LoggerFactory.getLogger(RASASpout.class);
 
     private static final Scheme SCHEME = new StringTabScheme();
-    
-    // flag necessary to prevent an accumulation of time intensive queries 
-    private boolean activeQuery = false;
 
 
     /** Used to distinguish between instances in the logs **/
@@ -59,7 +56,7 @@ public class RASASpout extends AbstractQueryingSpout {
 
         super.open(conf, context, collector);
 
-        maxNumResults = ConfUtils.getInt(conf, Constants.SQL_MAXRESULTS_PARAM_NAME, 100);
+        maxNumResults = ConfUtils.getInt(conf, Constants.RASA_MAXRESULTS_PARAM_NAME, 100);
 
         Configuration.init(conf);
         Configuration.setActive(conf, true);
@@ -79,13 +76,6 @@ public class RASASpout extends AbstractQueryingSpout {
 
     @Override
     protected void populateBuffer() {
-       synchronized(this) {
-          if(this.activeQuery) {
-             return;
-          }
-          
-          this.activeQuery = true;
-       }
 
 
         long timeStartQuery = System.currentTimeMillis();
@@ -93,6 +83,9 @@ public class RASASpout extends AbstractQueryingSpout {
 
         try {
            LinkToBeCheckedFilter filter = Configuration.linkToBeCheckedResource.getLinkToBeCheckedFilter().setIsActive(true).setDoOrder(true);
+           
+           LOG.debug("{} call LinkToBeCheckedRessource.get(filter)", logIdprefix);
+           this.isInQuery.set(true);
            
            Configuration
               .linkToBeCheckedResource
@@ -105,7 +98,7 @@ public class RASASpout extends AbstractQueryingSpout {
                  md.setValue("originalUrl", link.getUrl());
                  buffer.add(link.getUrl(), md);
               });
-
+            this.markQueryReceivedNow();
             long timeTaken = System.currentTimeMillis() - timeStartQuery;
             queryTimes.addMeasurement(timeTaken);
 
@@ -115,8 +108,7 @@ public class RASASpout extends AbstractQueryingSpout {
         catch (SQLException e) {
             LOG.error("Exception while querying table", e);
         }
-        
-        this.activeQuery = false;
+
     }
 
     @Override

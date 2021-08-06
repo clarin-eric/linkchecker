@@ -1,35 +1,43 @@
 /**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+ * Licensed to DigitalPebble Ltd under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * DigitalPebble licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License. NOTICE: This code was modified in ACDH - Austrian Academy of
- * Sciences, based on Stormcrawler source code.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
+
 package at.ac.oeaw.acdh.linkchecker.bolt;
 
-import at.ac.oeaw.acdh.linkchecker.config.Configuration;
-import at.ac.oeaw.acdh.linkchecker.config.Constants;
-import at.ac.oeaw.acdh.linkchecker.exception.CategoryException;
-import at.ac.oeaw.acdh.linkchecker.exception.CrawlDelayTooLongException;
-import at.ac.oeaw.acdh.linkchecker.exception.DeniedByRobotsException;
-import at.ac.oeaw.acdh.linkchecker.exception.LoginPageException;
-
-import com.digitalpebble.stormcrawler.Metadata;
-import com.digitalpebble.stormcrawler.bolt.StatusEmitterBolt;
-import com.digitalpebble.stormcrawler.persistence.Status;
-import com.digitalpebble.stormcrawler.protocol.*;
-import com.digitalpebble.stormcrawler.util.ConfUtils;
-import crawlercommons.domains.PaidLevelDomain;
-import crawlercommons.robots.BaseRobotRules;
-import eu.clarin.cmdi.rasa.helpers.statusCodeMapper.Category;
+import java.io.File;
+import java.net.InetAddress;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.net.UnknownHostException;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.client.RedirectException;
@@ -40,38 +48,52 @@ import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
+import org.apache.storm.utils.TupleUtils;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.net.*;
-import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
+import com.digitalpebble.stormcrawler.Metadata;
+import com.digitalpebble.stormcrawler.bolt.StatusEmitterBolt;
+import com.digitalpebble.stormcrawler.persistence.Status;
+import com.digitalpebble.stormcrawler.protocol.HttpHeaders;
+import com.digitalpebble.stormcrawler.protocol.Protocol;
+import com.digitalpebble.stormcrawler.protocol.ProtocolFactory;
+import com.digitalpebble.stormcrawler.protocol.ProtocolResponse;
+import com.digitalpebble.stormcrawler.util.ConfUtils;
+
+import at.ac.oeaw.acdh.linkchecker.config.Configuration;
+import at.ac.oeaw.acdh.linkchecker.config.Constants;
+import at.ac.oeaw.acdh.linkchecker.exception.CategoryException;
+import at.ac.oeaw.acdh.linkchecker.exception.CrawlDelayTooLongException;
+import at.ac.oeaw.acdh.linkchecker.exception.DeniedByRobotsException;
+import at.ac.oeaw.acdh.linkchecker.exception.LoginPageException;
+import crawlercommons.domains.PaidLevelDomain;
+import crawlercommons.robots.BaseRobotRules;
+import eu.clarin.cmdi.rasa.helpers.statusCodeMapper.Category;
 
 /**
  * A multithreaded, queue-based fetcher adapted from Apache Nutch. Enforces the
  * politeness and handles the fetching threads itself.
  */
 @SuppressWarnings("serial")
-public class FetcherBolt extends StatusEmitterBolt {
+public class MetricsFetcherBolt extends StatusEmitterBolt {
 
-   private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(FetcherBolt.class);
+   private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(MetricsFetcherBolt.class);
 
    private static final String SITEMAP_DISCOVERY_PARAM_KEY = "sitemap.discovery";
+   
+
+   /**
+    * Acks URLs which have spent too much time in the queue, should be set to a
+    * value equals to the topology timeout
+    **/
+   public static final String QUEUED_TIMEOUT_PARAM_KEY = "fetcher.timeout.queue";
 
    private final AtomicInteger activeThreads = new AtomicInteger(0);
    private final AtomicInteger spinWaiting = new AtomicInteger(0);
 
    private FetchItemQueues fetchQueues;
 
-
    private ProtocolFactory protocolFactory;
-
-   private int HTTP_REDIRECT_LIMIT;
 
    private int taskID = -1;
 
@@ -79,12 +101,24 @@ public class FetcherBolt extends StatusEmitterBolt {
 
    private File debugfiletrigger;
 
-   /** blocks the processing of new URLs if this value is reached */
+   /** blocks the processing of new URLs if this value is reached **/
    private int maxNumberURLsInQueues = -1;
 
    private String[] beingFetched;
+   
+   private int HTTP_REDIRECT_LIMIT;
 
-   /** This class described the item to be fetched. */
+   @Override
+   public Map<String, Object> getComponentConfiguration() {
+      Config conf = new Config();
+      int tickFrequencyInSeconds = 5;
+      conf.put(Config.TOPOLOGY_TICK_TUPLE_FREQ_SECS, tickFrequencyInSeconds);
+      return conf;
+   }
+
+   /**
+    * This class described the item to be fetched.
+    */
    private static class FetchItem {
 
       String queueID;
@@ -104,6 +138,7 @@ public class FetcherBolt extends StatusEmitterBolt {
        * argument, either as a protocol + hostname pair, protocol + IP address pair or
        * protocol+domain pair.
        */
+
       public static FetchItem create(URL u, String url, Tuple t, String queueMode) {
 
          String queueID;
@@ -145,6 +180,7 @@ public class FetcherBolt extends StatusEmitterBolt {
          queueID = key.toLowerCase(Locale.ROOT);
          return new FetchItem(url, t, queueID);
       }
+
    }
 
    /**
@@ -209,6 +245,7 @@ public class FetcherBolt extends StatusEmitterBolt {
          else
             nextFetchTime.set(endTime);
       }
+
    }
 
    /**
@@ -226,16 +263,16 @@ public class FetcherBolt extends StatusEmitterBolt {
 
       int maxQueueSize;
 
-      final Config conf;
-
       public static final String QUEUE_MODE_HOST = "byHost";
       public static final String QUEUE_MODE_DOMAIN = "byDomain";
       public static final String QUEUE_MODE_IP = "byIP";
 
       String queueMode;
 
+      final Map<Pattern, Integer> customMaxThreads = new HashMap<>();
+
       public FetchItemQueues(Config conf) {
-         this.conf = conf;
+
          this.defaultMaxThread = ConfUtils.getInt(conf, "fetcher.threads.per.queue", 1);
          queueMode = ConfUtils.getString(conf, "fetcher.queue.mode", QUEUE_MODE_HOST);
          // check that the mode is known
@@ -252,9 +289,19 @@ public class FetcherBolt extends StatusEmitterBolt {
          if (this.maxQueueSize == -1) {
             this.maxQueueSize = Integer.MAX_VALUE;
          }
+
+         // order is not guaranteed
+         for (Entry<String, Object> e : conf.entrySet()) {
+            String key = e.getKey();
+            if (!key.startsWith("fetcher.maxThreads."))
+               continue;
+            Pattern patt = Pattern.compile(key.substring("fetcher.maxThreads.".length()));
+            customMaxThreads.put(patt, ((Number) e.getValue()).intValue());
+         }
+
       }
 
-      /** @return true if the URL has been added, false otherwise */
+      /** @return true if the URL has been added, false otherwise **/
       public synchronized boolean addFetchItem(URL u, String url, Tuple input) {
          FetchItem it = FetchItem.create(u, url, input, queueMode);
          FetchItemQueue fiq = getFetchItemQueue(it.queueID);
@@ -277,8 +324,14 @@ public class FetcherBolt extends StatusEmitterBolt {
       public synchronized FetchItemQueue getFetchItemQueue(String id) {
          FetchItemQueue fiq = queues.get(id);
          if (fiq == null) {
+            int customThreadVal = defaultMaxThread;
             // custom maxThread value?
-            final int customThreadVal = ConfUtils.getInt(conf, "fetcher.maxThreads." + id, defaultMaxThread);
+            for (Entry<Pattern, Integer> p : customMaxThreads.entrySet()) {
+               if (p.getKey().matcher(id).matches()) {
+                  customThreadVal = p.getValue().intValue();
+                  break;
+               }
+            }
             // initialize queue
             fiq = new FetchItemQueue(customThreadVal, crawlDelay, minCrawlDelay, maxQueueSize);
             queues.put(id, fiq);
@@ -339,7 +392,9 @@ public class FetcherBolt extends StatusEmitterBolt {
       }
    }
 
-   /** This class picks items from queues and fetches the pages. */
+   /**
+    * This class picks items from queues and fetches the pages.
+    */
    private class FetcherThread extends Thread {
 
       // max. delay accepted from robots.txt
@@ -352,6 +407,11 @@ public class FetcherBolt extends StatusEmitterBolt {
       private final boolean crawlDelayForce;
       private int threadNum;
 
+      private long timeoutInQueues = -1;
+
+      // by default remains as is-pre 1.17
+      private String protocolMDprefix = "";
+
       public FetcherThread(Config conf, int num) {
          this.setDaemon(true); // don't hang JVM on exit
          this.setName("FetcherThread #" + num); // use an informative name
@@ -360,16 +420,16 @@ public class FetcherBolt extends StatusEmitterBolt {
          this.maxCrawlDelayForce = ConfUtils.getBoolean(conf, "fetcher.max.crawl.delay.force", false);
          this.crawlDelayForce = ConfUtils.getBoolean(conf, "fetcher.server.delay.force", false);
          this.threadNum = num;
+         timeoutInQueues = ConfUtils.getLong(conf, QUEUED_TIMEOUT_PARAM_KEY, timeoutInQueues);
+         protocolMDprefix = ConfUtils.getString(conf, ProtocolResponse.PROTOCOL_MD_PREFIX_PARAM, protocolMDprefix);
       }
 
       @Override
       public void run() {
-
-         LOG.debug("Configuration.isActive(): {}", Configuration.isActive());
          while (true) {
             FetchItem fit = fetchQueues.getFetchItem();
             if (fit == null) {
-               LOG.debug("{} spin-waiting ...", getName());
+               LOG.trace("{} spin-waiting ...", getName());
                // spin-wait.
                spinWaiting.incrementAndGet();
                try {
@@ -391,44 +451,45 @@ public class FetcherBolt extends StatusEmitterBolt {
 
             LOG.debug("[Fetcher #{}] {} : Fetching {}", taskID, getName(), fit.url);
 
-            Metadata metadata = new Metadata();
+            Metadata metadata = null;
 
-            if (fit.t.contains("metadata") && fit.t.getValueByField("metadata") != null) {
-               metadata.putAll((Metadata) fit.t.getValueByField("metadata"));
+            if (fit.t.contains("metadata")) {
+               metadata = (Metadata) fit.t.getValueByField("metadata");
+            }
+            if (metadata == null) {
+               metadata = Metadata.empty;
             }
 
+            // https://github.com/DigitalPebble/storm-crawler/issues/813
+            metadata.remove("fetch.exception");
+
             boolean asap = false;
+            
             String message;
             String category;
 
             String originalUrl = metadata.getFirstValue("originalUrl");
 
-            String redirectCountStr = metadata.getFirstValue("redirectCount");
+            String redirectCountStr = metadata.getFirstValue("fetch.redirectCount");
 
             int redirectCount = (redirectCountStr != null ? Integer.valueOf(redirectCountStr) : 0);
-
-            String url = fit.url;
 
             try {
                int statusCode = 0;
                ProtocolResponse response = null;
+               
+               URL url = new URL(fit.url);
+               Protocol protocol = protocolFactory.getProtocol(url);
 
+               if (protocol == null)
+                  throw new RuntimeException("No protocol implementation found for " + fit.url);
 
+               BaseRobotRules rules = protocol.getRobotRules(fit.url);
 
-               URL u = new URL(url); // here it checks for malformed url and throws an exception, which is
-               // handled below
-
-               Protocol protocol = protocolFactory.getProtocol(u);
-
-               if (protocol == null) {
-                  throw new RuntimeException("No protocol implementation found for " + url);
-               }
-               BaseRobotRules rules = protocol.getRobotRules(url);
-
-               if (!rules.isAllowed(url)) {
-                  LOG.info("Denied by robots.txt: {}", url);
+               if (!rules.isAllowed(fit.url)) {
+                  LOG.info("Denied by robots.txt: {}", fit.url);
                   // pass the info about denied by robots
-                  metadata.setValue(Constants.STATUS_ERROR_CAUSE, "robots.txt");
+                  metadata.setValue(com.digitalpebble.stormcrawler.Constants.STATUS_ERROR_CAUSE, "robots.txt");
 
                   // no need to wait next time as we won't request from
                   // that site
@@ -450,18 +511,20 @@ public class FetcherBolt extends StatusEmitterBolt {
                         fiq.crawlDelay = maxCrawlDelay;
                      } else {
                         // pass the info about crawl delay
-                        metadata.setValue(Constants.STATUS_ERROR_CAUSE, "crawl_delay");
+                        metadata.setValue(com.digitalpebble.stormcrawler.Constants.STATUS_ERROR_CAUSE, "crawl_delay");
 
                         // no need to wait next time as we won't request
                         // from that site
                         asap = true;
                         throw new CrawlDelayTooLongException("Crawl delay too long.");
                      }
-                  } else if (rules.getCrawlDelay() < fetchQueues.crawlDelay && crawlDelayForce) {
+                  } 
+                  else if (rules.getCrawlDelay() < fetchQueues.crawlDelay && crawlDelayForce) {
                      fiq.crawlDelay = fetchQueues.crawlDelay;
                      LOG.info("Crawl delay for {} too short ({}), set to fetcher.server.delay", url,
                            rules.getCrawlDelay());
-                  } else {
+                  } 
+                  else {
                      fiq.crawlDelay = rules.getCrawlDelay();
                      LOG.info("Crawl delay for queue: {}  is set to {} as per robots.txt. url: {}", fit.queueID,
                            fiq.crawlDelay, url);
@@ -471,23 +534,22 @@ public class FetcherBolt extends StatusEmitterBolt {
                while (Configuration.loginPagesLock.isLocked()) {
                   // do nothing, wait until it is unlocked to read
                }
-               if (Configuration.loginPageUrls.contains(url)) {
+               if (Configuration.loginPageUrls.contains(fit.url)) {
                   // this next if check means that the harvested page was not the login page.
                   // if the login page is harvested as a url, then it should be handled normally
-                  if (!url.equals(originalUrl)) {
+                  if (!fit.url.equals(originalUrl)) {
                      throw new LoginPageException(
                            originalUrl + " points to a login page, therefore has restricted access.");
                   }
                }
 
-               Long timestamp = System.currentTimeMillis();
 
                // first try HEAD
                metadata.setValue("http.method.head", "true");
                
                long start = System.currentTimeMillis();
 
-               response = protocol.getProtocolOutput(url, metadata);
+               response = protocol.getProtocolOutput(fit.url, metadata);
                statusCode = response.getStatusCode();
 
                // if its unsuccessful, try GET
@@ -496,113 +558,88 @@ public class FetcherBolt extends StatusEmitterBolt {
                if (!Configuration.redirectStatusCodes.contains(statusCode) && statusCode != 200 && statusCode != 304) {
                   start = System.currentTimeMillis();
                   metadata.setValue("http.method.head", "false");
-                  response = protocol.getProtocolOutput(url, metadata);
+                  response = protocol.getProtocolOutput(fit.url, metadata);
                   statusCode = response.getStatusCode();
                }
+
                long timeInQueues = start - fit.creationTime;
-               
-               boolean redirect = false;
-               String redirectUrl = null;
+
                if (Configuration.redirectStatusCodes.contains(statusCode)) {
-                  redirect = true;
-                  redirectCount++;
-                  if (redirectCount >= HTTP_REDIRECT_LIMIT) {
+
+                  if (++redirectCount >= HTTP_REDIRECT_LIMIT) {
                      throw new RedirectException(
                            "Redirects exceeded " + HTTP_REDIRECT_LIMIT + " redirects for " + originalUrl);
                   }
-                  redirectUrl = convertRelativeToAbsolute(url,
-                        response.getMetadata().getFirstValue(HttpHeaders.LOCATION));
+                  String redirectUrl = convertRelativeToAbsolute(fit.url, response.getMetadata().getFirstValue(HttpHeaders.LOCATION));
+                  metadata.setValue("fetch.redirectCount", Integer.toString(redirectCount));
+                  
+                  collector.emit(Constants.RedirectStreamName, fit.t, new Values(redirectUrl, metadata));
+                  
+               }
+               else {
+
+                  // this doesn't take redirects into account, but i dont think thats a problem
+                  long timeFetching = System.currentTimeMillis() - start;
+   
+                  if (Configuration.okStatusCodes.contains(statusCode)) {
+                     message = Category.Ok.name();
+                     category = message;
+                  } else if (Configuration.undeterminedStatusCodes.contains(statusCode)) {
+                     message = "Undetermined, Status code: " + statusCode;
+                     category = Category.Undetermined.name();
+                  } else {
+                     message = "Broken, Status code: " + statusCode;
+                     category = Category.Broken.name();
+                  }
+   
+                  LOG.info("[Fetcher #{}] Fetched {} with status {} in msec {}", taskID, url, response.getStatusCode(),
+                        timeFetching);
+                  
+                  LOG.debug("response metadata:\n{}", response.getMetadata().toString());
+   
+                  // merges the original MD and the ones returned by the
+                  // protocol
+                  Metadata mergedMD = new Metadata();
+                  mergedMD.putAll(metadata);
+   
+                  mergedMD.putAll(response.getMetadata());
+   
+                  mergedMD.setValue("fetch.statusCode", Integer.toString(response.getStatusCode()));
+   
+                  mergedMD.setValue("fetch.byteLength", response.getMetadata().getFirstValue(HttpHeaders.CONTENT_LENGTH));
+   
+                  mergedMD.setValue("fetch.loadingTime", Long.toString(timeFetching));
+   
+                  mergedMD.setValue("fetch.timeInQueues", Long.toString(timeInQueues));
+   
+                  mergedMD.setValue("fetch.redirectCount", Integer.toString(redirectCount));
+   
+                  mergedMD.setValue("fetch.message", message);
+   
+                  mergedMD.setValue("fetch.category", category);
+
+                  collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, fit.t, new Values(fit.url, mergedMD, Status.DISCOVERED));
                }
 
-               // this doesn't take redirects into account, but i dont think thats a problem
-               long timeFetching = System.currentTimeMillis() - start;
-
-               Integer byteLength;
-               try {
-                  byteLength = Integer.parseInt(response.getMetadata().getFirstValue(HttpHeaders.CONTENT_LENGTH));
-               } catch (NumberFormatException e) {
-                  byteLength = null;
-               }
-
-               if (Configuration.okStatusCodes.contains(statusCode)) {
-                  message = Category.Ok.name();
-                  category = message;
-               } else if (Configuration.undeterminedStatusCodes.contains(statusCode)) {
-                  message = "Undetermined, Status code: " + statusCode;
-                  category = Category.Undetermined.name();
-               } else {
-                  message = "Broken, Status code: " + statusCode;
-                  category = Category.Broken.name();
-               }
-
-               LOG.info("[Fetcher #{}] Fetched {} with status {} in msec {}", taskID, url, response.getStatusCode(),
-                     timeFetching);
-
-               // merges the original MD and the ones returned by the
-               // protocol
-               Metadata mergedMD = new Metadata();
-               mergedMD.putAll(metadata);
-
-               mergedMD.putAll(response.getMetadata());
-
-               mergedMD.setValue("fetch.statusCode", Integer.toString(response.getStatusCode()));
-
-               mergedMD.setValue("fetch.byteLength", byteLength == null ? null : Integer.toString(byteLength));
-
-               mergedMD.setValue("fetch.loadingTime", Long.toString(timeFetching));
-
-               mergedMD.setValue("fetch.timeInQueues", Long.toString(timeInQueues));
-
-               mergedMD.setValue("fetch.redirectCount", Integer.toString(redirectCount));
-
-               mergedMD.setValue("fetch.message", message);
-
-               mergedMD.setValue("fetch.category", category);
-
-               mergedMD.setValue("fetch.timestamp", timestamp.toString());
-
-               // if redirect, go back to partitioner bolt, if not pass it to status updater
-               // bolt
-               Values tupleToSend;
-               
-               String streamName;
-               if (redirect) {
-                  streamName = Constants.RedirectStreamName;
-                  url = redirectUrl;
-                  tupleToSend = new Values(url, mergedMD);
-               } else {
-                  streamName = Constants.StatusStreamName;
-                  tupleToSend = new Values(url, mergedMD, Status.DISCOVERED);
-               }
+            } 
+            catch (Exception ex) {
 
 
-
-               collector.emit(streamName, fit.t, tupleToSend);
-
-            } catch (Exception e) {
                if (metadata.size() == 0) {
                   metadata = new Metadata();
                }
 
-               metadata.setValue("fetch.statusCode", null);
+               metadata.setValue("fetch.category", CategoryException.getCategoryFromException(ex, fit.url).name());
 
-               metadata.setValue("fetch.byteLength", null);
+               metadata.setValue("fetch.message", ex.getMessage());
 
-               metadata.setValue("fetch.content-type", null);
-
-               metadata.setValue("fetch.category", CategoryException.getCategoryFromException(e, url).name());
-
-               metadata.setValue("fetch.message", e.getMessage());
-
-               final Values tupleToSend = new Values(url, metadata, Status.DISCOVERED);
-
-               collector.emit(Constants.StatusStreamName, fit.t, tupleToSend);
+               collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, fit.t, new Values(fit.url, metadata, Status.DISCOVERED));
 
             } finally {
                fetchQueues.finishFetchItem(fit, asap);
                activeThreads.decrementAndGet(); // count threads
                // ack it whatever happens
-               collector.ack(fit.t);
+               ack(fit.t);
                beingFetched[threadNum] = "";
             }
          }
@@ -620,7 +657,7 @@ public class FetcherBolt extends StatusEmitterBolt {
          LOG.error(message);
          throw new IllegalArgumentException(message);
       }
-
+      
       HTTP_REDIRECT_LIMIT = ConfUtils.getInt(stormConf, Constants.HTTP_REDIRECT_LIMIT, 5);
    }
 
@@ -635,9 +672,7 @@ public class FetcherBolt extends StatusEmitterBolt {
 
       checkConfiguration(conf);
 
-      SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH);
-      long start = System.currentTimeMillis();
-      LOG.info("[Fetcher #{}] : starting at {}", taskID, sdf.format(start));
+      LOG.info("[Fetcher #{}] : starting at {}", taskID, Instant.now());
 
       protocolFactory = new ProtocolFactory(conf);
 
@@ -662,13 +697,20 @@ public class FetcherBolt extends StatusEmitterBolt {
        * If set to a valid path e.g. /tmp/fetcher-dump-{port} on a worker node, the
        * content of the queues will be dumped to the logs for debugging. The port
        * number needs to match the one used by the FetcherBolt instance.
-       */
+       **/
       String debugfiletriggerpattern = ConfUtils.getString(conf, "fetcherbolt.queue.debug.filepath");
 
       if (StringUtils.isNotBlank(debugfiletriggerpattern)) {
          debugfiletrigger = new File(
                debugfiletriggerpattern.replaceAll("\\{port\\}", Integer.toString(context.getThisWorkerPort())));
       }
+
+   }
+
+   @Override
+   public void declareOutputFields(OutputFieldsDeclarer declarer) {
+      declarer.declareStream(com.digitalpebble.stormcrawler.Constants.StatusStreamName, new Fields("url", "metadata", "status"));
+      declarer.declareStream(Constants.RedirectStreamName, new Fields("url", "metadata"));
    }
 
    @Override
@@ -678,7 +720,18 @@ public class FetcherBolt extends StatusEmitterBolt {
 
    @Override
    public void execute(Tuple input) {
-      LOG.debug("tuple: {}", input);
+
+      if (TupleUtils.isTick(input)) {
+         // detect whether there is a file indicating that we should
+         // dump the content of the queues to the log
+         if (debugfiletrigger != null && debugfiletrigger.exists()) {
+            LOG.info("Found trigger file {}", debugfiletrigger);
+            logQueuesContent();
+            debugfiletrigger.delete();
+         }
+         return;
+      }
+
       if (this.maxNumberURLsInQueues != -1) {
          while (this.activeThreads.get() + this.fetchQueues.inQueues.get() >= maxNumberURLsInQueues) {
             try {
@@ -692,49 +745,36 @@ public class FetcherBolt extends StatusEmitterBolt {
          }
       }
 
-      // detect whether there is a file indicating that we should
-      // dump the content of the queues to the log
-      if (debugfiletrigger != null && debugfiletrigger.exists()) {
-         LOG.info("Found trigger file {}", debugfiletrigger);
-         logQueuesContent();
-         debugfiletrigger.delete();
-      }
-
-      final String url = input.getStringByField("url");
-
-      if (StringUtils.isBlank(url)) {
+      final String urlString = input.getStringByField("url");
+      if (StringUtils.isBlank(urlString)) {
          LOG.info("[Fetcher #{}] Missing value for field url in tuple {}", taskID, input);
          // ignore silently
-         collector.ack(input);
+         ack(input);
          return;
       }
 
-      URL u;
+      URL url;
 
       try {
-         u = new URL(url);
+         url = new URL(urlString);
       } catch (MalformedURLException e) {
+         LOG.error("{} is a malformed URL", urlString);
 
          Metadata metadata = (Metadata) input.getValueByField("metadata");
          if (metadata == null) {
             metadata = new Metadata();
          }
-
-         metadata.setValue("fetch.category", CategoryException.getCategoryFromException(e, url).name());
-
-         metadata.setValue("fetch.message", e.getMessage());
-
-         final Values tupleToSend = new Values(url, metadata, Status.DISCOVERED);
-
-         collector.emit(Constants.StatusStreamName, input, tupleToSend);
-
-         collector.ack(input);
+         // Report to status stream and ack
+         metadata.setValue(com.digitalpebble.stormcrawler.Constants.STATUS_ERROR_CAUSE, "malformed URL");
+         emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, input,
+               new Values(urlString, metadata, Status.ERROR));
+         ack(input);
          return;
       }
 
-      boolean added = fetchQueues.addFetchItem(u, url, input);
+      boolean added = fetchQueues.addFetchItem(url, urlString, input);
       if (!added) {
-         collector.fail(input);
+         fail(input);
       }
    }
 
@@ -789,13 +829,5 @@ public class FetcherBolt extends StatusEmitterBolt {
          LOG.info("URLs being fetched {}", sb2.toString());
       }
    }
-   @Override
-   public void declareOutputFields(OutputFieldsDeclarer declarer) {
-       declarer.declareStream(
-               Constants.StatusStreamName,
-               new Fields("url", "metadata", "status"));
-       declarer.declareStream(
-               Constants.RedirectStreamName,
-               new Fields("url", "metadata"));
-   }
+
 }

@@ -18,35 +18,11 @@
 
 package at.ac.oeaw.acdh.linkchecker.config;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 public class Constants {
-    public static final String SQL_STATUS_TABLE_PARAM_NAME = "sql.status.table";
-    public static final String SQL_MAX_DOCS_BUCKET_PARAM_NAME = "sql.max.urls.per.bucket";
-    public static final String SQL_MAXRESULTS_PARAM_NAME = "sql.spout.max.results";
-    public static final String SQL_UPDATE_BATCH_SIZE_PARAM_NAME = "sql.update.batch.size";
-    public static final String SQL_METRICS_TABLE_PARAM_NAME = "sql.metrics.table";
-    public static final String SQL_STATUS_RESULT_TABLE_PARAM_NAME = "sql.status.resultTable";
-    public static final String SQL_STATUS_HISTORY_TABLE_PARAM_NAME = "sql.status.historyTable";
+    public static final String RASA_MAXRESULTS_PARAM_NAME = "rasa.spout.max.results";
     public static final String HTTP_REDIRECT_LIMIT = "http.redirectLimit";
-
-    public static final String PARTITION_MODEParamName = "partition.url.mode";
-    public static final String PARTITION_MODE_HOST = "byHost";
-    public static final String PARTITION_MODE_DOMAIN = "byDomain";
-    public static final String PARTITION_MODE_IP = "byIP";
-    public static final String STATUS_ERROR_MESSAGE = "error.message";
-    public static final String STATUS_ERROR_SOURCE = "error.source";
-    public static final String STATUS_ERROR_CAUSE = "error.cause";
-    public static final String StatusStreamName = "status";
+    
     public static final String RedirectStreamName = "redirect";
-    public static final String DELETION_STREAM_NAME = "deletion";
-    public static final String AllowRedirParamName = "redirections.allowed";
-    public static final String fetchErrorFetchIntervalParamName = "fetchInterval.fetch.error";
-    public static final String errorFetchIntervalParamName = "fetchInterval.error";
-    public static final String defaultFetchIntervalParamName = "fetchInterval.default";
-    public static final String fetchErrorCountParamName = "fetch.error.count";
     
     public static final String LOGIN_LIST_URL = "login.list.url";
     public static final String OK_STATUS_CODES = "ok.status.codes";

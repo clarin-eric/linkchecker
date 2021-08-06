@@ -55,8 +55,8 @@ config:
   # the FetcherBolt will log the content of its internal queues to the logs
   # fetcherbolt.queue.debug.filepath: "/tmp/fetcher-dump-{port}"
 
-  parsefilters.config.file: "parsefilters.json"
-  urlfilters.config.file: "urlfilters.json"
+  #  parsefilters.config.file: "parsefilters.json"
+  # urlfilters.config.file: "urlfilters.json"
 
   # revisit a page daily (value in minutes)
   # set it to -1 to never refetch a page
@@ -115,7 +115,7 @@ config:
     password: 
     maximumPoolSize: 10
 
-  sql.spout.max.results: 1000
+  rasa.spout.max.results: 1000
 
   # time in secs for which the URLs will be considered for fetching after a ack of fail
   spout.ttl.purgatory: 300

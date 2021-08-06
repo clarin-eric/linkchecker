@@ -43,7 +43,8 @@ config:
   http.agent.description: "{{HTTP_AGENT_DESCRIPTION}}"
   http.agent.url: "{{HTTP_AGENT_URL}}"
   http.agent.email: "{{HTTP_AGENT_EMAIL}}"
-  http.redirectLimit: "{{HTTP_REDIRECT_LIMIT}}"
+  http.redirectLimit: {{HTTP_REDIRECT_LIMIT}}
+  http.timeout: 5000
 
   # Defines delay (in secs) between crawls in the same queue
   fetcher.server.delay: 2
@@ -61,8 +62,8 @@ config:
   # the FetcherBolt will log the content of its internal queues to the logs
   # fetcherbolt.queue.debug.filepath: "/tmp/fetcher-dump-{port}"
 
-  parsefilters.config.file: "parsefilters.json"
-  urlfilters.config.file: "urlfilters.json"
+  # parsefilters.config.file: "parsefilters.json"
+  # urlfilters.config.file: "urlfilters.json"
 
   # revisit a page daily (value in minutes)
   # set it to -1 to never refetch a page
@@ -119,7 +120,7 @@ config:
     maximumPoolSize: 5
     minimumIdle: 0
 
-  sql.spout.max.results: 250000
+  rasa.spout.max.results: {{RASA_SPOUT_MAX_RESULTS}}
 
   # time in secs for which the URLs will be considered for fetching after a ack of fail
   spout.ttl.purgatory: 300

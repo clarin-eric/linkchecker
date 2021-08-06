@@ -36,6 +36,7 @@ import java.sql.*;
 import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 
 /**
@@ -45,6 +46,8 @@ import java.util.Optional;
 
 @SuppressWarnings("serial")
 public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
+   
+    private static final Pattern INT_PATTERN = Pattern.compile("\\d+");
 
     public final Logger LOG = LoggerFactory.getLogger(StatusUpdaterBolt.class);
 
@@ -81,20 +84,27 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
         Metadata md = (Metadata) t.getValueByField("metadata");
         
+        String str = null;
+        
         checkedLink.setUrlId(Long.valueOf(md.getFirstValue("urlId")));
         
-        String fetchStatusCode = md.getFirstValue("fetch.statusCode");
-        checkedLink.setStatus(fetchStatusCode == null ? null : fetchStatusCode.equalsIgnoreCase("null") ? null : Integer.parseInt(fetchStatusCode));
+        if((str = md.getFirstValue("fetch.statusCode")) != null && INT_PATTERN.matcher(str).matches()){
+           checkedLink.setStatus(Integer.parseInt(md.getFirstValue("fetch.statusCode")));
+        }
         checkedLink.setContentType(md.getFirstValue("content-type"));
-        String fetchByteLength = md.getFirstValue("fetch.byteLength");
-        checkedLink.setByteSize(fetchByteLength == null ? null : fetchByteLength.equalsIgnoreCase("null") ? null : Integer.parseInt(fetchByteLength));
-        checkedLink.setDuration(md.getFirstValue("fetch.loadingTime") == null ? 0 : Integer.parseInt(md.getFirstValue("fetch.loadingTime")));
+        
+        if((str = md.getFirstValue("fetch.byteLength")) != null && INT_PATTERN.matcher(str).matches()){
+           checkedLink.setByteSize(Integer.parseInt(md.getFirstValue("fetch.byteLength")));
+        }
+        
+        if((str = md.getFirstValue("fetch.loadingTime")) != null && INT_PATTERN.matcher(str).matches()){
+           checkedLink.setDuration(Integer.parseInt(md.getFirstValue("fetch.loadingTime")));
+        }
+        
         checkedLink.setMessage(md.getFirstValue("fetch.message"));
         checkedLink.setCategory(Category.valueOf(md.getFirstValue("fetch.category")));
 
-        Long timestampLong = md.getFirstValue("fetch.timestamp") == null ? System.currentTimeMillis() : Long.parseLong(md.getFirstValue("fetch.timestamp"));
-        Timestamp timestamp = new Timestamp(timestampLong);
-        checkedLink.setCheckingDate(timestamp);
+        checkedLink.setCheckingDate(new Timestamp(System.currentTimeMillis()));
 
 
 

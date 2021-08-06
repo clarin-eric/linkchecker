@@ -89,15 +89,6 @@
 										<exclude>META-INF/*.RSA</exclude>
 									</excludes>
 								</filter>
-								<filter>
-									<!-- https://issues.apache.org/jira/browse/STORM-2428 -->
-									<artifact>org.apache.storm:flux-core</artifact>
-									<excludes>
-										<exclude>org/apache/commons/**</exclude>
-										<exclude>org/apache/http/**</exclude>
-										<exclude>org/yaml/**</exclude>
-									</excludes>
-								</filter>
 							</filters>
 						</configuration>
 					</execution>
@@ -111,29 +102,25 @@
 			<groupId>com.digitalpebble.stormcrawler</groupId>
 			<artifactId>storm-crawler-core</artifactId>
 			<version>${stormcrawler.version}</version>
-		</dependency>
+		</dependency>		
 		<dependency>
 			<groupId>org.apache.storm</groupId>
 			<artifactId>storm-core</artifactId>
 			<version>${storm.version}</version>
-			<scope>provided</scope>
-		</dependency>
+			<scope>test</scope>
+		</dependency>	
 		<dependency>
 			<groupId>org.apache.storm</groupId>
 			<artifactId>storm-client</artifactId>
 			<version>${storm.version}</version>
 			<scope>provided</scope>
 		</dependency>
+		<!-- Flux include -->
 		<dependency>
 			<groupId>org.apache.storm</groupId>
 			<artifactId>flux-core</artifactId>
 			<version>${storm.version}</version>
 		</dependency>
-<dependency>
-    <groupId>com.fasterxml.jackson.core</groupId>
-    <artifactId>jackson-core</artifactId>
-    <version>2.12.3</version>
-</dependency>
 		<dependency>
 			<groupId>eu.clarin.cmdi</groupId>
 			<artifactId>rasa-api</artifactId>
