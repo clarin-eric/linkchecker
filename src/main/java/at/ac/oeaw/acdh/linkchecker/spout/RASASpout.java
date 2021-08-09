@@ -82,7 +82,7 @@ public class RASASpout extends AbstractQueryingSpout {
 
 
         try {
-           LinkToBeCheckedFilter filter = Configuration.linkToBeCheckedResource.getLinkToBeCheckedFilter().setIsActive(true).setDoOrder(true);
+           LinkToBeCheckedFilter filter = Configuration.linkToBeCheckedResource.getLinkToBeCheckedFilter().setIsActive(true).setOrderByCheckingDate(true);
            
            LOG.debug("{} call LinkToBeCheckedRessource.get(filter)", logIdprefix);
            this.isInQuery.set(true);
