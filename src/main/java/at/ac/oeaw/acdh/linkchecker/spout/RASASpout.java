@@ -16,8 +16,11 @@
  */
 
 package at.ac.oeaw.acdh.linkchecker.spout;
+
 import java.sql.SQLException;
 import java.util.Map;
+import java.util.stream.Stream;
+
 import org.apache.storm.spout.Scheme;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
@@ -32,99 +35,88 @@ import com.digitalpebble.stormcrawler.util.StringTabScheme;
 
 import at.ac.oeaw.acdh.linkchecker.config.Configuration;
 import at.ac.oeaw.acdh.linkchecker.config.Constants;
+import eu.clarin.cmdi.rasa.DAO.LinkToBeChecked;
 import eu.clarin.cmdi.rasa.filters.LinkToBeCheckedFilter;
 
 @SuppressWarnings("serial")
 public class RASASpout extends AbstractQueryingSpout {
 
-    public static final Logger LOG = LoggerFactory.getLogger(RASASpout.class);
+   public static final Logger LOG = LoggerFactory.getLogger(RASASpout.class);
 
-    private static final Scheme SCHEME = new StringTabScheme();
+   private static final Scheme SCHEME = new StringTabScheme();
 
+   /** Used to distinguish between instances in the logs **/
+   protected String logIdprefix = "";
 
-    /** Used to distinguish between instances in the logs **/
-    protected String logIdprefix = "";
+   private int maxNumResults;
 
+   @SuppressWarnings({ "rawtypes", "unchecked" })
+   @Override
+   public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
 
-    private int maxNumResults;
+      super.open(conf, context, collector);
 
+      maxNumResults = ConfUtils.getInt(conf, Constants.RASA_MAXRESULTS_PARAM_NAME, 100);
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-    @Override
-    public void open(Map conf, TopologyContext context,
-            SpoutOutputCollector collector) {
+      Configuration.init(conf);
+      Configuration.setActive(conf, true);
 
-        super.open(conf, context, collector);
+      int totalTasks = context.getComponentTasks(context.getThisComponentId()).size();
+      if (totalTasks > 1) {
+         logIdprefix = "[" + context.getThisComponentId() + " #" + context.getThisTaskIndex() + "] ";
+      }
+   }
 
-        maxNumResults = ConfUtils.getInt(conf, Constants.RASA_MAXRESULTS_PARAM_NAME, 100);
+   @Override
+   public void declareOutputFields(OutputFieldsDeclarer declarer) {
+      declarer.declare(SCHEME.getOutputFields());
+   }
 
-        Configuration.init(conf);
-        Configuration.setActive(conf, true);
-        
-        int totalTasks = context
-              .getComponentTasks(context.getThisComponentId()).size();
-         if (totalTasks > 1) {
-             logIdprefix = "[" + context.getThisComponentId() + " #"
-                     + context.getThisTaskIndex() + "] ";
-         }
-    }
+   @Override
+   protected void populateBuffer() {
 
-    @Override
-    public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(SCHEME.getOutputFields());
-    }
+      LinkToBeCheckedFilter filter = Configuration.linkToBeCheckedResource.getLinkToBeCheckedFilter().setIsActive(true)
+            .setOrderByCheckingDate(true).setLimit(0, maxNumResults);
 
-    @Override
-    protected void populateBuffer() {
+      LOG.debug("{} call LinkToBeCheckedRessource.get(filter)", logIdprefix);
+      
+      this.isInQuery.set(true);
+      long timeStartQuery = System.currentTimeMillis();
+      try (Stream<LinkToBeChecked> stream = Configuration.linkToBeCheckedResource.get(filter)) {         
 
+         stream.filter(link -> !beingProcessed.containsKey(link.getUrl())).forEach(link -> {
+            Metadata md = new Metadata();
+            md.setValue("urlId", String.valueOf(link.getUrlId()));
+            md.setValue("originalUrl", link.getUrl());
+            buffer.add(link.getUrl(), md);
+         });
+         this.markQueryReceivedNow();
+         long timeTaken = System.currentTimeMillis() - timeStartQuery;
+         queryTimes.addMeasurement(timeTaken);
 
-        long timeStartQuery = System.currentTimeMillis();
+         LOG.info("{} SQL query returned {} hits, distributed on {} queues in {} msec", logIdprefix, buffer.size(),
+               buffer.numQueues(), timeTaken);
 
+      } 
+      catch (SQLException e) {
+         LOG.error("Exception while querying table", e);
+      }
+   }
 
-        try {
-           LinkToBeCheckedFilter filter = Configuration.linkToBeCheckedResource.getLinkToBeCheckedFilter().setIsActive(true).setOrderByCheckingDate(true);
-           
-           LOG.debug("{} call LinkToBeCheckedRessource.get(filter)", logIdprefix);
-           this.isInQuery.set(true);
-           
-           Configuration
-              .linkToBeCheckedResource
-              .get(filter)
-              .limit(maxNumResults)
-              .filter(link -> !beingProcessed.containsKey(link.getUrl()))
-              .forEach(link -> {
-                 Metadata md = new Metadata();
-                 md.setValue("urlId", String.valueOf(link.getUrlId()));
-                 md.setValue("originalUrl", link.getUrl());
-                 buffer.add(link.getUrl(), md);
-              });
-            this.markQueryReceivedNow();
-            long timeTaken = System.currentTimeMillis() - timeStartQuery;
-            queryTimes.addMeasurement(timeTaken);
+   @Override
+   public void ack(Object msgId) {
+      LOG.debug("{}  Ack for {}", logIdprefix, msgId);
+      super.ack(msgId);
+   }
 
-            LOG.info("{} SQL query returned {} hits, distributed on {} queues in {} msec", logIdprefix, buffer.size(), buffer.numQueues(), timeTaken);
+   @Override
+   public void fail(Object msgId) {
+      LOG.info("{}  Fail for {}", logIdprefix, msgId);
+      super.fail(msgId);
+   }
 
-        } 
-        catch (SQLException e) {
-            LOG.error("Exception while querying table", e);
-        }
-
-    }
-
-    @Override
-    public void ack(Object msgId) {
-        LOG.debug("{}  Ack for {}", logIdprefix, msgId);
-        super.ack(msgId);
-    }
-
-    @Override
-    public void fail(Object msgId) {
-        LOG.info("{}  Fail for {}", logIdprefix, msgId);
-        super.fail(msgId);
-    }
-
-    @Override
-    public void close() {
-       super.close();
-    }
+   @Override
+   public void close() {
+      super.close();
+   }
 }
