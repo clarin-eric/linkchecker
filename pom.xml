@@ -5,13 +5,14 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>at.ac.oeaw.acdh</groupId>
 	<artifactId>linkchecker</artifactId>
-	<version>2.1</version>
+	<version>2.1.0</version>
 	<packaging>jar</packaging>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<storm.version>2.2.0</storm.version>
 		<stormcrawler.version>2.1</stormcrawler.version>
+		<rasa.version>4.0.0</rasa.version>
 	</properties>
 
 	<distributionManagement>
@@ -124,12 +125,12 @@
 		<dependency>
 			<groupId>eu.clarin.cmdi</groupId>
 			<artifactId>rasa-api</artifactId>
-			<version>4.0.0-beta_1</version>
+			<version>${rasa.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>eu.clarin.cmdi</groupId>
 			<artifactId>rasa-mysql-impl</artifactId>
-			<version>4.0.0-beta_1</version>
+			<version>${rasa.version}</version>
 		</dependency>
 	</dependencies>
 
