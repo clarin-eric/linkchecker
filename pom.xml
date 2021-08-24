@@ -4,13 +4,15 @@
 
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>at.ac.oeaw.acdh</groupId>
-	<artifactId>stormychecker</artifactId>
-	<version>2.0.2</version>
+	<artifactId>linkchecker</artifactId>
+	<version>2.1.0</version>
 	<packaging>jar</packaging>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<stormcrawler.version>1.14</stormcrawler.version>
+		<storm.version>2.2.0</storm.version>
+		<stormcrawler.version>2.1</stormcrawler.version>
+		<rasa.version>4.0.0</rasa.version>
 	</properties>
 
 	<distributionManagement>
@@ -31,8 +33,8 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.2</version>
 				<configuration>
-					<source>1.8</source>
-					<target>1.8</target>
+					<source>11</source>
+					<target>11</target>
 				</configuration>
 			</plugin>
 			<plugin>
@@ -88,15 +90,6 @@
 										<exclude>META-INF/*.RSA</exclude>
 									</excludes>
 								</filter>
-								<filter>
-									<!-- https://issues.apache.org/jira/browse/STORM-2428 -->
-									<artifact>org.apache.storm:flux-core</artifact>
-									<excludes>
-										<exclude>org/apache/commons/**</exclude>
-										<exclude>org/apache/http/**</exclude>
-										<exclude>org/yaml/**</exclude>
-									</excludes>
-								</filter>
 							</filters>
 						</configuration>
 					</execution>
@@ -110,27 +103,34 @@
 			<groupId>com.digitalpebble.stormcrawler</groupId>
 			<artifactId>storm-crawler-core</artifactId>
 			<version>${stormcrawler.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>com.digitalpebble.stormcrawler</groupId>
-			<artifactId>storm-crawler-sql</artifactId>
-			<version>${stormcrawler.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>mysql</groupId>
-			<artifactId>mysql-connector-java</artifactId>
-			<version>8.0.17</version>
-		</dependency>
+		</dependency>		
 		<dependency>
 			<groupId>org.apache.storm</groupId>
 			<artifactId>storm-core</artifactId>
-			<version>1.2.3</version>
+			<version>${storm.version}</version>
+			<scope>test</scope>
+		</dependency>	
+		<dependency>
+			<groupId>org.apache.storm</groupId>
+			<artifactId>storm-client</artifactId>
+			<version>${storm.version}</version>
 			<scope>provided</scope>
 		</dependency>
+		<!-- Flux include -->
 		<dependency>
 			<groupId>org.apache.storm</groupId>
 			<artifactId>flux-core</artifactId>
-			<version>1.2.3</version>
+			<version>${storm.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>eu.clarin.cmdi</groupId>
+			<artifactId>rasa-api</artifactId>
+			<version>${rasa.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>eu.clarin.cmdi</groupId>
+			<artifactId>rasa-mysql-impl</artifactId>
+			<version>${rasa.version}</version>
 		</dependency>
 	</dependencies>
 

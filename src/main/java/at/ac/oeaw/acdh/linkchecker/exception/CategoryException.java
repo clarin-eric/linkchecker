@@ -1,7 +1,7 @@
-package at.ac.oeaw.acdh.stormychecker.exception;
+package at.ac.oeaw.acdh.linkchecker.exception;
 
-import at.ac.oeaw.acdh.stormychecker.bolt.FetcherBolt;
-import at.ac.oeaw.acdh.stormychecker.config.Category;
+import eu.clarin.cmdi.rasa.helpers.statusCodeMapper.Category;
+
 import org.apache.http.ConnectionClosedException;
 import org.apache.http.NoHttpResponseException;
 import org.apache.http.client.RedirectException;

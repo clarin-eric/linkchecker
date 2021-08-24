@@ -10,7 +10,8 @@ config:
   topology.max.spout.pending: 100
   topology.debug: false
 
-  fetcher.threads.number: 50
+  urlbuffer.class: "at.ac.oeaw.acdh.linkchecker.spout.QueueLimitURLBuffer"
+  fetcher.threads.number: 1
 
   # override the JVM parameters for the workers
   topology.worker.childopts: "-Xmx2g -Djava.net.preferIPv4Stack=true"
@@ -33,16 +34,22 @@ config:
     - error.source
     - isSitemap
     - isFeed
+    - urlId
+    - originalUrl
+    - redirectCount
 
   http.agent.name: "{{HTTP_AGENT_NAME}}"
   http.agent.version: "{{HTTP_AGENT_VERSION}}"
   http.agent.description: "{{HTTP_AGENT_DESCRIPTION}}"
   http.agent.url: "{{HTTP_AGENT_URL}}"
   http.agent.email: "{{HTTP_AGENT_EMAIL}}"
-  http.redirectLimit: "{{HTTP_REDIRECT_LIMIT}}"
+  http.redirectLimit: {{HTTP_REDIRECT_LIMIT}}
+  http.timeout: 5000
 
-  #default 1 already
-  #fetcher.server.delay: 1
+  # Defines delay (in secs) between crawls in the same queue
+  fetcher.server.delay: 2
+  # Defines the delay between crawls in the same queue if a queue has > 1 thread (fetcher.server.delay is use otherwise)
+  fetcher.server.min.delay: 2
   fetcher.server.delay.force: true
 
   # The maximum number of bytes for returned HTTP response bodies.
@@ -55,8 +62,8 @@ config:
   # the FetcherBolt will log the content of its internal queues to the logs
   # fetcherbolt.queue.debug.filepath: "/tmp/fetcher-dump-{port}"
 
-  parsefilters.config.file: "parsefilters.json"
-  urlfilters.config.file: "urlfilters.json"
+  # parsefilters.config.file: "parsefilters.json"
+  # urlfilters.config.file: "urlfilters.json"
 
   # revisit a page daily (value in minutes)
   # set it to -1 to never refetch a page
@@ -101,44 +108,35 @@ config:
       parallelism.hint: 1
 
   #######
-  # SQL #
+  # HIKARI connection pool #
   #######
 
-  #your mysql parameters go here
-  sql.connection:
-    url: "{{DATABASE_URI}}"
-    user: "{{DATABASE_USERNAME}}"
+  #your hikari properties go here
+  HIKARI:
+    driverClassName: com.mysql.cj.jdbc.Driver
+    jdbcUrl: "{{DATABASE_URI}}"
+    username: "{{DATABASE_USERNAME}}"
     password: "{{DATABASE_PASSWORD}}"
-    rewriteBatchedStatements: "true"
-    useBatchMultiSend: "true"
-    autoReconnect:  "true"
+    maximumPoolSize: 5
+    minimumIdle: 0
 
-  sql.max.urls.per.bucket: 100
-
-  sql.status.table: "urls"
-  sql.status.resultTable: "status"
-  sql.status.historyTable: "history"
-
-  sql.spout.max.results: 100
+  rasa.spout.max.results: {{RASA_SPOUT_MAX_RESULTS}}
 
   # time in secs for which the URLs will be considered for fetching after a ack of fail
   spout.ttl.purgatory: 300
 
-  #  #Max time to allow between 2 successive queries to the backend. Value in msecs, default 20000.
-  spout.max.delay.queries: 600000
+  #Max time to allow between 2 successive queries to the backend. Value in msecs, default 20000.
+  # 1 hour
+  spout.max.delay.queries: 3600000
 
   # Min time (in msecs) to allow between 2 successive queries to SQL
-  spout.min.delay.queries: 2000
+  # 5 minutes
+  spout.min.delay.queries: 60000
 
-  # Delay since previous query date (in secs) after which the nextFetchDate value will be reset to the current time
-  # Setting this to -1 or a large value means that the ES will cache the results but also that less and less results
-  # might be returned.
-  spout.reset.fetchdate.after: 120
 
-  sql.metrics.table: "metrics"
 
-  sql.index.table: "content"
-
-  #default value 1000, you can change to test
-  sql.update.batch.size: 1000
-
+ # linkchecker specific settings
+  login.list.url: "https://raw.githubusercontent.com/clarin-eric/login-pages/master/list.txt"
+  ok.status.codes: [200, 304]
+  redirect.status.codes: [301, 302, 303, 307, 308] 
+  undeterminded.status.codes: [401, 405, 429]

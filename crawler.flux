@@ -1,4 +1,4 @@
-name: "stormychecker"
+name: "linkchecker"
 
 includes:
     - resource: true
@@ -6,23 +6,23 @@ includes:
       override: false
 
     - resource: false
-      file: "/app/stormychecker/crawler-conf.yaml"
+      file: "${ENV-LINKCHECKER_DIRECTORY}/crawler-conf.yaml"
       override: true
 
 spouts:
   - id: "spout"
-    className: "at.ac.oeaw.acdh.stormychecker.spout.SQLSpout"
+    className: "at.ac.oeaw.acdh.linkchecker.spout.RASASpout"
     parallelism: 1
 
 bolts:
   - id: "partitioner"
-    className: "at.ac.oeaw.acdh.stormychecker.bolt.URLPartitionerBolt"
+    className: "com.digitalpebble.stormcrawler.bolt.URLPartitionerBolt"
     parallelism: 1
   - id: "fetcher"
-    className: "at.ac.oeaw.acdh.stormychecker.bolt.FetcherBolt"
-    parallelism: 10
+    className: "at.ac.oeaw.acdh.linkchecker.bolt.MetricsFetcherBolt"
+    parallelism: 30
   - id: "status"
-    className: "at.ac.oeaw.acdh.stormychecker.bolt.StatusUpdaterBolt"
+    className: "at.ac.oeaw.acdh.linkchecker.bolt.StatusUpdaterBolt"
     parallelism: 1
 
 streams:
@@ -30,24 +30,19 @@ streams:
     to: "partitioner"
     grouping:
       type: SHUFFLE
-
   - from: "partitioner"
     to: "fetcher"
     grouping:
       type: FIELDS
       args: ["key"]
-
   - from: "fetcher"
     to: "status"
     grouping:
       type: FIELDS
       args: ["url"]
-      streamId: "status"
-
+      streamId: "status"        
   - from: "fetcher"
     to: "partitioner"
     grouping:
       type: SHUFFLE
       streamId: "redirect"
-
-

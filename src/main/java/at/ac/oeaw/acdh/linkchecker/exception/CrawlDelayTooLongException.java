@@ -1,4 +1,4 @@
-package at.ac.oeaw.acdh.stormychecker.exception;
+package at.ac.oeaw.acdh.linkchecker.exception;
 
 public class CrawlDelayTooLongException extends Exception {
 
