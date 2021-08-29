@@ -88,7 +88,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         
         checkedLink.setUrlId(Long.valueOf(md.getFirstValue("urlId")));
         
-        checkedLink.setUrl("originalUrl"); //just for the error message since urlId is first choice for storage
+        checkedLink.setUrl(md.getFirstValue("originalUrl")); //just for the error message since urlId is first choice for storage
         
         if((str = md.getFirstValue("fetch.statusCode")) != null && INT_PATTERN.matcher(str).matches()){
            checkedLink.setStatus(Integer.parseInt(md.getFirstValue("fetch.statusCode")));
