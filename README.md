@@ -5,24 +5,24 @@ persists them in a database (currently MariaDB/MySQL)
 
 # How to setup and run
 
-0. Before you can run linkchecker, you need to install [Apache Storm](https://storm.apache.org/):
+1. Before you can run linkchecker, you need to install [Apache Storm](https://storm.apache.org/):
 Download Apache Storm 2.2.0 (current supported version) from this link: https://archive.apache.org/dist/storm/apache-storm-2.2.0/apache-storm-2.2.0.tar.gz
 
-1. Clone this repository.
+2. Clone this repository.
 
-2. Run `mvn install` in the working directory
+3. Run `mvn install` in the working directory
 
-3. ...
-
-4. Add your hikari connection pool ppropiertes to *crawler-conf.yaml* (and change any other parameters you wish, ex: http.agent):
+4. Add your hikari connection pool propiertes to *crawler-conf.yaml* (and change any other parameters you wish, ex: http.agent):
+  
   ```
   HIKARI:
-  driverClassName: com.mysql.cj.jdbc.Driver
-  jdbcUrl: {your database url, ex: "jdbc:mysql://localhost:3307/stormychecker"}
-  username: {your database username}
-  password: {your database password}
+   driverClassName: com.mysql.cj.jdbc.Driver
+   jdbcUrl: {your database url, ex: "jdbc:mysql://localhost:3307/stormychecker"}
+   username: {your database username}
+   password: {your database password}
   ```
 5. Point to your crawler-conf.yaml file in *crawler.flux*:
+  
   ```
   includes:
     - resource: true
@@ -50,9 +50,8 @@ Our SQL database has 6 tables:
 6. **url_context**: joins url-table n-n to the context table, so that each URL might appear in different contexts. Moreover the table contains the last time when the link was ingested and and a boolean flag which indicates if the join is still active. Only URLs which have at least one active join are considered to be checked!
 
 *crawler.flux* defines our topology. It defines all the spouts, bolts and streams.
-1. `com.digitalpebble.stormcrawler.sql.SQLSpout` reads from the urls table in the database and sends it to URLPartitionerBolt. It reads only when nextfetchdate is in the future and it orders the reads based on that column.
-2. `com.digitalpebble.stormcrawler.bolt.URLPartitionerBolt` partitions the URLS to host, path, parameter etc.
-3. `FetcherBolt` fetches the urls. It sends redirects back to URLPartitionerBolt and sends the rest onwards down the stream to StatusUpdaterBolt. Modification of  `com.digitalpebble.stormcrawler.bolt.FetcherBolt`
-4. `StatusUpdaterBolt` persists the results in the status table in the database. It also persists nextfetchdate and host columns in the urls table. Modification of `com.digitalpebble.stormcrawler.sql.StatusUpdaterBolt`.
+1. `at.ac.oeaw.acdh.linkchecker.spout.RASASpout` uses the [resource availability status API](https://github.com/clarin-eric/resource-availability-status-api) to fill up a buffer with URLs to check.
+2. `com.digitalpebble.stormcrawler.bolt.URLPartitionerBolt` partitions the URLs by a configured criteria
+3. `at.ac.oeaw.acdh.linkchecker.bolt.MetricsFetcherBolt` fetches the urls. It sends redirects back to URLPartitionerBolt and sends the rest onwards down the stream to StatusUpdaterBolt. Modification of  `com.digitalpebble.stormcrawler.bolt.FetcherBolt`
+4. `at.ac.oeaw.acdh.linkchecker.bolt.StatusUpdaterBolt` persists the results in the status table of the database via [resource availability status API](https://github.com/clarin-eric/resource-availability-status-api).
 
-Note: For now streams just forward the tuples between the bolts. Parallelism is currently set to 1, so streams are not fully used to their potential right now.
