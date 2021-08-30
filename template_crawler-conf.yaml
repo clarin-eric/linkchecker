@@ -11,7 +11,7 @@ config:
   topology.debug: false
 
   urlbuffer.class: "at.ac.oeaw.acdh.linkchecker.spout.QueueLimitURLBuffer"
-  fetcher.threads.number: 1
+  fetcher.threads.number: 50
 
   # override the JVM parameters for the workers
   topology.worker.childopts: "-Xmx2g -Djava.net.preferIPv4Stack=true"
@@ -118,7 +118,7 @@ config:
     username: "{{DATABASE_USERNAME}}"
     password: "{{DATABASE_PASSWORD}}"
     maximumPoolSize: 5
-    minimumIdle: 3
+    minimumIdle: 0
 
   rasa.spout.max.results: {{RASA_SPOUT_MAX_RESULTS}}
 
