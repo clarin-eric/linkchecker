@@ -71,7 +71,7 @@ public class Configuration {
 	    	fillLoginPageUrls(ConfUtils.getString(conf, Constants.LOGIN_LIST_URL));
 	    	
 	    	//update the list once a day at 1 am
-	    	Runnable loginPageUrlUpdater = () -> { Configuration.fillLoginPageUrls("");};
+	    	Runnable loginPageUrlUpdater = () -> { Configuration.fillLoginPageUrls(ConfUtils.getString(conf, Constants.LOGIN_LIST_URL));};
 	
 	        long oneAM = LocalDateTime.now().until(LocalDate.now().plusDays(1).atTime(1, 0), ChronoUnit.MINUTES);
 	        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
