@@ -566,7 +566,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
 
                if (Configuration.redirectStatusCodes.contains(statusCode)) {
 
-                  if (++redirectCount >= HTTP_REDIRECT_LIMIT) {
+                  if (++redirectCount > HTTP_REDIRECT_LIMIT) {
                      throw new RedirectException(
                            "Redirects exceeded " + HTTP_REDIRECT_LIMIT + " redirects for " + originalUrl);
                   }
