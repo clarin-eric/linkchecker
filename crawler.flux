@@ -20,7 +20,7 @@ bolts:
     parallelism: 1
   - id: "fetcher"
     className: "at.ac.oeaw.acdh.linkchecker.bolt.MetricsFetcherBolt"
-    parallelism: 30
+    parallelism: 1
   - id: "status"
     className: "at.ac.oeaw.acdh.linkchecker.bolt.StatusUpdaterBolt"
     parallelism: 1
