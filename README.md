@@ -1,10 +1,20 @@
 # Link Checker
 The Link checker is a [StormCrawler](https://github.com/DigitalPebble/storm-crawler) 
 adaptation for URL checking. Instead of crawling, it checks the status of URLs and
-persists them in a database (currently MariaDB/MySQL)
+persists them in a database (currently MariaDB/MySQL). 
+**Important** for understanding is the fact, that the linkchecker is not a stand alone application 
+but storm topology which is running inside a cluster. For more information on storm topologies, 
+have a look at the documentation of the [apache storm](https://storm.apache.org/releases/2.2.0/Concepts.html) project, please.   
 
 # How to setup and run
 
+## In your IDE
+1. Clone this repository into an IDE workspace
+2. Create either a file crawler-test.flux or change the name in class at.oeaw.acdh.linkchecker.LinkcheckerTest, line 13 to point to a valid flux file
+3. Adapt the settings in crawler.flux and crawler-conf.yaml (or whatever you call these files in your test-environment) as described in the cluster setup.
+4. Execute class at.oeaw.acdh.linkchecker.LinkcheckerTest
+
+## In a local cluster
 1. Before you can run linkchecker, you need to install [Apache Storm](https://storm.apache.org/):
 Download Apache Storm 2.2.0 (current supported version) from this link: https://archive.apache.org/dist/storm/apache-storm-2.2.0/apache-storm-2.2.0.tar.gz
 
@@ -36,6 +46,8 @@ Download Apache Storm 2.2.0 (current supported version) from this link: https://
   Note: If you set it "crawler-conf.yaml", then you can directly use the crawler-conf.yaml in this repository.
 
 6. To start the link checker on local mode, run `apache-storm-2.2.0/bin/storm storm local path/to/this/repository/target/linkchecker-2.1.0.jar  org.apache.storm.flux.Flux --local path/to/this/repository/crawler.flux --local-ttl 3600`
+
+**For remote cluster setup, have a look at the documentation of the [apache storm](https://storm.apache.org/releases/2.2.0/Setting-up-a-Storm-cluster.html) project, please.**
 
   
   
