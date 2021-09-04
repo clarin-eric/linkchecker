@@ -96,14 +96,15 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
         checkedLink.setContentType(md.getFirstValue("content-type"));
         
         if((str = md.getFirstValue("fetch.byteLength")) != null && INT_PATTERN.matcher(str).matches()){
-           checkedLink.setByteSize(Integer.parseInt(md.getFirstValue("fetch.byteLength")));
+           checkedLink.setByteSize(Long.parseLong(md.getFirstValue("fetch.byteLength")));
         }
         
         if((str = md.getFirstValue("fetch.loadingTime")) != null && INT_PATTERN.matcher(str).matches()){
            checkedLink.setDuration(Integer.parseInt(md.getFirstValue("fetch.loadingTime")));
         }
-        
-        checkedLink.setMessage(md.getFirstValue("fetch.message"));
+        if(md.getFirstValue("fetch.message") != null) {
+           checkedLink.setMessage(md.getFirstValue("fetch.message").substring(0, 1024));
+        }
         checkedLink.setCategory(Category.valueOf(md.getFirstValue("fetch.category")));
 
         checkedLink.setCheckingDate(new Timestamp(System.currentTimeMillis()));
