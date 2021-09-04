@@ -38,7 +38,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
-
 /**
  * Status updater for SQL backend. Discovered URLs are sent as a batch, whereas
  * updates are atomic.
@@ -46,90 +45,92 @@ import java.util.regex.Pattern;
 
 @SuppressWarnings("serial")
 public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
-   
-    private static final Pattern INT_PATTERN = Pattern.compile("\\d+");
 
-    public final Logger LOG = LoggerFactory.getLogger(StatusUpdaterBolt.class);
+   private static final Pattern INT_PATTERN = Pattern.compile("\\d+");
 
-    /**
-     * Does not shard based on the total number of queues
-     **/
-    public StatusUpdaterBolt() {
-    }
+   public final Logger LOG = LoggerFactory.getLogger(StatusUpdaterBolt.class);
 
-    @SuppressWarnings({"rawtypes"})
-    @Override
-    public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
-        super.prepare(stormConf, context, collector);
-    }
+   /**
+    * Does not shard based on the total number of queues
+    **/
+   public StatusUpdaterBolt() {
+   }
 
-    @Override
-    public synchronized void store(String url, Status status,
-          Metadata metadata, Optional<Date> nextFetch, Tuple t) throws Exception {
-    	
-    	LOG.debug("url: {}", url);
-    	LOG.debug("metadata: {}", metadata);
-    	LOG.debug("tuple: {}", t);
+   @SuppressWarnings({ "rawtypes" })
+   @Override
+   public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
+      super.prepare(stormConf, context, collector);
+   }
 
-        StringBuilder mdAsString = new StringBuilder();
-        for (String mdKey : metadata.keySet()) {
-            String[] vals = metadata.getValues(mdKey);
-            for (String v : vals) {
-                mdAsString.append("\t").append(mdKey).append("=").append(v);
-            }
-        }
-        
-        CheckedLink checkedLink = new CheckedLink();
- 
+   @Override
+   public synchronized void store(String url, Status status, Metadata metadata, Optional<Date> nextFetch, Tuple t)
+         throws Exception {
 
-        Metadata md = (Metadata) t.getValueByField("metadata");
-        
-        String str = null;
-        
-        checkedLink.setUrlId(Long.valueOf(md.getFirstValue("urlId")));
-        
-        checkedLink.setUrl(md.getFirstValue("originalUrl")); //just for the error message since urlId is first choice for storage
-        
-        if((str = md.getFirstValue("fetch.statusCode")) != null && INT_PATTERN.matcher(str).matches()){
-           checkedLink.setStatus(Integer.parseInt(md.getFirstValue("fetch.statusCode")));
-        }
-        checkedLink.setContentType(md.getFirstValue("content-type"));
-        
-        if((str = md.getFirstValue("fetch.byteLength")) != null && INT_PATTERN.matcher(str).matches()){
-           checkedLink.setByteSize(Long.parseLong(md.getFirstValue("fetch.byteLength")));
-        }
-        
-        if((str = md.getFirstValue("fetch.loadingTime")) != null && INT_PATTERN.matcher(str).matches()){
-           checkedLink.setDuration(Integer.parseInt(md.getFirstValue("fetch.loadingTime")));
-        }
-        if(md.getFirstValue("fetch.message") != null) {
-           checkedLink.setMessage(md.getFirstValue("fetch.message").substring(0, 1024));
-        }
-        checkedLink.setCategory(Category.valueOf(md.getFirstValue("fetch.category")));
+      LOG.debug("url: {}", url);
+      LOG.debug("metadata: {}", metadata);
+      LOG.debug("tuple: {}", t);
 
-        checkedLink.setCheckingDate(new Timestamp(System.currentTimeMillis()));
+      StringBuilder mdAsString = new StringBuilder();
+      for (String mdKey : metadata.keySet()) {
+         String[] vals = metadata.getValues(mdKey);
+         for (String v : vals) {
+            mdAsString.append("\t").append(mdKey).append("=").append(v);
+         }
+      }
 
+      CheckedLink checkedLink = new CheckedLink();
 
+      Metadata md = (Metadata) t.getValueByField("metadata");
 
-        checkedLink.setRedirectCount(md.getFirstValue("fetch.redirectCount") == null ? 0 : Integer.parseInt(md.getFirstValue("fetch.redirectCount")));
+      String str = null;
 
-        String methodBool = md.getFirstValue("http.method.head");
-        String method = methodBool == null ? "N/A" : methodBool.equalsIgnoreCase("true") ? "HEAD" : "GET";
-        checkedLink.setMethod(method);
-        
-        try {
-        	Configuration.checkedLinkResource.save(checkedLink);
-        	_collector.ack(t);
-        }
-        catch(SQLException ex) {
-        	LOG.error("can't save checked link \n{}", checkedLink);
-        	_collector.fail(t);
-        }
-    }
+      checkedLink.setUrlId(Long.valueOf(md.getFirstValue("urlId")));
 
+      checkedLink.setUrl(md.getFirstValue("originalUrl")); // just for the error message since urlId is first choice for
+                                                           // storage
 
-    @Override
-    public void cleanup() {
-    	
-    }
+      if ((str = md.getFirstValue("fetch.statusCode")) != null && INT_PATTERN.matcher(str).matches()) {
+         checkedLink.setStatus(Integer.parseInt(md.getFirstValue("fetch.statusCode")));
+      }
+      if (md.getFirstValue("content-type") != null) {
+         checkedLink.setContentType((md.getFirstValue("content-type").length() < 256) ? md.getFirstValue("content-type")
+               : md.getFirstValue("content-type").substring(0, 250) + "...");
+      }
+
+      if ((str = md.getFirstValue("fetch.byteLength")) != null && INT_PATTERN.matcher(str).matches()) {
+         checkedLink.setByteSize(Long.parseLong(md.getFirstValue("fetch.byteLength")));
+      }
+
+      if ((str = md.getFirstValue("fetch.loadingTime")) != null && INT_PATTERN.matcher(str).matches()) {
+         checkedLink.setDuration(Integer.parseInt(md.getFirstValue("fetch.loadingTime")));
+      }
+      if (md.getFirstValue("fetch.message") != null) {
+         checkedLink.setMessage((md.getFirstValue("fetch.message").length() < 1024) ? md.getFirstValue("fetch.message")
+               : md.getFirstValue("fetch.message").substring(0, 1020) + "...");
+      }
+
+      checkedLink.setCategory(Category.valueOf(md.getFirstValue("fetch.category")));
+
+      checkedLink.setCheckingDate(new Timestamp(System.currentTimeMillis()));
+
+      checkedLink.setRedirectCount(md.getFirstValue("fetch.redirectCount") == null ? 0
+            : Integer.parseInt(md.getFirstValue("fetch.redirectCount")));
+
+      String methodBool = md.getFirstValue("http.method.head");
+      String method = methodBool == null ? "N/A" : methodBool.equalsIgnoreCase("true") ? "HEAD" : "GET";
+      checkedLink.setMethod(method);
+
+      try {
+         Configuration.checkedLinkResource.save(checkedLink);
+         _collector.ack(t);
+      } catch (SQLException ex) {
+         LOG.error("can't save checked link \n{}", checkedLink);
+         _collector.fail(t);
+      }
+   }
+
+   @Override
+   public void cleanup() {
+
+   }
 }
