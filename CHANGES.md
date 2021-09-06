@@ -1,4 +1,8 @@
-# version 2.1
+# version 2.1.1
+- increase size of content-length/byteSize from int to long in Java and from int to bigint in mysql/maria db
+- increase size of message from varchar(256) to varchar(1024) with a truncation in Java, if the message is longer that 1024 characters
+
+# version 2.1.0
 - Java version upgrade to Java 11
 - dependency upgerade to storm 2.2
 - dependency upgrade to storm crawler 2.1
