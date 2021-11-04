@@ -8,11 +8,11 @@ config:
   topology.workers: 1
   topology.message.timeout.secs: 3600 # 1hour
   topology.max.spout.pending: 100
-  topology.debug: true
+  topology.debug: false
   
   urlbuffer.class: "at.ac.oeaw.acdh.linkchecker.spout.QueueLimitURLBuffer"
 
-  fetcher.threads.number: 1
+  fetcher.threads.number: 10
 
   # override the JVM parameters for the workers
   topology.worker.childopts: "-Xmx2g -Djava.net.preferIPv4Stack=true"
@@ -36,7 +36,7 @@ config:
     - isSitemap
     - isFeed
     - urlId
-    - redirectCount
+    - fetch.redirectCount
 
   http.agent.name: "CLARIN Linkchecker: https://www.clarin.eu/linkchecker"
   http.agent.version: "2.1"
@@ -46,6 +46,8 @@ config:
   http.redirectLimit: 5  
   http.timeout: 5000
 
+  # http.protocol.implementation: "com.digitalpebble.stormcrawler.protocol.okhttp.HttpProtocol"
+  # https.protocol.implementation: "com.digitalpebble.stormcrawler.protocol.okhttp.HttpProtocol"
 
   # Defines delay between crawls in the same queue
   fetcher.server.delay: 2
@@ -58,15 +60,15 @@ config:
   # The maximum number of bytes for returned HTTP response bodies.
   # Set -1 to disable the limit.
   # this is 0 so that we don't download any payload when doing GET requests, it will get trimmed.
-  http.content.limit: 0
+  http.content.limit: 100000
 
   # FetcherBolt queue dump => comment out to activate
   # if a file exists on the worker machine with the corresponding port number
   # the FetcherBolt will log the content of its internal queues to the logs
   # fetcherbolt.queue.debug.filepath: "/tmp/fetcher-dump-{port}"
 
-  parsefilters.config.file: "parsefilters.json"
-  urlfilters.config.file: "urlfilters.json"
+  # parsefilters.config.file: "parsefilters.json"
+  # urlfilters.config.file: "urlfilters.json"
 
   # revisit a page daily (value in minutes)
   # set it to -1 to never refetch a page
@@ -121,25 +123,23 @@ config:
   HIKARI:
     driverClassName: com.mysql.cj.jdbc.Driver
     jdbcUrl: "jdbc:mysql://localhost:3306/linkchecker_test"
-    username: testUser
-    password: testPassword
+    username: testuser
+    password: testuser
     maximumPoolSize: 5
-    minimumIdle: 0
+    minimumIdle: 1
 
-  sql.spout.max.results: 250000
+  rasa.spout.max.results: 150000
 
   # time in secs for which the URLs will be considered for fetching after a ack of fail
   spout.ttl.purgatory: 300
 
-  #  #Max time to allow between 2 successive queries to the backend. Value in msecs, default 20000.
-  spout.max.delay.queries: 600000
-
-  #6 minutes
   #Max time to allow between 2 successive queries to the backend. Value in msecs, default 20000.
-  spout.max.delay.queries: 1000000
+  # 1 hour
+  spout.max.delay.queries: 3600000
 
   # Min time (in msecs) to allow between 2 successive queries to SQL
-  spout.min.delay.queries: 2000
+  # 5 minutes
+  spout.min.delay.queries: 60000
   
   # revisit a page daily (value in minutes)
   # set it to -1 to never refetch a page
