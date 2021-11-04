@@ -611,6 +611,8 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                   mergedMD.setValue("fetch.loadingTime", Long.toString(timeFetching));
    
                   mergedMD.setValue("fetch.timeInQueues", Long.toString(timeInQueues));
+                  
+                  mergedMD.setValue("fetch.startTime", Long.toString(start));
    
                   mergedMD.setValue("fetch.redirectCount", Integer.toString(redirectCount));
    

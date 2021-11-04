@@ -111,7 +111,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
       checkedLink.setCategory(Category.valueOf(md.getFirstValue("fetch.category")));
 
-      checkedLink.setCheckingDate(new Timestamp(System.currentTimeMillis()));
+      checkedLink.setCheckingDate(new Timestamp(Long.parseLong(md.getFirstValue("fetch.startTime"))));
 
       checkedLink.setRedirectCount(md.getFirstValue("fetch.redirectCount") == null ? 0
             : Integer.parseInt(md.getFirstValue("fetch.redirectCount")));
