@@ -55,7 +55,7 @@ config:
   # The maximum number of bytes for returned HTTP response bodies.
   # Set -1 to disable the limit.
   # this is 0 so that we don't download any payload when doing GET requests, it will get trimmed.
-  http.content.limit: 100000
+  http.content.limit: 10000
 
   # FetcherBolt queue dump => comment out to activate
   # if a file exists on the worker machine with the corresponding port number
