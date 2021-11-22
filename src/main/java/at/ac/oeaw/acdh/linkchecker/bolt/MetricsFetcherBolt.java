@@ -473,6 +473,8 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
             String redirectCountStr = metadata.getFirstValue("fetch.redirectCount");
 
             int redirectCount = (redirectCountStr != null ? Integer.valueOf(redirectCountStr) : 0);
+            
+            long start = System.currentTimeMillis();
 
             try {
                int statusCode = 0;
@@ -547,7 +549,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                // first try HEAD
                metadata.setValue("http.method.head", "true");
                
-               long start = System.currentTimeMillis();
+               start = System.currentTimeMillis();
 
                response = protocol.getProtocolOutput(fit.url, metadata);
                statusCode = response.getStatusCode();
@@ -634,6 +636,8 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                metadata.setValue("fetch.category", CategoryException.getCategoryFromException(ex, fit.url).name());
 
                metadata.setValue("fetch.message", ex.getMessage());
+               
+               metadata.setValue("fetch.startTime", Long.toString(start));
 
                collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, fit.t, new Values(fit.url, metadata, Status.DISCOVERED));
 
