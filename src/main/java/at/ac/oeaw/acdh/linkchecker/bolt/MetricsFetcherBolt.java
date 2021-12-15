@@ -917,7 +917,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
    }
 
    public synchronized void countAndLog() {
-      if (counter.incrementAndGet() >= 1000) {
+      if (counter.incrementAndGet() >= 100) {
          long secondsDiff = System.currentTimeMillis() - lastCheckpoint;
          LOG.info("Checked %d links in the last %d ms", counter.get(), secondsDiff);
          counter.set(0);
