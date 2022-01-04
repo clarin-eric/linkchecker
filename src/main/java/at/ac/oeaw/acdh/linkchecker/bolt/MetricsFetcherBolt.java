@@ -483,6 +483,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
 
                URL url = new URL(fit.url);
                Protocol protocol = protocolFactory.getProtocol(url);
+               boolean doRedirect = false;
 
                if (isProtocolImplemented(protocol, fit.url, metadata)) {
 
@@ -509,6 +510,8 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                         response = protocol.getProtocolOutput(fit.url, metadata);
                         statusCode = response.getStatusCode();
                      }
+                     
+
 
                      if (Configuration.redirectStatusCodes.contains(statusCode)) {
 
@@ -520,12 +523,9 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
 
                         }
                         else {
-
-                           String redirectUrl = convertRelativeToAbsolute(fit.url,
-                                 response.getMetadata().getFirstValue(HttpHeaders.LOCATION));
-                           metadata.setValue("fetch.redirectCount", Integer.toString(redirectCount));
-
-                           collector.emit(Constants.RedirectStreamName, fit.t, new Values(redirectUrl, metadata));
+                           
+                           doRedirect = true;
+                           
                         }
                      }
                      else {
@@ -555,20 +555,36 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
 
                      }
                   }
+                  
+                  if(doRedirect) {
+                     String redirectUrl = convertRelativeToAbsolute(fit.url,
+                           response.getMetadata().getFirstValue(HttpHeaders.LOCATION));
+                     metadata.setValue("fetch.redirectCount", Integer.toString(redirectCount));
 
-                  metadata.setValue("fetch.statusCode", Integer.toString(response.getStatusCode()));
+                     collector.emit(Constants.RedirectStreamName, fit.t, new Values(redirectUrl, metadata));
+                  }
+                  else {
 
-                  metadata.setValue("fetch.byteLength",
-                        response.getMetadata().getFirstValue(HttpHeaders.CONTENT_LENGTH));
+                     metadata.setValue("fetch.statusCode", Integer.toString(response.getStatusCode()));
+   
+                     metadata.setValue("fetch.byteLength",
+                           response.getMetadata().getFirstValue(HttpHeaders.CONTENT_LENGTH));
+   
+                     metadata.setValue("fetch.timeInQueues", String.valueOf(start - fit.creationTime));
+   
+                     metadata.setValue("fetch.startTime", Long.toString(start));
+   
+                     metadata.setValue("fetch.redirectCount", Integer.toString(redirectCount));
+   
+                     collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, fit.t,
+                           new Values(fit.url, metadata, Status.DISCOVERED));
+                  }
+               }
+               else { // protocol not implemented
 
-                  metadata.setValue("fetch.timeInQueues", String.valueOf(start - fit.creationTime));
-
-                  metadata.setValue("fetch.startTime", Long.toString(start));
-
-                  metadata.setValue("fetch.redirectCount", Integer.toString(redirectCount));
-
-                  collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, fit.t,
-                        new Values(fit.url, metadata, Status.DISCOVERED));
+                  metadata.setValue("fetch.category", Category.Undetermined.name());
+                  metadata.setValue("fetch.message", "No protocol implementation found for " + fit.url);
+                  
                }
             }
             catch (Exception ex) {

@@ -81,6 +81,8 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
       CheckedLink checkedLink = new CheckedLink();
 
       Metadata md = (Metadata) t.getValueByField("metadata");
+      
+      LOG.debug("metadata:\n" + md.toString());
 
       String str = null;
 
