@@ -109,7 +109,7 @@ config:
 
   #your mysql parameters go here
   HIKARI:
-    driverClassName: com.mysql.cj.jdbc.Driver
+    driverClassName: org.mariadb.jdbc.Driver
     jdbcUrl: 
     username: 
     password: 
