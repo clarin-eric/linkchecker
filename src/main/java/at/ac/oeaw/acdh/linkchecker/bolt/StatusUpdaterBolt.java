@@ -81,6 +81,8 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
       CheckedLink checkedLink = new CheckedLink();
 
       Metadata md = (Metadata) t.getValueByField("metadata");
+      
+      LOG.debug("metadata:\n" + md.toString());
 
       String str = null;
 
@@ -101,8 +103,8 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
          checkedLink.setByteSize(Long.parseLong(md.getFirstValue("fetch.byteLength")));
       }
 
-      if ((str = md.getFirstValue("fetch.loadingTime")) != null && INT_PATTERN.matcher(str).matches()) {
-         checkedLink.setDuration(Integer.parseInt(md.getFirstValue("fetch.loadingTime")));
+      if ((str = md.getFirstValue("fetch.duration")) != null && INT_PATTERN.matcher(str).matches()) {
+         checkedLink.setDuration(Integer.parseInt(md.getFirstValue("fetch.duration")));
       }
       if (md.getFirstValue("fetch.message") != null) {
          checkedLink.setMessage((md.getFirstValue("fetch.message").length() < 1024) ? md.getFirstValue("fetch.message")

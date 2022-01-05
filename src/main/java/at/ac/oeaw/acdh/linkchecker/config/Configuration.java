@@ -65,7 +65,7 @@ public class Configuration {
 	public static List<Integer> undeterminedStatusCodes;
 
     
-    @SuppressWarnings("unchecked")
+//    @SuppressWarnings("unchecked")
 	public static synchronized void init(Map<String, Object> conf) {
     	if(!isInitialized) {
 	    	fillLoginPageUrls(ConfUtils.getString(conf, Constants.LOGIN_LIST_URL));
@@ -83,7 +83,6 @@ public class Configuration {
     	}	
     }
     
-    @SuppressWarnings("unchecked")
 	public static synchronized void setActive(Map<String,Object> conf, boolean active) {
     	if(active) {
         	final Properties props = new Properties();

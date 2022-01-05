@@ -121,7 +121,7 @@ config:
 
   #your hikari properties go here
   HIKARI:
-    driverClassName: com.mysql.cj.jdbc.Driver
+    driverClassName: org.mariadb.jdbc.Driver
     jdbcUrl: "jdbc:mysql://localhost:3306/linkchecker_test"
     username: testuser
     password: testuser

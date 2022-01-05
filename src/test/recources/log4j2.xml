@@ -4,6 +4,7 @@
         <Console name="STDOUT" target="SYSTEM_OUT">
             <PatternLayout pattern="%d{HH:mm:ss} [%t] %-5level %logger{36} - %msg%n"/>
         </Console>
+        <!-- 
         <RollingFile name="FILE" fileName="${env:LINKCHECKER_DIRECTORY}/logs/linkchecker.log"
          filePattern="logs/$${date:yyyy-MM}/app-%d{MM-dd-yyyy}-%i.log.gz">
          <PatternLayout>
@@ -14,12 +15,14 @@
             <SizeBasedTriggeringPolicy size="250 MB" />
          </Policies>
       </RollingFile>
+       -->
     </Appenders>
     <Loggers>
-        <Logger name="at.ac.oeaw.acdh.linkchecker.spout.RASASpout" level="debug">
+ 
+        <Logger name="at.ac.oeaw.acdh.linkchecker.spout.RASASpout" level="debug"  additivity="false">
             <AppenderRef ref="STDOUT"/>
         </Logger>
-       <!--  
+           <!-- 
         <Logger name="eu.clarin.cmdi.rasa.linkResources.impl.LinkToBeCheckedResourceImpl" level="debug">
             <AppenderRef ref="STDOUT"/>
         </Logger> 
