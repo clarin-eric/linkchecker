@@ -113,7 +113,6 @@ config:
 
   #your hikari properties go here
   HIKARI:
-    driverClassName: org.mariadb.jdbc.Driver
     jdbcUrl: "{{DATABASE_URI}}"
     username: "{{DATABASE_USERNAME}}"
     password: "{{DATABASE_PASSWORD}}"
