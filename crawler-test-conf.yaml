@@ -45,6 +45,10 @@ config:
   http.agent.email: "linkchecker@clarin.eu"
   http.redirectLimit: 5  
   http.timeout: 5000
+  
+  # using mock proxy server for all requests
+  http.proxy.host: "localhost"
+  http.proxy.port: 8181
 
   # http.protocol.implementation: "com.digitalpebble.stormcrawler.protocol.okhttp.HttpProtocol"
   # https.protocol.implementation: "com.digitalpebble.stormcrawler.protocol.okhttp.HttpProtocol"
