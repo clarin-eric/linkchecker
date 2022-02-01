@@ -12,7 +12,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<storm.version>2.2.1</storm.version>
 		<stormcrawler.version>2.1</stormcrawler.version>
-		<rasa.version>4.2.0-SNAPSHOT</rasa.version>
+		<rasa.version>5.0.1-SNAPSHOT</rasa.version>
 	</properties>
 
 	<distributionManagement>
