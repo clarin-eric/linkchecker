@@ -25,6 +25,8 @@ import org.apache.storm.spout.Scheme;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.persistence.AbstractQueryingSpout;
@@ -34,11 +36,12 @@ import com.digitalpebble.stormcrawler.util.StringTabScheme;
 import at.ac.oeaw.acdh.linkchecker.config.Configuration;
 import at.ac.oeaw.acdh.linkchecker.config.Constants;
 import eu.clarin.cmdi.rasa.DAO.LinkToBeChecked;
-import lombok.extern.slf4j.Slf4j;
+import eu.clarin.cmdi.rasa.filters.LinkToBeCheckedFilter;
 
 @SuppressWarnings("serial")
-@Slf4j
 public class RASASpout extends AbstractQueryingSpout {
+
+   public static final Logger LOG = LoggerFactory.getLogger(RASASpout.class);
 
    private static final Scheme SCHEME = new StringTabScheme();
 
@@ -53,20 +56,10 @@ public class RASASpout extends AbstractQueryingSpout {
 
       super.open(conf, context, collector);
 
-      maxNumResults = ConfUtils.getInt(conf, Constants.RASA_MAXRESULTS_PARAM_NAME, 1000);
+      maxNumResults = ConfUtils.getInt(conf, Constants.RASA_MAXRESULTS_PARAM_NAME, 100);
 
       Configuration.init(conf);
       Configuration.setActive(conf, true);
-      
-      
-      try {
-         log.debug("trimming URLs and extraction groupKey (host)");
-         Configuration.linkToBeCheckedResource.updateURLs();
-      }
-      catch (SQLException e) {
-         
-         log.error("exception while trimming URLs and extraction groupKeys:\n{}", e);
-      }
 
       int totalTasks = context.getComponentTasks(context.getThisComponentId()).size();
       if (totalTasks > 1) {
@@ -82,13 +75,16 @@ public class RASASpout extends AbstractQueryingSpout {
    @Override
    protected void populateBuffer() {
 
-      log.debug("{} call LinkToBeCheckedRessource.getNextLinksToCheck()", logIdprefix);
+      LinkToBeCheckedFilter filter = Configuration.linkToBeCheckedResource.getLinkToBeCheckedFilter().setIsActive(true)
+            .setOrderByCheckingDate(true).setLimit(0, maxNumResults);
+
+      LOG.debug("{} call LinkToBeCheckedRessource.get(filter)", logIdprefix);
       
       this.isInQuery.set(true);
       long timeStartQuery = System.currentTimeMillis();
-      try (Stream<LinkToBeChecked> stream = Configuration.linkToBeCheckedResource.getNextLinksToCheck()) {         
+      try (Stream<LinkToBeChecked> stream = Configuration.linkToBeCheckedResource.get(filter)) {         
 
-         stream.limit(maxNumResults).filter(link -> !beingProcessed.containsKey(link.getUrl())).forEach(link -> {
+         stream.filter(link -> !beingProcessed.containsKey(link.getUrl())).forEach(link -> {
             Metadata md = new Metadata();
             md.setValue("urlId", String.valueOf(link.getUrlId()));
             md.setValue("originalUrl", link.getUrl());
@@ -98,24 +94,24 @@ public class RASASpout extends AbstractQueryingSpout {
          long timeTaken = System.currentTimeMillis() - timeStartQuery;
          queryTimes.addMeasurement(timeTaken);
 
-         log.info("{} SQL query returned {} hits, distributed on {} queues in {} msec", logIdprefix, buffer.size(),
+         LOG.info("{} SQL query returned {} hits, distributed on {} queues in {} msec", logIdprefix, buffer.size(),
                buffer.numQueues(), timeTaken);
 
       } 
       catch (SQLException e) {
-         log.error("Exception while querying table", e);
+         LOG.error("Exception while querying table", e);
       }
    }
 
    @Override
    public void ack(Object msgId) {
-      log.debug("{}  Ack for {}", logIdprefix, msgId);
+      LOG.debug("{}  Ack for {}", logIdprefix, msgId);
       super.ack(msgId);
    }
 
    @Override
    public void fail(Object msgId) {
-      log.info("{}  Fail for {}", logIdprefix, msgId);
+      LOG.info("{}  Fail for {}", logIdprefix, msgId);
       super.fail(msgId);
    }
 

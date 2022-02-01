@@ -480,8 +480,6 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
             try {
                int statusCode = 0;
                ProtocolResponse response = null;
-               
-               fit.url = fit.url.replace(" ", "%20");  //whitespace replacement
 
                URL url = new URL(fit.url);
                Protocol protocol = protocolFactory.getProtocol(url);
