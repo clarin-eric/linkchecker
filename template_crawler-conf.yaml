@@ -10,7 +10,7 @@ config:
   topology.max.spout.pending: 100
   topology.debug: false
 
-  urlbuffer.class: "at.ac.oeaw.acdh.linkchecker.spout.QueueLimitURLBuffer"
+#  urlbuffer.class: "at.ac.oeaw.acdh.linkchecker.spout.QueueLimitURLBuffer"
   fetcher.threads.number: 50
 
   # override the JVM parameters for the workers
@@ -55,7 +55,7 @@ config:
   # The maximum number of bytes for returned HTTP response bodies.
   # Set -1 to disable the limit.
   # this is 0 so that we don't download any payload when doing GET requests, it will get trimmed.
-  http.content.limit: 100000
+  http.content.limit: 10000
 
   # FetcherBolt queue dump => comment out to activate
   # if a file exists on the worker machine with the corresponding port number
@@ -113,7 +113,6 @@ config:
 
   #your hikari properties go here
   HIKARI:
-    driverClassName: org.mariadb.jdbc.Driver
     jdbcUrl: "{{DATABASE_URI}}"
     username: "{{DATABASE_USERNAME}}"
     password: "{{DATABASE_PASSWORD}}"
