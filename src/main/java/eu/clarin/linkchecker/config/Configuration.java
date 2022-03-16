@@ -1,4 +1,4 @@
-package at.ac.oeaw.acdh.linkchecker.config;
+package eu.clarin.linkchecker.config;
 
 import org.apache.storm.shade.org.json.simple.JSONArray;
 import org.apache.http.client.methods.CloseableHttpResponse;

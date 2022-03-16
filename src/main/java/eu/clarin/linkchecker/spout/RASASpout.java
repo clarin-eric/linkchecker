@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package at.ac.oeaw.acdh.linkchecker.spout;
+package eu.clarin.linkchecker.spout;
 
 import java.sql.SQLException;
 import java.util.Map;
@@ -31,9 +31,9 @@ import com.digitalpebble.stormcrawler.persistence.AbstractQueryingSpout;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.digitalpebble.stormcrawler.util.StringTabScheme;
 
-import at.ac.oeaw.acdh.linkchecker.config.Configuration;
-import at.ac.oeaw.acdh.linkchecker.config.Constants;
 import eu.clarin.cmdi.rasa.DAO.LinkToBeChecked;
+import eu.clarin.linkchecker.config.Configuration;
+import eu.clarin.linkchecker.config.Constants;
 import lombok.extern.slf4j.Slf4j;
 
 @SuppressWarnings("serial")

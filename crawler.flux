@@ -11,7 +11,7 @@ includes:
 
 spouts:
   - id: "spout"
-    className: "at.ac.oeaw.acdh.linkchecker.spout.RASASpout"
+    className: "eu.clarin.linkchecker.spout.RASASpout"
     parallelism: 1
 
 bolts:
@@ -19,10 +19,10 @@ bolts:
     className: "com.digitalpebble.stormcrawler.bolt.URLPartitionerBolt"
     parallelism: 1
   - id: "fetcher"
-    className: "at.ac.oeaw.acdh.linkchecker.bolt.MetricsFetcherBolt"
+    className: "eu.clarin.linkchecker.bolt.MetricsFetcherBolt"
     parallelism: 1
   - id: "status"
-    className: "at.ac.oeaw.acdh.linkchecker.bolt.StatusUpdaterBolt"
+    className: "eu.clarin.linkchecker.bolt.StatusUpdaterBolt"
     parallelism: 1
 
 streams:

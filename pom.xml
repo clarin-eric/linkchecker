@@ -10,7 +10,7 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<storm.version>2.2.1</storm.version>
+		<storm.version>2.1.1</storm.version>
 		<stormcrawler.version>2.1</stormcrawler.version>
 		<rasa.version>5.0.1-SNAPSHOT</rasa.version>
 	</properties>
@@ -94,6 +94,7 @@
 					</execution>
 				</executions>
 			</plugin>
+			
 		</plugins>
 	</build>
 	<dependencies>
@@ -202,6 +203,13 @@
 					<artifactId>slf4j-api</artifactId>
 				</exclusion>
 			</exclusions>
+		</dependency>
+		<dependency>
+     <groupId>org.mock-server</groupId>
+     <artifactId>mockserver-netty</artifactId>
+     <version>5.12.0</version>
+     <classifier>shaded</classifier>
+     <scope>test</scope>
 		</dependency>
 	</dependencies>
 

@@ -16,16 +16,17 @@
  * NOTICE: This code was modified in ACDH - Austrian Academy of Sciences, based on Stormcrawler source code.
  */
 
-package at.ac.oeaw.acdh.linkchecker.bolt;
+package eu.clarin.linkchecker.bolt;
 
 import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.persistence.AbstractStatusUpdaterBolt;
 import com.digitalpebble.stormcrawler.persistence.Status;
 
-import at.ac.oeaw.acdh.linkchecker.config.Configuration;
 import eu.clarin.cmdi.rasa.DAO.CheckedLink;
 
 import eu.clarin.cmdi.rasa.helpers.statusCodeMapper.Category;
+import eu.clarin.linkchecker.config.Configuration;
+
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.tuple.Tuple;

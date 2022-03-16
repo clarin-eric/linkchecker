@@ -16,7 +16,7 @@
  * NOTICE: This code was modified in ACDH - Austrian Academy of Sciences.
  */
 
-package at.ac.oeaw.acdh.linkchecker.config;
+package eu.clarin.linkchecker.config;
 
 public class Constants {
     public static final String RASA_MAXRESULTS_PARAM_NAME = "rasa.spout.max.results";

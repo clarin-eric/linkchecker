@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package at.ac.oeaw.acdh.linkchecker.bolt;
+package eu.clarin.linkchecker.bolt;
 
 import java.io.File;
 import java.net.ConnectException;
@@ -69,11 +69,11 @@ import com.digitalpebble.stormcrawler.protocol.ProtocolFactory;
 import com.digitalpebble.stormcrawler.protocol.ProtocolResponse;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 
-import at.ac.oeaw.acdh.linkchecker.config.Configuration;
-import at.ac.oeaw.acdh.linkchecker.config.Constants;
 import crawlercommons.domains.PaidLevelDomain;
 import crawlercommons.robots.BaseRobotRules;
 import eu.clarin.cmdi.rasa.helpers.statusCodeMapper.Category;
+import eu.clarin.linkchecker.config.Configuration;
+import eu.clarin.linkchecker.config.Constants;
 
 /**
  * A multithreaded, queue-based fetcher adapted from Apache Nutch. Enforces the
