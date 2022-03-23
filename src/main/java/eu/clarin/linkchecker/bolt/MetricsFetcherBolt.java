@@ -571,6 +571,9 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
    
                      metadata.setValue("fetch.byteLength",
                            response.getMetadata().getFirstValue(HttpHeaders.CONTENT_LENGTH));
+                     
+                     metadata.setValue("fetch.contentType",
+                           response.getMetadata().getFirstValue(HttpHeaders.CONTENT_TYPE));
    
                      metadata.setValue("fetch.timeInQueues", String.valueOf(start - fit.creationTime));
    

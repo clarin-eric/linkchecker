@@ -95,9 +95,9 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
       if ((str = md.getFirstValue("fetch.statusCode")) != null && INT_PATTERN.matcher(str).matches()) {
          checkedLink.setStatus(Integer.parseInt(md.getFirstValue("fetch.statusCode")));
       }
-      if (md.getFirstValue("content-type") != null) {
-         checkedLink.setContentType((md.getFirstValue("content-type").length() < 256) ? md.getFirstValue("content-type")
-               : md.getFirstValue("content-type").substring(0, 250) + "...");
+      if (md.getFirstValue("fetch.contentType") != null) {
+         checkedLink.setContentType((md.getFirstValue("fetch.contentType").length() < 256) ? md.getFirstValue("fetch.contentType")
+               : md.getFirstValue("fetch.contentType").substring(0, 250) + "...");
       }
 
       if ((str = md.getFirstValue("fetch.byteLength")) != null && INT_PATTERN.matcher(str).matches()) {
