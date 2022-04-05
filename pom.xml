@@ -71,8 +71,6 @@
                            </manifestEntries>
                         </transformer>
                      </transformers>
-                     <!-- The filters below are necessary if you want to include the Tika 
-								module -->
                      <filters>
                         <filter>
                            <artifact>*:*</artifact>

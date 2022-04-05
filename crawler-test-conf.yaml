@@ -10,7 +10,7 @@ config:
   topology.max.spout.pending: 100
   topology.debug: false
   
-#  urlbuffer.class: "at.ac.oeaw.acdh.linkchecker.spout.QueueLimitURLBuffer"
+  urlbuffer.class: "at.ac.oeaw.acdh.linkchecker.spout.QueueLimitURLBuffer"
 
   fetcher.threads.number: 10
 
