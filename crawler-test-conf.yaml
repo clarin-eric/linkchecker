@@ -45,6 +45,10 @@ config:
   http.agent.email: "linkchecker@clarin.eu"
   http.redirectLimit: 5  
   http.timeout: 5000
+  
+  # using mock proxy server for all requests
+  #http.proxy.host: "localhost"
+  #http.proxy.port: 8181
 
   # http.protocol.implementation: "com.digitalpebble.stormcrawler.protocol.okhttp.HttpProtocol"
   # https.protocol.implementation: "com.digitalpebble.stormcrawler.protocol.okhttp.HttpProtocol"
@@ -121,14 +125,13 @@ config:
 
   #your hikari properties go here
   HIKARI:
-    driverClassName: org.mariadb.jdbc.Driver
-    jdbcUrl: "jdbc:mysql://localhost:3306/linkchecker_test"
-    username: testuser
-    password: testuser
+    jdbcUrl: ${ENV-DATABASE_URI}
+    username: ${ENV-DATABASE_USERNAME}
+    password: ${ENV-DATABASE_PASSWORD}
     maximumPoolSize: 5
     minimumIdle: 1
 
-  rasa.spout.max.results: 150000
+  rasa.spout.max.results: 5000
 
   # time in secs for which the URLs will be considered for fetching after a ack of fail
   spout.ttl.purgatory: 300
@@ -140,10 +143,6 @@ config:
   # Min time (in msecs) to allow between 2 successive queries to SQL
   # 5 minutes
   spout.min.delay.queries: 60000
-  
-  # revisit a page daily (value in minutes)
-  # set it to -1 to never refetch a page
-  fetchInterval.default: 86400
 
   # Delay since previous query date (in secs) after which the nextFetchDate value will be reset to the current time
   # Setting this to -1 or a large value means that the ES will cache the results but also that less and less results

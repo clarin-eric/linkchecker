@@ -30,3 +30,5 @@ hs_err_pid*
 # for running in docker locally
 docker/
 copy.sh
+/.classpath
+/.project

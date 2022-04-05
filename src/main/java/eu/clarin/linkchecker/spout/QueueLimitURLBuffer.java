@@ -1,4 +1,4 @@
-package at.ac.oeaw.acdh.linkchecker.spout;
+package eu.clarin.linkchecker.spout;
 
 import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.persistence.urlbuffer.SimpleURLBuffer;

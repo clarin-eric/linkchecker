@@ -1,4 +1,4 @@
-package at.ac.oeaw.acdh.linkchecker.config;
+package eu.clarin.linkchecker.config;
 
 import org.apache.storm.shade.org.json.simple.JSONArray;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -89,7 +89,8 @@ public class Configuration {
         	
         	((Map<String,Object>) conf.get("HIKARI")).forEach((k,v) -> props.setProperty(k, String.valueOf(v)));
         	
-        	factory = new RasaFactoryBuilderImpl().getRasaFactory(props);
+        	factory = new RasaFactoryBuilderImpl().getRasaFactory();
+        	factory.init(props);
         	linkToBeCheckedResource = factory.getLinkToBeCheckedResource();
         	checkedLinkResource = factory.getCheckedLinkResource();
         	

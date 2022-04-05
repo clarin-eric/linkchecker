@@ -128,10 +128,6 @@ config:
   # Min time (in msecs) to allow between 2 successive queries to SQL
   # 5 minutes
   spout.min.delay.queries: 60000
-  
-  # revisit a page daily (value in minutes)
-  # set it to -1 to never refetch a page
-  fetchInterval.default: 86400
 
   # Delay since previous query date (in secs) after which the nextFetchDate value will be reset to the current time
   # Setting this to -1 or a large value means that the ES will cache the results but also that less and less results

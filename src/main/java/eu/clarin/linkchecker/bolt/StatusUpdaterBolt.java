@@ -16,16 +16,17 @@
  * NOTICE: This code was modified in ACDH - Austrian Academy of Sciences, based on Stormcrawler source code.
  */
 
-package at.ac.oeaw.acdh.linkchecker.bolt;
+package eu.clarin.linkchecker.bolt;
 
 import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.persistence.AbstractStatusUpdaterBolt;
 import com.digitalpebble.stormcrawler.persistence.Status;
 
-import at.ac.oeaw.acdh.linkchecker.config.Configuration;
 import eu.clarin.cmdi.rasa.DAO.CheckedLink;
 
 import eu.clarin.cmdi.rasa.helpers.statusCodeMapper.Category;
+import eu.clarin.linkchecker.config.Configuration;
+
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.tuple.Tuple;
@@ -94,9 +95,9 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
       if ((str = md.getFirstValue("fetch.statusCode")) != null && INT_PATTERN.matcher(str).matches()) {
          checkedLink.setStatus(Integer.parseInt(md.getFirstValue("fetch.statusCode")));
       }
-      if (md.getFirstValue("content-type") != null) {
-         checkedLink.setContentType((md.getFirstValue("content-type").length() < 256) ? md.getFirstValue("content-type")
-               : md.getFirstValue("content-type").substring(0, 250) + "...");
+      if (md.getFirstValue("fetch.contentType") != null) {
+         checkedLink.setContentType((md.getFirstValue("fetch.contentType").length() < 256) ? md.getFirstValue("fetch.contentType")
+               : md.getFirstValue("fetch.contentType").substring(0, 250) + "...");
       }
 
       if ((str = md.getFirstValue("fetch.byteLength")) != null && INT_PATTERN.matcher(str).matches()) {

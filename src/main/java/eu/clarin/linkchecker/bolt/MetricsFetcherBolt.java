@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package at.ac.oeaw.acdh.linkchecker.bolt;
+package eu.clarin.linkchecker.bolt;
 
 import java.io.File;
 import java.net.ConnectException;
@@ -68,6 +68,7 @@ import com.digitalpebble.stormcrawler.protocol.Protocol;
 import com.digitalpebble.stormcrawler.protocol.ProtocolFactory;
 import com.digitalpebble.stormcrawler.protocol.ProtocolResponse;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
+
 import crawlercommons.domains.PaidLevelDomain;
 import crawlercommons.robots.BaseRobotRules;
 import eu.clarin.cmdi.rasa.helpers.statusCodeMapper.Category;
@@ -479,6 +480,8 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
             try {
                int statusCode = 0;
                ProtocolResponse response = null;
+               
+               fit.url = fit.url.replace(" ", "%20");  //whitespace replacement
 
                URL url = new URL(fit.url);
                Protocol protocol = protocolFactory.getProtocol(url);
@@ -568,6 +571,9 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
    
                      metadata.setValue("fetch.byteLength",
                            response.getMetadata().getFirstValue(HttpHeaders.CONTENT_LENGTH));
+                     
+                     metadata.setValue("fetch.contentType",
+                           response.getMetadata().getFirstValue(HttpHeaders.CONTENT_TYPE));
    
                      metadata.setValue("fetch.timeInQueues", String.valueOf(start - fit.creationTime));
    

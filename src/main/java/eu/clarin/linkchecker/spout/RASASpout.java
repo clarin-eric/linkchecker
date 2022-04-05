@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package at.ac.oeaw.acdh.linkchecker.spout;
+package eu.clarin.linkchecker.spout;
 
 import java.sql.SQLException;
 import java.util.Map;
@@ -25,22 +25,20 @@ import org.apache.storm.spout.Scheme;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.persistence.AbstractQueryingSpout;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.digitalpebble.stormcrawler.util.StringTabScheme;
+
 import eu.clarin.cmdi.rasa.DAO.LinkToBeChecked;
-import eu.clarin.cmdi.rasa.filters.LinkToBeCheckedFilter;
 import eu.clarin.linkchecker.config.Configuration;
 import eu.clarin.linkchecker.config.Constants;
+import lombok.extern.slf4j.Slf4j;
 
 @SuppressWarnings("serial")
+@Slf4j
 public class RASASpout extends AbstractQueryingSpout {
-
-   public static final Logger LOG = LoggerFactory.getLogger(RASASpout.class);
 
    private static final Scheme SCHEME = new StringTabScheme();
 
@@ -55,10 +53,20 @@ public class RASASpout extends AbstractQueryingSpout {
 
       super.open(conf, context, collector);
 
-      maxNumResults = ConfUtils.getInt(conf, Constants.RASA_MAXRESULTS_PARAM_NAME, 100);
+      maxNumResults = ConfUtils.getInt(conf, Constants.RASA_MAXRESULTS_PARAM_NAME, 1000);
 
       Configuration.init(conf);
       Configuration.setActive(conf, true);
+      
+      
+      try {
+         log.debug("trimming URLs and extraction groupKey (host)");
+         Configuration.linkToBeCheckedResource.updateURLs();
+      }
+      catch (SQLException e) {
+         
+         log.error("exception while trimming URLs and extraction groupKeys:\n{}", e);
+      }
 
       int totalTasks = context.getComponentTasks(context.getThisComponentId()).size();
       if (totalTasks > 1) {
@@ -74,16 +82,13 @@ public class RASASpout extends AbstractQueryingSpout {
    @Override
    protected void populateBuffer() {
 
-      LinkToBeCheckedFilter filter = Configuration.linkToBeCheckedResource.getLinkToBeCheckedFilter().setIsActive(true)
-            .setOrderByCheckingDate(true).setLimit(0, maxNumResults);
-
-      LOG.debug("{} call LinkToBeCheckedRessource.get(filter)", logIdprefix);
+      log.debug("{} call LinkToBeCheckedRessource.getNextLinksToCheck()", logIdprefix);
       
       this.isInQuery.set(true);
       long timeStartQuery = System.currentTimeMillis();
-      try (Stream<LinkToBeChecked> stream = Configuration.linkToBeCheckedResource.get(filter)) {         
+      try (Stream<LinkToBeChecked> stream = Configuration.linkToBeCheckedResource.getNextLinksToCheck()) {         
 
-         stream.filter(link -> !beingProcessed.containsKey(link.getUrl())).forEach(link -> {
+         stream.limit(maxNumResults).filter(link -> !beingProcessed.containsKey(link.getUrl())).forEach(link -> {
             Metadata md = new Metadata();
             md.setValue("urlId", String.valueOf(link.getUrlId()));
             md.setValue("originalUrl", link.getUrl());
@@ -93,24 +98,24 @@ public class RASASpout extends AbstractQueryingSpout {
          long timeTaken = System.currentTimeMillis() - timeStartQuery;
          queryTimes.addMeasurement(timeTaken);
 
-         LOG.info("{} SQL query returned {} hits, distributed on {} queues in {} msec", logIdprefix, buffer.size(),
+         log.info("{} SQL query returned {} hits, distributed on {} queues in {} msec", logIdprefix, buffer.size(),
                buffer.numQueues(), timeTaken);
 
       } 
       catch (SQLException e) {
-         LOG.error("Exception while querying table", e);
+         log.error("Exception while querying table", e);
       }
    }
 
    @Override
    public void ack(Object msgId) {
-      LOG.debug("{}  Ack for {}", logIdprefix, msgId);
+      log.debug("{}  Ack for {}", logIdprefix, msgId);
       super.ack(msgId);
    }
 
    @Override
    public void fail(Object msgId) {
-      LOG.info("{}  Fail for {}", logIdprefix, msgId);
+      log.info("{}  Fail for {}", logIdprefix, msgId);
       super.fail(msgId);
    }
 
