@@ -28,14 +28,15 @@ config:
   # lists the metadata to persist to storage
   # these are not transfered to the outlinks
   metadata.persist:
-    - _redirTo
-    - error.cause
-    - error.source
-    - isSitemap
-    - isFeed
     - urlId
-    - originalUrl
-    - redirectCount
+    - fetch.statusCode
+    - fetch.category
+    - fetch.message
+    - fetch.contentType
+    - fetch.byteLength
+    - fetch.duration
+    - fetch.startTime
+    - fetch.redirectCount
 
   http.agent.name: "{{HTTP_AGENT_NAME}}"
   http.agent.version: "{{HTTP_AGENT_VERSION}}"
@@ -54,7 +55,7 @@ config:
   # The maximum number of bytes for returned HTTP response bodies.
   # Set -1 to disable the limit.
   # this is 0 so that we don't download any payload when doing GET requests, it will get trimmed.
-  http.content.limit: 10000
+  http.content.limit: 0
 
   # FetcherBolt queue dump => comment out to activate
   # if a file exists on the worker machine with the corresponding port number
