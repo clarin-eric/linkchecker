@@ -490,11 +490,11 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                BaseRobotRules rules = protocol.getRobotRules(fit.url);
 
                if (!rules.isAllowed(fit.url)) {
-                  log.info("Denied by robots.txt: {}", fit.url);
+                  metadata.setValue("fetch.message", "Blocked by robots.txt");
                   // pass the info about denied by robots
-                  metadata.setValue(Constants.STATUS_ERROR_CAUSE, "robots.txt");
+                  metadata.setValue("fetch.category", Category.Blocked_By_Robots_txt.name());
                   collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, fit.t,
-                        new Values(fit.url, metadata, Status.ERROR));
+                        new Values(fit.url, metadata, Status.DISCOVERED));
                   // no need to wait next time as we won't request from
                   // that site
                   asap = true;
@@ -730,9 +730,16 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
 
    @Override
    public void declareOutputFields(OutputFieldsDeclarer declarer) {
-      super.declareOutputFields(declarer);
-      declarer.declare(new Fields("url", "content", "metadata"));
+      declarer.declareStream(
+            com.digitalpebble.stormcrawler.Constants.StatusStreamName, 
+            new Fields("url", "metadata", "status")
+         );
+      declarer.declareStream(
+            eu.clarin.linkchecker.config.Constants.RedirectStreamName, 
+            new Fields("url", "metadata")
+         );
    }
+
 
    @Override
    public void cleanup() {
