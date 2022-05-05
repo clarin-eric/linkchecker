@@ -22,17 +22,10 @@ import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.persistence.AbstractStatusUpdaterBolt;
 import com.digitalpebble.stormcrawler.persistence.Status;
 
-import eu.clarin.cmdi.rasa.DAO.CheckedLink;
-
-import eu.clarin.cmdi.rasa.helpers.statusCodeMapper.Category;
-import eu.clarin.linkchecker.config.Configuration;
-import lombok.extern.slf4j.Slf4j;
-
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.tuple.Tuple;
 
-import java.sql.*;
 import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
@@ -44,10 +37,8 @@ import java.util.regex.Pattern;
  **/
 
 @SuppressWarnings("serial")
-@Slf4j
 public class MetadataPrinterBolt extends AbstractStatusUpdaterBolt {
 
-   private static final Pattern INT_PATTERN = Pattern.compile("\\d+");
 
 
    /**
