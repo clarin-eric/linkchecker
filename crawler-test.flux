@@ -1,4 +1,4 @@
-name: "linkchecker"
+name: "linkchecker-test"
 
 includes:
     - resource: true
@@ -11,7 +11,15 @@ includes:
 
 spouts:
   - id: "spout"
-    className: "eu.clarin.linkchecker.spout.RASASpout"
+    className: "eu.clarin.linkchecker.spout.RASAQuerySpout"
+    constructorArgs: 
+      - >
+       select u.* from status s
+       inner join url u
+       on s.url_id=u.id
+       where s.category='undetermined' and method = 'N/A'
+       order by s.checkingDate desc
+       limit 100
     parallelism: 1
 
 bolts:
@@ -22,7 +30,7 @@ bolts:
     className: "eu.clarin.linkchecker.bolt.MetricsFetcherBolt"
     parallelism: 1
   - id: "status"
-    className: "eu.clarin.linkchecker.bolt.StatusUpdaterBolt"
+    className: "eu.clarin.linkchecker.bolt.MetadataPrinterBolt"
     parallelism: 1
 
 streams:
