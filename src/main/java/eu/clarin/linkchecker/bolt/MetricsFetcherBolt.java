@@ -560,7 +560,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                      && response.getStatusCode() != 304) {
                   
                   metadata.setValue("http.method.head", "false");
-                  collector.emit(eu.clarin.linkchecker.config.Constants.RedirectStreamName, fit.t, new Values(url, metadata));
+                  collector.emit(eu.clarin.linkchecker.config.Constants.RedirectStreamName, fit.t, new Values(fit.url, metadata));
                   continue;
                }
                
