@@ -92,6 +92,7 @@ public class RASASpout extends AbstractQueryingSpout {
             Metadata md = new Metadata();
             md.setValue("urlId", String.valueOf(link.getUrlId()));
             md.setValue("originalUrl", link.getUrl());
+            md.setValue("http.method.head", "true");
             buffer.add(link.getUrl(), md);
          });
          this.markQueryReceivedNow();
