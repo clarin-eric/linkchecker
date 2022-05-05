@@ -62,16 +62,6 @@ public class RASAQuerySpout extends AbstractQueryingSpout {
 
       Configuration.init(conf);
       Configuration.setActive(conf, true);
-      
-      
-      try {
-         log.debug("trimming URLs and extraction groupKey (host)");
-         Configuration.linkToBeCheckedResource.updateURLs();
-      }
-      catch (SQLException e) {
-         
-         log.error("exception while trimming URLs and extraction groupKeys:\n{}", e);
-      }
 
       int totalTasks = context.getComponentTasks(context.getThisComponentId()).size();
       if (totalTasks > 1) {
@@ -93,9 +83,9 @@ public class RASAQuerySpout extends AbstractQueryingSpout {
       long timeStartQuery = System.currentTimeMillis();
       try (Stream<Map<String, Object>> stream = Configuration.linkToBeCheckedResource.get(this.query)) {         
 
-         stream.forEach(map -> {
+         stream.limit(this.maxNumResults).forEach(map -> {
             Metadata md = new Metadata();
-            md.setValue("urlId", map.get("urlId").toString());
+            md.setValue("urlId", map.get("id").toString());
             md.setValue("originalUrl", map.get("url").toString());
             md.setValue("http.method.head", "true");
             buffer.add(map.get("url").toString(), md);
