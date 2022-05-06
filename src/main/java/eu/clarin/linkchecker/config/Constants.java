@@ -28,6 +28,7 @@ public class Constants {
     public static final String OK_STATUS_CODES = "ok.status.codes";
     public static final String REDIRECT_STATUS_CODES = "redirect.status.codes";
     public static final String UNDETERMINED_STATUS_CODES = "undeterminded.status.codes";
+    public static final String RESTRICTED_ACCESS_STATUS_CODES = "restricted.access.status.codes";
 
     private Constants() {
     }

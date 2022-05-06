@@ -14,12 +14,10 @@ spouts:
     className: "eu.clarin.linkchecker.spout.RASAQuerySpout"
     constructorArgs: 
       - >
-       select u.* from status s
-       inner join url u
-       on s.url_id=u.id
-       where s.category='undetermined' and method = 'N/A'
-       order by s.checkingDate desc
-       limit 100
+       SELECT u.* FROM url u 
+       WHERE u.valid=true 
+       ORDER BY RAND() 
+       LIMIT 1000
     parallelism: 1
 
 bolts:

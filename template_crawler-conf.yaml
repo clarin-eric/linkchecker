@@ -29,6 +29,7 @@ config:
   # these are not transfered to the outlinks
   metadata.persist:
     - urlId
+    - originalUrl
     - fetch.statusCode
     - fetch.category
     - fetch.message
@@ -37,6 +38,7 @@ config:
     - fetch.duration
     - fetch.startTime
     - fetch.redirectCount
+    - http.method.head
 
   http.agent.name: "{{HTTP_AGENT_NAME}}"
   http.agent.version: "{{HTTP_AGENT_VERSION}}"
@@ -138,4 +140,5 @@ config:
   login.list.url: "https://raw.githubusercontent.com/clarin-eric/login-pages/master/list.txt"
   ok.status.codes: [200, 304]
   redirect.status.codes: [301, 302, 303, 307, 308] 
-  undeterminded.status.codes: [401, 405, 429]
+  undeterminded.status.codes: [405, 429]
+  restricted.access.status.codes: [401, 403]

@@ -46,6 +46,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -70,9 +71,6 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 import org.apache.storm.utils.TupleUtils;
-import org.apache.storm.utils.Utils;
-
-
 
 /**
  * A multithreaded, queue-based fetcher adapted from Apache Nutch. Enforces the
@@ -267,8 +265,6 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
 
       int maxQueueSize;
 
-      final Config conf;
-
       public static final String QUEUE_MODE_HOST = "byHost";
       public static final String QUEUE_MODE_DOMAIN = "byDomain";
       public static final String QUEUE_MODE_IP = "byIP";
@@ -278,7 +274,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
       final Map<Pattern, Integer> customMaxThreads = new HashMap<>();
 
       public FetchItemQueues(Config conf) {
-         this.conf = conf;
+
          this.defaultMaxThread = ConfUtils.getInt(conf, "fetcher.threads.per.queue", 1);
          queueMode = ConfUtils.getString(conf, "fetcher.queue.mode", QUEUE_MODE_HOST);
          // check that the mode is known
@@ -489,6 +485,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
 
                BaseRobotRules rules = protocol.getRobotRules(fit.url);
 
+               //checking for robots.txt
                if (!rules.isAllowed(fit.url)) {
                   metadata.setValue("fetch.message", "Blocked by robots.txt");
                   // pass the info about denied by robots
@@ -500,6 +497,8 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                   asap = true;
                   continue;
                }
+               
+               //checking for crawl delays
                FetchItemQueue fiq = fetchQueues.getFetchItemQueue(fit.queueID);
                if (rules.getCrawlDelay() > 0 && rules.getCrawlDelay() != fiq.crawlDelay) {
                   if (rules.getCrawlDelay() > maxCrawlDelay && maxCrawlDelay >= 0) {
@@ -536,6 +535,22 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                   }
                }
                
+               // checking for know login pages
+               if (Configuration.loginPageUrls.contains(fit.url)) {
+                  // this next if check means that the harvested page was not the login page.
+                  // if the login page is harvested as a url, then it should be handled normally
+
+                  if (!fit.url.equals(metadata.getFirstValue("originalUrl"))) {
+                     metadata.setValue("fetch.message", metadata.getFirstValue("originalUrl")
+                           + " points to a login page, therefore has restricted access.");
+                     metadata.setValue("fetch.category", Category.Restricted_Access.name());
+                     
+                     collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, fit.t,
+                           new Values(fit.url, metadata, Status.ERROR));
+                     
+                     continue;
+                  }
+               }
                
 
                long start = System.currentTimeMillis();
@@ -551,18 +566,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                   continue;
                }
 
-               ProtocolResponse response = protocol.getProtocolOutput(fit.url, metadata);
-               
-               // RASASpout sets HEAD request as default
-               // if the head request is unsuccessful, the tuple is returned to the Partitioner 
-               // with the information that we wont to replay it with a GET request
-               if ("true".equals(metadata.getFirstValue("http.method.head")) && !Configuration.redirectStatusCodes.contains(response.getStatusCode()) && response.getStatusCode() != 200
-                     && response.getStatusCode() != 304) {
-                  
-                  metadata.setValue("http.method.head", "false");
-                  collector.emit(eu.clarin.linkchecker.config.Constants.RedirectStreamName, fit.t, new Values(fit.url, metadata));
-                  continue;
-               }
+               ProtocolResponse response = protocol.getProtocolOutput(fit.url, metadata);               
                
                if (Configuration.redirectStatusCodes.contains(response.getStatusCode())) {
 
@@ -583,10 +587,33 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                      continue;
                   }
                }
+               
+               // RASASpout sets HEAD request as default
+               // if the head request is unsuccessful, the tuple is returned to the Partitioner 
+               // with the information that we wont to replay it with a GET request
+               else if ("true".equals(metadata.getFirstValue("http.method.head")) && !List.of(200, 304).contains(response.getStatusCode())) {                  
+                  metadata.setValue("http.method.head", "false");
+                  collector.emit(eu.clarin.linkchecker.config.Constants.RedirectStreamName, fit.t, new Values(fit.url, metadata));
+                  continue;
+               }               
+               else if (Configuration.okStatusCodes.contains(response.getStatusCode())) {
+                  metadata.setValue("fetch.message", Category.Ok.name());
+                  metadata.setValue("fetch.category", Category.Ok.name());
+               }
+               else if (Configuration.undeterminedStatusCodes.contains(response.getStatusCode())) {
+                  metadata.setValue("fetch.message", "Undetermined, Status code: " + response.getStatusCode());
+                  metadata.setValue("fetch.category", Category.Undetermined.name());
+               }
+               else if (Configuration.restrictedAccessStatusCodes.contains(response.getStatusCode())) {
+                  metadata.setValue("fetch.message", "Restricted access, Status code: " + response.getStatusCode());
+                  metadata.setValue("fetch.category", Category.Restricted_Access.name());
+               }
+               else {
+                  metadata.setValue("fetch.message", "Broken, Status code: " + response.getStatusCode());
+                  metadata.setValue("fetch.category", Category.Broken.name());
+               }
 
                long timeFetching = System.currentTimeMillis() - start;
-
-               final int byteLength = response.getContent().length;
 
 
                log.info("[Fetcher #{}] Fetched {} with status {} in msec {}", taskID, fit.url, response.getStatusCode(),
@@ -603,13 +630,11 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
 
                mergedMD.setValue("fetch.statusCode", Integer.toString(response.getStatusCode()));
 
-               mergedMD.setValue("fetch.byteLength", Integer.toString(byteLength));
+               mergedMD.setValue("fetch.byteLength", response.getMetadata().getFirstValue(HttpHeaders.CONTENT_LENGTH));
                
                mergedMD.setValue("fetch.contentType", response.getMetadata().getFirstValue(HttpHeaders.CONTENT_TYPE));
 
-               mergedMD.setValue("fetch.loadingTime", Long.toString(timeFetching));
-
-               mergedMD.setValue("fetch.timeInQueues", Long.toString(timeInQueues));
+               mergedMD.setValue("fetch.duration", Long.toString(timeFetching));
                
                mergedMD.setValue("fetch.redirectCount", Integer.toString(redirectCount));
 
