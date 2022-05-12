@@ -643,6 +643,12 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
 
             }
             catch (Exception exece) {
+               // recheck with GET request if the failed check was a GET request
+               if("true".equals(metadata.getFirstValue("http.method.head"))){
+                  collector.emit(eu.clarin.linkchecker.config.Constants.RedirectStreamName, fit.t, new Values(fit.url, metadata));
+                  continue;                  
+               }
+               
                String message = exece.getMessage();
                if (message == null)
                   message = "";

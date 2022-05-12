@@ -28,7 +28,7 @@ bolts:
     className: "eu.clarin.linkchecker.bolt.MetricsFetcherBolt"
     parallelism: 1
   - id: "status"
-    className: "eu.clarin.linkchecker.bolt.MetadataPrinterBolt"
+    className: "eu.clarin.linkchecker.bolt.StatusUpdaterBolt"
     parallelism: 1
 
 streams:
