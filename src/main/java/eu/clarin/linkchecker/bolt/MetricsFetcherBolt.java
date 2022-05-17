@@ -283,7 +283,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
             log.error("Unknown partition mode : {} - forcing to byHost", queueMode);
             queueMode = QUEUE_MODE_HOST;
          }
-         log.info("Using queue mode : {}", queueMode);
+         log.debug("Using queue mode : {}", queueMode);
 
          this.crawlDelay = (long) (ConfUtils.getFloat(conf, "fetcher.server.delay", 1.0f) * 1000);
          this.minCrawlDelay = (long) (ConfUtils.getFloat(conf, "fetcher.server.min.delay", 0.0f) * 1000);
@@ -510,7 +510,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                         force = true;
                         msg = "using value of fetcher.max.crawl.delay instead";
                      }
-                     log.info("Crawl-Delay for {} too long ({}), {}", fit.url, rules.getCrawlDelay(), msg);
+                     log.debug("Crawl-Delay for {} too long ({}), {}", fit.url, rules.getCrawlDelay(), msg);
                      if (force) {
                         fiq.crawlDelay = maxCrawlDelay;
                      }
@@ -527,12 +527,12 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                   }
                   else if (rules.getCrawlDelay() < fetchQueues.crawlDelay && crawlDelayForce) {
                      fiq.crawlDelay = fetchQueues.crawlDelay;
-                     log.info("Crawl delay for {} too short ({}), set to fetcher.server.delay", fit.url,
+                     log.debug("Crawl delay for {} too short ({}), set to fetcher.server.delay", fit.url,
                            rules.getCrawlDelay());
                   }
                   else {
                      fiq.crawlDelay = rules.getCrawlDelay();
-                     log.info("Crawl delay for queue: {}  is set to {} as per robots.txt. url: {}", fit.queueID,
+                     log.debug("Crawl delay for queue: {}  is set to {} as per robots.txt. url: {}", fit.queueID,
                            fiq.crawlDelay, fit.url);
                   }
                }
@@ -561,7 +561,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                // been in the queue far too long and already failed
                // by the timeout - let's not fetch it
                if (timeoutInQueues != -1 && timeInQueues > timeoutInQueues * 1000) {
-                  log.info("[Fetcher #{}] Waited in queue for too long - {}", taskID, fit.url);
+                  log.debug("[Fetcher #{}] Waited in queue for too long - {}", taskID, fit.url);
                   // no need to wait next time as we won't request from
                   // that site
                   asap = true;
@@ -618,7 +618,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                long timeFetching = System.currentTimeMillis() - start;
 
 
-               log.info("[Fetcher #{}] Fetched {} with status {} in msec {}", taskID, fit.url, response.getStatusCode(),
+               log.debug("[Fetcher #{}] Fetched {} with status {} in msec {}", taskID, fit.url, response.getStatusCode(),
                      timeFetching);
 
                // merges the original MD and the ones returned by the
@@ -658,12 +658,12 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                // common exceptions for which we log only a short message
                if (exece.getCause() instanceof java.util.concurrent.TimeoutException
                      || message.contains(" timed out")) {
-                  log.info("Socket timeout fetching {}", fit.url);
+                  log.debug("Socket timeout fetching {}", fit.url);
                   message = "Socket timeout fetching";
                }
                else if (exece.getCause() instanceof java.net.UnknownHostException
                      || exece instanceof java.net.UnknownHostException) {
-                  log.info("Unknown host {}", fit.url);
+                  log.debug("Unknown host {}", fit.url);
                   message = "Unknown host";
                }
                else {
@@ -672,7 +672,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                      log.debug("Exception while fetching {}", fit.url, exece);
                   }
                   else {
-                     log.info("Exception while fetching {} -> {}", fit.url, message);
+                     log.debug("Exception while fetching {} -> {}", fit.url, message);
                   }
                }
 
@@ -727,7 +727,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
 
       checkConfiguration(conf);
 
-      log.info("[Fetcher #{}] : starting at {}", taskID, Instant.now());
+      log.debug("[Fetcher #{}] : starting at {}", taskID, Instant.now());
 
       protocolFactory = ProtocolFactory.getInstance(conf);
 
@@ -786,7 +786,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
          // detect whether there is a file indicating that we should
          // dump the content of the queues to the log
          if (debugfiletrigger != null && debugfiletrigger.exists()) {
-            log.info("Found trigger file {}", debugfiletrigger);
+            log.debug("Found trigger file {}", debugfiletrigger);
             logQueuesContent();
             debugfiletrigger.delete();
          }
@@ -809,7 +809,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
 
       final String urlString = input.getStringByField("url");
       if (StringUtils.isBlank(urlString)) {
-         log.info("[Fetcher #{}] Missing value for field url in tuple {}", taskID, input);
+         log.debug("[Fetcher #{}] Missing value for field url in tuple {}", taskID, input);
          // ignore silently
          collector.ack(input);
          return;
@@ -859,7 +859,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                sb.append("\n\t").append(urlsIter.next().url);
             }
          }
-         log.info("Dumping queue content {}", sb.toString());
+         log.debug("Dumping queue content {}", sb.toString());
 
          StringBuilder sb2 = new StringBuilder("\n");
          // dump the list of URLs being fetched
@@ -868,7 +868,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                sb2.append("\n\tThread #").append(i).append(": ").append(beingFetched[i]);
             }
          }
-         log.info("URLs being fetched {}", sb2.toString());
+         log.debug("URLs being fetched {}", sb2.toString());
       }
    }
 
