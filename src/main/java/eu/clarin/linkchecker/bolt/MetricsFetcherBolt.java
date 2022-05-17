@@ -477,7 +477,9 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
             boolean asap = false;
 
             try {
-               URL url = new URL(fit.url);
+               
+               URL url = new URL(fit.url.replace(" ", "%20")); //whitespace replacement
+               
                Protocol protocol = protocolFactory.getProtocol(url);
 
                if (protocol == null)
