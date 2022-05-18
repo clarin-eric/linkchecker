@@ -497,6 +497,8 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                   // no need to wait next time as we won't request from
                   // that site
                   asap = true;
+                  
+                  countAndLog();
                   continue;
                }
                
@@ -516,12 +518,16 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                      }
                      else {
                         // pass the info about crawl delay
-                        metadata.setValue(Constants.STATUS_ERROR_CAUSE, "crawl_delay");
+                        metadata.setValue("fetch.message", "Crawl delay too long.");
+                        metadata.setValue("fetch.category", Category.Blocked_By_Robots_txt.name());
+
                         collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, fit.t,
-                              new Values(fit.url, metadata, Status.ERROR));
+                              new Values(fit.url, metadata, Status.DISCOVERED));
                         // no need to wait next time as we won't request
                         // from that site
                         asap = true;
+                        
+                        countAndLog();
                         continue;
                      }
                   }
@@ -548,8 +554,9 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                      metadata.setValue("fetch.category", Category.Restricted_Access.name());
                      
                      collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, fit.t,
-                           new Values(fit.url, metadata, Status.ERROR));
+                           new Values(fit.url, metadata, Status.DISCOVERED));
                      
+                     countAndLog();
                      continue;
                   }
                }
@@ -647,6 +654,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
             catch (Exception exece) {
                // recheck with GET request if the failed check was a GET request
                if("true".equals(metadata.getFirstValue("http.method.head"))){
+                  metadata.setValue("http.method.head", "false");
                   collector.emit(eu.clarin.linkchecker.config.Constants.RedirectStreamName, fit.t, new Values(fit.url, metadata));
                   continue;                  
                }
@@ -687,7 +695,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
 //               metadata.setValue("fetch.startTime", Long.toString(start));
 
                // send to status stream
-               collector.emit(Constants.StatusStreamName, fit.t, new Values(fit.url, metadata, Status.FETCH_ERROR));
+               collector.emit(Constants.StatusStreamName, fit.t, new Values(fit.url, metadata, Status.DISCOVERED));
 
             }
             finally {
