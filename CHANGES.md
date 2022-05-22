@@ -1,3 +1,6 @@
+# version 2.4.0
+ - upgrade to storm 2.4.0 and storm crawler 2.4
+ 
 # version 2.3.0
 - improved algorithm for next links to check
 - trimming URLs (done by RASA) and escaping white spaces in URLs used for request
