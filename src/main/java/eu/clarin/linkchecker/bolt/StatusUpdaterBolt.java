@@ -26,12 +26,11 @@ import eu.clarin.cmdi.rasa.DAO.CheckedLink;
 
 import eu.clarin.cmdi.rasa.helpers.statusCodeMapper.Category;
 import eu.clarin.linkchecker.config.Configuration;
+import lombok.extern.slf4j.Slf4j;
 
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.tuple.Tuple;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.sql.*;
 import java.util.Date;
@@ -45,11 +44,10 @@ import java.util.regex.Pattern;
  **/
 
 @SuppressWarnings("serial")
+@Slf4j
 public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
    private static final Pattern INT_PATTERN = Pattern.compile("\\d+");
-
-   public final Logger LOG = LoggerFactory.getLogger(StatusUpdaterBolt.class);
 
    /**
     * Does not shard based on the total number of queues
@@ -67,9 +65,9 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
    public synchronized void store(String url, Status status, Metadata metadata, Optional<Date> nextFetch, Tuple t)
          throws Exception {
 
-      LOG.debug("url: {}", url);
-      LOG.debug("metadata: {}", metadata);
-      LOG.debug("tuple: {}", t);
+      log.debug("url: {}", url);
+      log.debug("metadata: {}", metadata);
+      log.debug("tuple: {}", t);
 
       StringBuilder mdAsString = new StringBuilder();
       for (String mdKey : metadata.keySet()) {
@@ -82,8 +80,8 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
       CheckedLink checkedLink = new CheckedLink();
 
       Metadata md = (Metadata) t.getValueByField("metadata");
-      
-      LOG.debug("metadata:\n" + md.toString());
+
+      log.debug("metadata:\n" + md.toString());
 
       String str = null;
 
@@ -96,8 +94,9 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
          checkedLink.setStatus(Integer.parseInt(md.getFirstValue("fetch.statusCode")));
       }
       if (md.getFirstValue("fetch.contentType") != null) {
-         checkedLink.setContentType((md.getFirstValue("fetch.contentType").length() < 256) ? md.getFirstValue("fetch.contentType")
-               : md.getFirstValue("fetch.contentType").substring(0, 250) + "...");
+         checkedLink.setContentType(
+               (md.getFirstValue("fetch.contentType").length() < 256) ? md.getFirstValue("fetch.contentType")
+                     : md.getFirstValue("fetch.contentType").substring(0, 250) + "...");
       }
 
       if ((str = md.getFirstValue("fetch.byteLength")) != null && INT_PATTERN.matcher(str).matches()) {
@@ -112,9 +111,17 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
                : md.getFirstValue("fetch.message").substring(0, 1020) + "...");
       }
 
-      checkedLink.setCategory(Category.valueOf(md.getFirstValue("fetch.category")));
+      if (md.getFirstValue("fetch.category") != null) {
+         checkedLink.setCategory(Category.valueOf(md.getFirstValue("fetch.category")));
+      }
+      else {
+         log.error("category is null for in metadata:\n{})", md);
+         checkedLink.setCategory(Category.Undetermined);
+      }
 
-      checkedLink.setCheckingDate(new Timestamp(md.getFirstValue("fetch.startTime")!=null?Long.parseLong(md.getFirstValue("fetch.startTime")):System.currentTimeMillis()));
+      checkedLink.setCheckingDate(new Timestamp(
+            md.getFirstValue("fetch.startTime") != null ? Long.parseLong(md.getFirstValue("fetch.startTime"))
+                  : System.currentTimeMillis()));
 
       checkedLink.setRedirectCount(md.getFirstValue("fetch.redirectCount") == null ? 0
             : Integer.parseInt(md.getFirstValue("fetch.redirectCount")));
@@ -126,8 +133,9 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
       try {
          Configuration.checkedLinkResource.save(checkedLink);
          _collector.ack(t);
-      } catch (SQLException ex) {
-         LOG.error("can't save checked link \n{}", checkedLink);
+      }
+      catch (SQLException ex) {
+         log.error("can't save checked link \n{}", checkedLink);
          _collector.fail(t);
       }
    }

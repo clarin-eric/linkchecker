@@ -63,6 +63,8 @@ public class Configuration {
 
   //this determines what status codes will not be considered broken links. urls with these codes will also not factor into the url-scores
 	public static List<Integer> undeterminedStatusCodes;
+	
+	public static List<Integer> restrictedAccessStatusCodes;
 
     
 //    @SuppressWarnings("unchecked")
@@ -80,6 +82,7 @@ public class Configuration {
 	        okStatusCodes = getIntegerList(Constants.OK_STATUS_CODES, conf);
 	        redirectStatusCodes = getIntegerList(Constants.REDIRECT_STATUS_CODES, conf);
 	        undeterminedStatusCodes = getIntegerList(Constants.UNDETERMINED_STATUS_CODES, conf);
+	        restrictedAccessStatusCodes = getIntegerList(Constants.RESTRICTED_ACCESS_STATUS_CODES, conf);
     	}	
     }
     

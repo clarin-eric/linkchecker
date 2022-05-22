@@ -1,4 +1,4 @@
-name: "linkchecker"
+name: "linkchecker-test"
 
 includes:
     - resource: true
@@ -11,7 +11,13 @@ includes:
 
 spouts:
   - id: "spout"
-    className: "eu.clarin.linkchecker.spout.RASASpout"
+    className: "eu.clarin.linkchecker.spout.RASAQuerySpout"
+    constructorArgs: 
+      - >
+       SELECT u.* FROM url u 
+       WHERE u.valid=true 
+       ORDER BY RAND() 
+       LIMIT 1000
     parallelism: 1
 
 bolts:

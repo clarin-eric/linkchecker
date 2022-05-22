@@ -10,7 +10,7 @@ config:
   topology.max.spout.pending: 100
   topology.debug: false
 
-  fetcher.threads.number: 10
+  fetcher.threads.number: 1
 
   # override the JVM parameters for the workers
   topology.worker.childopts: "-Xmx2g -Djava.net.preferIPv4Stack=true"
@@ -28,19 +28,23 @@ config:
   # lists the metadata to persist to storage
   # these are not transfered to the outlinks
   metadata.persist:
-    - _redirTo
-    - error.cause
-    - error.source
-    - isSitemap
-    - isFeed
     - urlId
+    - originalUrl
+    - fetch.statusCode
+    - fetch.category
+    - fetch.message
+    - fetch.contentType
+    - fetch.byteLength
+    - fetch.duration
+    - fetch.startTime
     - fetch.redirectCount
+    - http.method.head
 
-  http.agent.name: "CLARIN Linkchecker: https://www.clarin.eu/linkchecker"
-  http.agent.version: "2.1"
-  http.agent.description: "built with StormCrawler Archetype 2.1"
+  http.agent.name: "CLARIN Linkchecker: https://www.clarin.eu/linkchecker (!!! TEST !!!)"
+  http.agent.version: "2.4"
+  http.agent.description: "built with StormCrawler Archetype 2.4"
   http.agent.url: "https://www.clarin.eu/linkchecker"
-  http.agent.email: "linkchecker@clarin.eu"
+  http.agent.email: "clarin@wowasa.com"
   http.redirectLimit: 5  
   http.timeout: 5000
   
@@ -62,7 +66,7 @@ config:
   # The maximum number of bytes for returned HTTP response bodies.
   # Set -1 to disable the limit.
   # this is 0 so that we don't download any payload when doing GET requests, it will get trimmed.
-  http.content.limit: 100000
+  http.content.limit: 0
 
   # FetcherBolt queue dump => comment out to activate
   # if a file exists on the worker machine with the corresponding port number
@@ -151,4 +155,5 @@ config:
   login.list.url: "https://raw.githubusercontent.com/clarin-eric/login-pages/master/list.txt"
   ok.status.codes: [200, 304]
   redirect.status.codes: [301, 302, 303, 307, 308] 
-  undeterminded.status.codes: [401, 405, 429]
+  undeterminded.status.codes: [405, 429]
+  restricted.access.status.codes: [401, 403]

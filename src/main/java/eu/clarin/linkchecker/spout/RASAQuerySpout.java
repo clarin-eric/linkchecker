@@ -31,14 +31,13 @@ import com.digitalpebble.stormcrawler.persistence.AbstractQueryingSpout;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.digitalpebble.stormcrawler.util.StringTabScheme;
 
-import eu.clarin.cmdi.rasa.DAO.LinkToBeChecked;
 import eu.clarin.linkchecker.config.Configuration;
 import eu.clarin.linkchecker.config.Constants;
 import lombok.extern.slf4j.Slf4j;
 
 @SuppressWarnings("serial")
 @Slf4j
-public class RASASpout extends AbstractQueryingSpout {
+public class RASAQuerySpout extends AbstractQueryingSpout {
 
    private static final Scheme SCHEME = new StringTabScheme();
 
@@ -46,6 +45,12 @@ public class RASASpout extends AbstractQueryingSpout {
    protected String logIdprefix = "";
 
    private int maxNumResults;
+   
+   private final String query;
+   
+   public RASAQuerySpout(String query) {
+      this.query = query;
+   }
 
    @SuppressWarnings({ "rawtypes", "unchecked" })
    @Override
@@ -57,16 +62,6 @@ public class RASASpout extends AbstractQueryingSpout {
 
       Configuration.init(conf);
       Configuration.setActive(conf, true);
-      
-      
-      try {
-         log.debug("trimming URLs and extraction groupKey (host)");
-         Configuration.linkToBeCheckedResource.updateURLs();
-      }
-      catch (SQLException e) {
-         
-         log.error("exception while trimming URLs and extraction groupKeys:\n{}", e);
-      }
 
       int totalTasks = context.getComponentTasks(context.getThisComponentId()).size();
       if (totalTasks > 1) {
@@ -86,15 +81,16 @@ public class RASASpout extends AbstractQueryingSpout {
       
       this.isInQuery.set(true);
       long timeStartQuery = System.currentTimeMillis();
-      try (Stream<LinkToBeChecked> stream = Configuration.linkToBeCheckedResource.getNextLinksToCheck()) {         
+      try (Stream<Map<String, Object>> stream = Configuration.linkToBeCheckedResource.get(this.query)) {         
 
-         stream.limit(maxNumResults).filter(link -> !beingProcessed.containsKey(link.getUrl())).forEach(link -> {
+         stream.limit(this.maxNumResults).forEach(map -> {
             Metadata md = new Metadata();
-            md.setValue("urlId", String.valueOf(link.getUrlId()));
-            md.setValue("originalUrl", link.getUrl());
+            md.setValue("urlId", map.get("id").toString());
+            md.setValue("originalUrl", map.get("url").toString());
             md.setValue("http.method.head", "true");
-            buffer.add(link.getUrl(), md);
+            buffer.add(map.get("url").toString(), md);
          });
+         
          this.markQueryReceivedNow();
          long timeTaken = System.currentTimeMillis() - timeStartQuery;
          queryTimes.addMeasurement(timeTaken);
@@ -104,7 +100,7 @@ public class RASASpout extends AbstractQueryingSpout {
 
       } 
       catch (SQLException e) {
-         log.error("Exception while querying table", e);
+         log.error("Exception while executing query '{}'", this.query);
       }
    }
 
