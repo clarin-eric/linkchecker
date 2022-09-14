@@ -11,7 +11,7 @@ includes:
 
 spouts:
   - id: "spout"
-    className: "eu.clarin.linkchecker.spout.RASAQuerySpout"
+    className: "eu.clarin.linkchecker.spout.CPASpout"
     constructorArgs: 
       - >
        SELECT u.* FROM url u 

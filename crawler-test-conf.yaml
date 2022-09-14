@@ -121,17 +121,16 @@ config:
     - class: "org.apache.storm.metric.LoggingMetricsConsumer"
       parallelism.hint: 1
 
-  #######
-  # HIKARI connection pool #
-  #######
 
-  #your hikari properties go here
-  HIKARI:
-    jdbcUrl: ${ENV-DATABASE_URI}
-    username: ${ENV-DATABASE_USERNAME}
-    password: ${ENV-DATABASE_PASSWORD}
-    maximumPoolSize: 5
-    minimumIdle: 1
+  #your JPA properties go here
+  JPA:
+    spring.datasource.url: ${ENV-DATABASE_URI}
+    spring.datasource.username: ${ENV-DATABASE_USERNAME}
+    spring.datasource.password: ${ENV-DATABASE_PASSWORD}
+    spring.datasource.driver-class-name: org.mariadb.jdbc.Driver
+    spring.jpa.show-sql: true
+    spring.jpa.hibernate.ddl-auto: none
+    spring.database-platform: org.hibernate.dialect.MariaDBDialect
 
   rasa.spout.max.results: 5000
 

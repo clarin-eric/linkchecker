@@ -11,7 +11,7 @@ includes:
 
 spouts:
   - id: "spout"
-    className: "eu.clarin.linkchecker.spout.RASASpout"
+    className: "eu.clarin.linkchecker.spout.CPASpout"
     parallelism: 1
 
 bolts:

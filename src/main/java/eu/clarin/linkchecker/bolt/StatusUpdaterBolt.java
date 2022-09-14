@@ -22,9 +22,11 @@ import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.persistence.AbstractStatusUpdaterBolt;
 import com.digitalpebble.stormcrawler.persistence.Status;
 
-import eu.clarin.cmdi.rasa.DAO.CheckedLink;
+import eu.clarin.cmdi.cpa.model.Url;
+import eu.clarin.cmdi.cpa.repository.UrlRepository;
+import eu.clarin.cmdi.cpa.service.StatusService;
+import eu.clarin.cmdi.cpa.utils.Category;
 
-import eu.clarin.cmdi.rasa.helpers.statusCodeMapper.Category;
 import eu.clarin.linkchecker.config.Configuration;
 import lombok.extern.slf4j.Slf4j;
 
@@ -32,7 +34,9 @@ import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.tuple.Tuple;
 
-import java.sql.*;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
@@ -55,7 +59,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
    public StatusUpdaterBolt() {
    }
 
-   @SuppressWarnings({ "rawtypes" })
+   @SuppressWarnings({ "rawtypes", "unchecked" })
    @Override
    public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
       super.prepare(stormConf, context, collector);
@@ -77,65 +81,57 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
          }
       }
 
-      CheckedLink checkedLink = new CheckedLink();
-
       Metadata md = (Metadata) t.getValueByField("metadata");
 
       log.debug("metadata:\n" + md.toString());
 
       String str = null;
+      
+      UrlRepository uRep = Configuration.ctx.getBean(UrlRepository.class);
+      StatusService sService = Configuration.ctx.getBean(StatusService.class);
+      
+      Url urlEntity = uRep.findById(Long.valueOf(md.getFirstValue("urlId"))).get();
+      
+      eu.clarin.cmdi.cpa.model.Status statusEntity = new eu.clarin.cmdi.cpa.model.Status(
+            urlEntity, 
+            Category.valueOf(md.getFirstValue("fetch.category")), 
+            md.getFirstValue("fetch.message"), 
+            md.getFirstValue("fetch.startTime") != null? 
+                  Instant.ofEpochMilli(Long.parseLong(md.getFirstValue("fetch.startTime"))).atZone(ZoneId.systemDefault()).toLocalDateTime()
+                  : LocalDateTime.now()
+         );
 
-      checkedLink.setUrlId(Long.valueOf(md.getFirstValue("urlId")));
-
-      checkedLink.setUrl(md.getFirstValue("originalUrl")); // just for the error message since urlId is first choice for
-                                                           // storage
 
       if ((str = md.getFirstValue("fetch.statusCode")) != null && INT_PATTERN.matcher(str).matches()) {
-         checkedLink.setStatus(Integer.parseInt(md.getFirstValue("fetch.statusCode")));
+         statusEntity.setStatusCode(Integer.parseInt(md.getFirstValue("fetch.statusCode")));
       }
       if (md.getFirstValue("fetch.contentType") != null) {
-         checkedLink.setContentType(
+         statusEntity.setContentType(
                (md.getFirstValue("fetch.contentType").length() < 256) ? md.getFirstValue("fetch.contentType")
                      : md.getFirstValue("fetch.contentType").substring(0, 250) + "...");
       }
 
       if ((str = md.getFirstValue("fetch.byteLength")) != null && INT_PATTERN.matcher(str).matches()) {
-         checkedLink.setByteSize(Long.parseLong(md.getFirstValue("fetch.byteLength")));
+         statusEntity.setContentLength(Long.parseLong(md.getFirstValue("fetch.byteLength")));
       }
 
       if ((str = md.getFirstValue("fetch.duration")) != null && INT_PATTERN.matcher(str).matches()) {
-         checkedLink.setDuration(Integer.parseInt(md.getFirstValue("fetch.duration")));
-      }
-      if (md.getFirstValue("fetch.message") != null) {
-         checkedLink.setMessage((md.getFirstValue("fetch.message").length() < 1024) ? md.getFirstValue("fetch.message")
-               : md.getFirstValue("fetch.message").substring(0, 1020) + "...");
+         statusEntity.setDuration(Integer.parseInt(md.getFirstValue("fetch.duration")));
       }
 
-      if (md.getFirstValue("fetch.category") != null) {
-         checkedLink.setCategory(Category.valueOf(md.getFirstValue("fetch.category")));
-      }
-      else {
-         log.error("category is null for in metadata:\n{})", md);
-         checkedLink.setCategory(Category.Undetermined);
-      }
-
-      checkedLink.setCheckingDate(new Timestamp(
-            md.getFirstValue("fetch.startTime") != null ? Long.parseLong(md.getFirstValue("fetch.startTime"))
-                  : System.currentTimeMillis()));
-
-      checkedLink.setRedirectCount(md.getFirstValue("fetch.redirectCount") == null ? 0
+      statusEntity.setRedirectCount(md.getFirstValue("fetch.redirectCount") == null ? 0
             : Integer.parseInt(md.getFirstValue("fetch.redirectCount")));
 
       String methodBool = md.getFirstValue("http.method.head");
       String method = methodBool == null ? "N/A" : methodBool.equalsIgnoreCase("true") ? "HEAD" : "GET";
-      checkedLink.setMethod(method);
+      statusEntity.setMethod(method);
 
       try {
-         Configuration.checkedLinkResource.save(checkedLink);
+         sService.save(statusEntity);
          _collector.ack(t);
       }
-      catch (SQLException ex) {
-         log.error("can't save checked link \n{}", checkedLink);
+      catch (Exception ex) {
+         log.error("can't save checked link \n{}", statusEntity);
          _collector.fail(t);
       }
    }
