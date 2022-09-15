@@ -19,7 +19,6 @@ package eu.clarin.linkchecker.spout;
 
 import java.time.LocalDateTime;
 import java.util.Map;
-import java.util.stream.Stream;
 
 import org.apache.storm.spout.Scheme;
 import org.apache.storm.spout.SpoutOutputCollector;
@@ -31,8 +30,7 @@ import com.digitalpebble.stormcrawler.persistence.AbstractQueryingSpout;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.digitalpebble.stormcrawler.util.StringTabScheme;
 
-import eu.clarin.cmdi.cpa.model.Url;
-import eu.clarin.cmdi.cpa.repository.UrlRepository;
+import eu.clarin.cmdi.cpa.service.LinkService;
 import eu.clarin.linkchecker.config.Configuration;
 import eu.clarin.linkchecker.config.Constants;
 import lombok.extern.slf4j.Slf4j;
@@ -80,17 +78,18 @@ public class CPASpout extends AbstractQueryingSpout {
       this.isInQuery.set(true);
       long timeStartQuery = System.currentTimeMillis();
       
-      UrlRepository uRep = Configuration.ctx.getBean(UrlRepository.class);
+      LinkService lService = Configuration.ctx.getBean(LinkService.class);
       
-      try (Stream<Url> stream = uRep.getNextUrlsToCheck(200, LocalDateTime.now().minusDays(1))) {         
-
-         stream.limit(maxNumResults).filter(url -> !beingProcessed.containsKey(url.getName())).forEach(url -> {
+      lService.getUrlsToCheck(maxNumResults, 200, LocalDateTime.now().minusDays(1))
+         .stream()
+         .filter(url -> !beingProcessed.containsKey(url.getName())).forEach(url -> {
             Metadata md = new Metadata();
             md.setValue("urlId", String.valueOf(url.getId()));
             md.setValue("originalUrl", url.getName());
             md.setValue("http.method.head", "true");
             buffer.add(url.getName(), md);
          });
+      
          this.markQueryReceivedNow();
          long timeTaken = System.currentTimeMillis() - timeStartQuery;
          queryTimes.addMeasurement(timeTaken);
@@ -98,8 +97,10 @@ public class CPASpout extends AbstractQueryingSpout {
          log.info("{} SQL query returned {} hits, distributed on {} queues in {} msec", logIdprefix, buffer.size(),
                buffer.numQueues(), timeTaken);
 
-      }
+
    }
+
+   
 
    @Override
    public void ack(Object msgId) {

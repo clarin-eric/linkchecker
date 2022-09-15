@@ -25,7 +25,7 @@ import com.digitalpebble.stormcrawler.protocol.ProtocolResponse;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 import crawlercommons.domains.PaidLevelDomain;
 import crawlercommons.robots.BaseRobotRules;
-import eu.clarin.cmdi.rasa.helpers.statusCodeMapper.Category;
+import eu.clarin.cmdi.cpa.utils.Category;
 import eu.clarin.linkchecker.config.Configuration;
 import lombok.extern.slf4j.Slf4j;
 

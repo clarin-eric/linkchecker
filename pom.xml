@@ -171,22 +171,6 @@
          <version>${storm.version}</version>
       </dependency>
       <dependency>
-         <groupId>eu.clarin.cmdi</groupId>
-         <artifactId>rasa-api</artifactId>
-         <version>${rasa.version}</version>
-      </dependency>
-      <dependency>
-         <groupId>eu.clarin.cmdi</groupId>
-         <artifactId>rasa-mysql-impl</artifactId>
-         <version>${rasa.version}</version>
-         <exclusions>
-            <exclusion>
-               <groupId>org.slf4j</groupId>
-               <artifactId>slf4j-api</artifactId>
-            </exclusion>
-         </exclusions>
-      </dependency>
-      <dependency>
          <groupId>org.mock-server</groupId>
          <artifactId>mockserver-netty</artifactId>
          <version>5.12.0</version>
@@ -205,14 +189,15 @@
          <version>${mariadb.version}</version>
       </dependency>
       <dependency>
-         <groupId>com.zaxxer</groupId>
-         <artifactId>HikariCP</artifactId>
-         <version>${hikari.version}</version>
-      </dependency>
-      <dependency>
       	<groupId>eu.clarin.cmdi</groupId>
       	<artifactId>curation-persistence</artifactId>
       	<version>0.0.1-SNAPSHOT</version>
+      	<exclusions>
+      		<exclusion>
+      			<groupId>org.springframework.boot</groupId>
+      			<artifactId>spring-boot-starter-logging</artifactId>
+      		</exclusion>
+      	</exclusions>
       </dependency>
    </dependencies>
    <repositories>

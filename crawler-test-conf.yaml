@@ -122,11 +122,11 @@ config:
       parallelism.hint: 1
 
 
-  #your JPA properties go here
-  JPA:
+  #your SPRING configuration properties go here
+  SPING:
     spring.datasource.url: ${ENV-DATABASE_URI}
-    spring.datasource.username: ${ENV-DATABASE_USERNAME}
-    spring.datasource.password: ${ENV-DATABASE_PASSWORD}
+    spring.datasource.username: ${ENV-MYSQL_USER}
+    spring.datasource.password: ${ENV-MYSQL_PASSWORD}
     spring.datasource.driver-class-name: org.mariadb.jdbc.Driver
     spring.jpa.show-sql: true
     spring.jpa.hibernate.ddl-auto: none

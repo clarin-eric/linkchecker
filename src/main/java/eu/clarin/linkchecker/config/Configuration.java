@@ -89,7 +89,7 @@ public class Configuration {
          ConfigurableEnvironment environment = new StandardEnvironment();
          MutablePropertySources propertySources = environment.getPropertySources();
          
-         propertySources.addFirst(new MapPropertySource("MY_MAP", (Map<String, Object>) conf.get("JPA")));
+         propertySources.addFirst(new MapPropertySource("MY_MAP", (Map<String, Object>) conf.get("SPING")));
          
          ctx.setEnvironment(environment);
          ctx.register(ApplicationConfig.class);
