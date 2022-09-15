@@ -1,5 +1,8 @@
+# version 3.0.0
+- replacement of the persistence layer: the [resource availability status API (RASA)](https://github.com/clarin-eric/resource-availability-status-api) is replaced by [curation-persistence](https://github.com/clarin-eric/curation-persistence)
+
 # version 2.4.0
- - upgrade to storm 2.4.0 and storm crawler 2.4
+- upgrade to storm 2.4.0 and storm crawler 2.4
  
 # version 2.3.0
 - improved algorithm for next links to check
