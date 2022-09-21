@@ -111,9 +111,9 @@ config:
 
   #your SPRING configuration properties go here
   SPING:
-    spring.datasource.url: {{DATABASE_URI}}
-    spring.datasource.username: {{MYSQL_USER}}
-    spring.datasource.password: {{MYSQL_PASSWORD}}
+    spring.datasource.url: "{{DATABASE_URI}}"
+    spring.datasource.username: "{{DATABASE_USERNAME}}"
+    spring.datasource.password: "{{DATABASE_PASSWORD}}"
     spring.datasource.driver-class-name: org.mariadb.jdbc.Driver
     spring.jpa.show-sql: false
     spring.jpa.hibernate.ddl-auto: none
