@@ -7,7 +7,7 @@
 config:
   topology.workers: 1
   topology.message.timeout.secs: 3600 # 1hour
-  topology.max.spout.pending: 1000
+  topology.max.spout.pending: 100
   topology.debug: false
 
   fetcher.threads.number: 50
@@ -28,34 +28,43 @@ config:
   # lists the metadata to persist to storage
   # these are not transfered to the outlinks
   metadata.persist:
-    - _redirTo
-    - error.cause
-    - error.source
-    - isSitemap
-    - isFeed
+    - urlId
+    - originalUrl
+    - fetch.statusCode
+    - fetch.category
+    - fetch.message
+    - fetch.contentType
+    - fetch.byteLength
+    - fetch.duration
+    - fetch.startTime
+    - fetch.redirectCount
+    - http.method.head
 
-  http.agent.name: "CLARIN Linkchecker: https://www.clarin.eu/linkchecker"
-  http.agent.version: "2.1"
-  http.agent.description: "built with StormCrawler Archetype 2.1"
-  http.agent.url: "https://www.clarin.eu/linkchecker"
-  http.agent.email: "acdh-tech@oeaw.ac.at"
-  http.redirectLimit: 5
+  http.agent.name: ${ENV-HTTP_AGENT_NAME}
+  http.agent.version: ${ENV-HTTP_AGENT_VERSION}
+  http.agent.description: ${ENV-HTTP_AGENT_DESCRIPTION}
+  http.agent.url: ${ENV-HTTP_AGENT_URL}
+  http.agent.email: ${ENV-HTTP_AGENT_EMAIL}
+  http.redirectLimit: ${ENV-HTTP_REDIRECT_LIMIT}
+  http.timeout: 5000
 
-  #default 1 already
-  #fetcher.server.delay: 1
+  # Defines delay (in secs) between crawls in the same queue
+  fetcher.server.delay: 2
+  # Defines the delay between crawls in the same queue if a queue has > 1 thread (fetcher.server.delay is use otherwise)
+  fetcher.server.min.delay: 2
   fetcher.server.delay.force: true
 
   # The maximum number of bytes for returned HTTP response bodies.
   # Set -1 to disable the limit.
   # this is 0 so that we don't download any payload when doing GET requests, it will get trimmed.
-  http.content.limit: 10000
+  http.content.limit: 0
 
   # FetcherBolt queue dump => comment out to activate
   # if a file exists on the worker machine with the corresponding port number
   # the FetcherBolt will log the content of its internal queues to the logs
   # fetcherbolt.queue.debug.filepath: "/tmp/fetcher-dump-{port}"
 
-  #  parsefilters.config.file: "parsefilters.json"
+  # parsefilters.config.file: "parsefilters.json"
   # urlfilters.config.file: "urlfilters.json"
 
   # revisit a page daily (value in minutes)
@@ -68,9 +77,6 @@ config:
 
   # never revisit a page with an error (or set a value in minutes)
   fetchInterval.error: -1
-  
-  # set to true if you don't need any text to be extracted by JSoup
-  textextractor.no.text: true
 
   # text extraction for JSoupParserBolt
   textextractor.include.pattern:
@@ -103,23 +109,20 @@ config:
     - class: "org.apache.storm.metric.LoggingMetricsConsumer"
       parallelism.hint: 1
 
-  #######
-  # SQL #
-  #######
+  #your SPRING configuration properties go here
+  SPING:
+    spring.datasource.url: ${ENV-DATABASE_URI}
+    spring.datasource.username: ${ENV-DATABASE_USERNAME}
+    spring.datasource.password: ${ENV-DATABASE_PASSWORD}
+    spring.datasource.driver-class-name: org.mariadb.jdbc.Driver
+    spring.jpa.show-sql: false
+    spring.jpa.hibernate.ddl-auto: none
+    spring.database-platform: org.hibernate.dialect.MariaDBDialect
 
-  #your mysql parameters go here
-  HIKARI:
-    driverClassName: org.mariadb.jdbc.Driver
-    jdbcUrl: 
-    username: 
-    password: 
-    maximumPoolSize: 10
-
-  rasa.spout.max.results: 1000
+  rasa.spout.max.results: ${ENV-RASA_SPOUT_MAX_RESULTS}
 
   # time in secs for which the URLs will be considered for fetching after a ack of fail
   spout.ttl.purgatory: 300
-
 
   #Max time to allow between 2 successive queries to the backend. Value in msecs, default 20000.
   # 1 hour
@@ -129,13 +132,11 @@ config:
   # 5 minutes
   spout.min.delay.queries: 60000
 
-  # Delay since previous query date (in secs) after which the nextFetchDate value will be reset to the current time
-  # Setting this to -1 or a large value means that the ES will cache the results but also that less and less results
-  # might be returned.
-  spout.reset.fetchdate.after: 120
-  
-  # linkchecker specific settings
+
+
+ # linkchecker specific settings
   login.list.url: "https://raw.githubusercontent.com/clarin-eric/login-pages/master/list.txt"
   ok.status.codes: [200, 304]
   redirect.status.codes: [301, 302, 303, 307, 308] 
-  undeterminded.status.codes: [401, 405, 429]
+  undeterminded.status.codes: [405, 429]
+  restricted.access.status.codes: [401, 403]
