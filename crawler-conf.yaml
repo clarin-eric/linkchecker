@@ -40,11 +40,11 @@ config:
     - fetch.redirectCount
     - http.method.head
 
-  http.agent.name: ${ENV-HTTP_AGENT_NAME}
-  http.agent.version: ${ENV-HTTP_AGENT_VERSION}
-  http.agent.description: ${ENV-HTTP_AGENT_DESCRIPTION}
-  http.agent.url: ${ENV-HTTP_AGENT_URL}
-  http.agent.email: ${ENV-HTTP_AGENT_EMAIL}
+  http.agent.name: "${ENV-HTTP_AGENT_NAME}"
+  http.agent.version: "${ENV-HTTP_AGENT_VERSION}"
+  http.agent.description: "${ENV-HTTP_AGENT_DESCRIPTION}"
+  http.agent.url: "${ENV-HTTP_AGENT_URL}"
+  http.agent.email: "${ENV-HTTP_AGENT_EMAIL}"
   http.redirectLimit: ${ENV-HTTP_REDIRECT_LIMIT}
   http.timeout: 5000
 
@@ -111,9 +111,9 @@ config:
 
   #your SPRING configuration properties go here
   SPING:
-    spring.datasource.url: ${ENV-DATABASE_URI}
-    spring.datasource.username: ${ENV-DATABASE_USERNAME}
-    spring.datasource.password: ${ENV-DATABASE_PASSWORD}
+    spring.datasource.url: "${ENV-DATABASE_URI}"
+    spring.datasource.username: "${ENV-DATABASE_USERNAME}"
+    spring.datasource.password: "${ENV-DATABASE_PASSWORD}"
     spring.datasource.driver-class-name: org.mariadb.jdbc.Driver
     spring.jpa.show-sql: false
     spring.jpa.hibernate.ddl-auto: none
