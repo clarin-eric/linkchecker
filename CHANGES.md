@@ -2,6 +2,7 @@
 - replacement of the persistence layer: the [resource availability status API (RASA)](https://github.com/clarin-eric/resource-availability-status-api) 
 is replaced by [curation-persistence](https://github.com/clarin-eric/curation-persistence)
 - inclusion of maven wrapper
+- deletion of template_crawler-conf.yaml and use of environment variables in crawler-conf.yaml
 
 # version 2.4.0
 - upgrade to storm 2.4.0 and storm crawler 2.4
