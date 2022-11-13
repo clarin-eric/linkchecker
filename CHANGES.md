@@ -1,5 +1,9 @@
+# version 2.4.1
+- maven build to Java 17
+- including maven wrapper
+
 # version 2.4.0
- - upgrade to storm 2.4.0 and storm crawler 2.4
+- upgrade to storm 2.4.0 and storm crawler 2.4
  
 # version 2.3.0
 - improved algorithm for next links to check
