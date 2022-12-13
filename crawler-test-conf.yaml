@@ -123,7 +123,7 @@ config:
 
 
   #your SPRING configuration properties go here
-  SPING:
+  SPRING:
     spring.datasource.url: ${ENV-DATABASE_URI}
     spring.datasource.username: ${ENV-MYSQL_USER}
     spring.datasource.password: ${ENV-MYSQL_PASSWORD}
