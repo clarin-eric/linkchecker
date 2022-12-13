@@ -41,7 +41,7 @@ config:
     - http.method.head
 
   http.agent.name: "${ENV-HTTP_AGENT_NAME}"
-  http.agent.version: "${ENV-HTTP_AGENT_VERSION}"
+  http.agent.version: "${version}"
   http.agent.description: "${ENV-HTTP_AGENT_DESCRIPTION}"
   http.agent.url: "${ENV-HTTP_AGENT_URL}"
   http.agent.email: "${ENV-HTTP_AGENT_EMAIL}"
@@ -110,7 +110,7 @@ config:
       parallelism.hint: 1
 
   #your SPRING configuration properties go here
-  SPING:
+  SPRING:
     spring.datasource.url: "${ENV-DATABASE_URI}"
     spring.datasource.username: "${ENV-DATABASE_USERNAME}"
     spring.datasource.password: "${ENV-DATABASE_PASSWORD}"
