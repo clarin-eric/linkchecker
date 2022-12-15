@@ -12,6 +12,7 @@
       <mariadb.version>2.7.5</mariadb.version>
       <hikari.version>5.0.1</hikari.version>
       <lombok.version>1.18.24</lombok.version>
+      <driver.class.name>org.mariadb.jdbc.Driver</driver.class.name>
    </properties>
    <distributionManagement>
       <snapshotRepository>
