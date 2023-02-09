@@ -22,12 +22,11 @@ import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.persistence.AbstractStatusUpdaterBolt;
 import com.digitalpebble.stormcrawler.persistence.Status;
 
-import eu.clarin.cmdi.cpa.model.Url;
-import eu.clarin.cmdi.cpa.repository.UrlRepository;
-import eu.clarin.cmdi.cpa.service.StatusService;
-import eu.clarin.cmdi.cpa.utils.Category;
-
 import eu.clarin.linkchecker.config.Configuration;
+import eu.clarin.linkchecker.persistence.model.Url;
+import eu.clarin.linkchecker.persistence.repository.UrlRepository;
+import eu.clarin.linkchecker.persistence.service.StatusService;
+import eu.clarin.linkchecker.persistence.utils.Category;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.storm.task.OutputCollector;
@@ -92,7 +91,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
       
       Url urlEntity = uRep.findById(Long.valueOf(md.getFirstValue("urlId"))).get();
       
-      eu.clarin.cmdi.cpa.model.Status statusEntity = new eu.clarin.cmdi.cpa.model.Status(
+      eu.clarin.linkchecker.persistence.model.Status statusEntity = new eu.clarin.linkchecker.persistence.model.Status(
             urlEntity, 
             Category.valueOf(md.getFirstValue("fetch.category")), 
             md.getFirstValue("fetch.message"), 

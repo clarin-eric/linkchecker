@@ -30,9 +30,9 @@ import com.digitalpebble.stormcrawler.persistence.AbstractQueryingSpout;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.digitalpebble.stormcrawler.util.StringTabScheme;
 
-import eu.clarin.cmdi.cpa.service.LinkService;
 import eu.clarin.linkchecker.config.Configuration;
 import eu.clarin.linkchecker.config.Constants;
+import eu.clarin.linkchecker.persistence.service.LinkService;
 import lombok.extern.slf4j.Slf4j;
 
 @SuppressWarnings("serial")

@@ -8,11 +8,11 @@
       <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
       <storm.version>2.4.0</storm.version>
       <stormcrawler.version>2.4</stormcrawler.version>
-      <rasa.version>5.1.0</rasa.version>
-      <mariadb.version>2.7.5</mariadb.version>
-      <hikari.version>5.0.1</hikari.version>
       <lombok.version>1.18.24</lombok.version>
+      <linkchecker-persistence.version>0.0.2-SNAPSHOT</linkchecker-persistence.version>
+      <!-- the following propierties are used for replacement in crawler-conf.yaml -->
       <driver.class.name>org.mariadb.jdbc.Driver</driver.class.name>
+      <hibernate.dialect>org.hibernate.dialect.MariaDBDialect</hibernate.dialect>
    </properties>
    <distributionManagement>
       <snapshotRepository>
@@ -190,15 +190,10 @@
       <version>${lombok.version}</version>
       <scope>provided</scope>
    </dependency>
-   <dependency>
-         <groupId>org.mariadb.jdbc</groupId>
-         <artifactId>mariadb-java-client</artifactId>
-         <version>${mariadb.version}</version>
-      </dependency>
       <dependency>
-      	<groupId>eu.clarin.cmdi</groupId>
-      	<artifactId>curation-persistence</artifactId>
-      	<version>0.0.1-SNAPSHOT</version>
+      	<groupId>eu.clarin</groupId>
+      	<artifactId>linkchecker-persistence</artifactId>
+      	<version>${linkchecker-persistence.version}</version>
       	<exclusions>
       		<exclusion>
       			<groupId>org.springframework.boot</groupId>
