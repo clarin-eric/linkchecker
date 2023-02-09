@@ -37,7 +37,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @SuppressWarnings("serial")
 @Slf4j
-public class CPASpout extends AbstractQueryingSpout {
+public class LPASpout extends AbstractQueryingSpout {
 
    private static final Scheme SCHEME = new StringTabScheme();
 
