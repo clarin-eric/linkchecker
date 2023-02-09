@@ -29,7 +29,6 @@ import org.apache.storm.tuple.Tuple;
 import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Pattern;
 
 /**
  * Status updater for SQL backend. Discovered URLs are sent as a batch, whereas
@@ -47,7 +46,7 @@ public class MetadataPrinterBolt extends AbstractStatusUpdaterBolt {
    public MetadataPrinterBolt() {
    }
 
-   @SuppressWarnings({ "rawtypes" })
+   @SuppressWarnings({ "rawtypes", "unchecked" })
    @Override
    public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
       super.prepare(stormConf, context, collector);
