@@ -10,9 +10,6 @@
       <stormcrawler.version>2.4</stormcrawler.version>
       <lombok.version>1.18.24</lombok.version>
       <linkchecker-persistence.version>0.0.2-SNAPSHOT</linkchecker-persistence.version>
-      <!-- the following propierties are used for replacement in crawler-conf.yaml -->
-      <driver.class.name>org.mariadb.jdbc.Driver</driver.class.name>
-      <hibernate.dialect>org.hibernate.dialect.MariaDBDialect</hibernate.dialect>
    </properties>
    <distributionManagement>
       <snapshotRepository>
@@ -25,12 +22,6 @@
       </repository>
    </distributionManagement>
    <build>
-      <resources>
-         <resource>
-            <directory>src/main/resources</directory>
-            <filtering>true</filtering>
-         </resource>
-      </resources>
       <plugins>
          <plugin>
             <groupId>org.apache.maven.plugins</groupId>

@@ -114,10 +114,10 @@ config:
     spring.datasource.url: "${ENV-DATABASE_URI}"
     spring.datasource.username: "${ENV-DATABASE_USERNAME}"
     spring.datasource.password: "${ENV-DATABASE_PASSWORD}"
-    spring.datasource.driver-class-name: ${org.mariadb.jdbc.Driver}
+    spring.datasource.driver-class-name: org.mariadb.jdbc.Driver
     spring.jpa.show-sql: false
     spring.jpa.hibernate.ddl-auto: none
-    spring.database-platform: ${hibernate.dialect}
+    spring.database-platform: org.hibernate.dialect.MariaDBDialect
 
   rasa.spout.max.results: ${ENV-RASA_SPOUT_MAX_RESULTS}
 
