@@ -42,9 +42,9 @@ config:
 
   http.agent.name: "${ENV-HTTP_AGENT_NAME}"
   http.agent.version: "${version}"
-  http.agent.description: "${ENV-HTTP_AGENT_DESCRIPTION}"
+#  http.agent.description: "${ENV-HTTP_AGENT_DESCRIPTION}"
   http.agent.url: "${ENV-HTTP_AGENT_URL}"
-  http.agent.email: "${ENV-HTTP_AGENT_EMAIL}"
+#  http.agent.email: "${ENV-HTTP_AGENT_EMAIL}"
   http.redirectLimit: ${ENV-HTTP_REDIRECT_LIMIT}
   http.timeout: 5000
 
@@ -117,7 +117,7 @@ config:
     spring.datasource.driver-class-name: ${org.mariadb.jdbc.Driver}
     spring.jpa.show-sql: false
     spring.jpa.hibernate.ddl-auto: none
-    spring.database-platform: org.hibernate.dialect.MariaDBDialect
+    spring.database-platform: ${hibernate.dialect}
 
   rasa.spout.max.results: ${ENV-RASA_SPOUT_MAX_RESULTS}
 
