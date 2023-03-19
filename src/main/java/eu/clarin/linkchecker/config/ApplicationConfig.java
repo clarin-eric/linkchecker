@@ -6,9 +6,9 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
-@ComponentScan(basePackages = {"eu.clarin.cmdi.cpa"})
-@EnableJpaRepositories("eu.clarin.cmdi.cpa.repository")
-@EntityScan("eu.clarin.cmdi.cpa.model")
+@ComponentScan(basePackages = {"eu.clarin.linkchecker.persistence"})
+@EnableJpaRepositories("eu.clarin.linkchecker.persistence.repository")
+@EntityScan("eu.clarin.linkchecker.persistence.model")
 @EnableAutoConfiguration
 @Configuration
 public class ApplicationConfig {
