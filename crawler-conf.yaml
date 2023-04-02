@@ -41,7 +41,7 @@ config:
     - http.method.head
 
   http.agent.name: "${ENV-HTTP_AGENT_NAME}"
-  http.agent.version: "${version}"
+  http.agent.version: 3.0.0
 #  http.agent.description: "${ENV-HTTP_AGENT_DESCRIPTION}"
   http.agent.url: "${ENV-HTTP_AGENT_URL}"
 #  http.agent.email: "${ENV-HTTP_AGENT_EMAIL}"
@@ -112,7 +112,7 @@ config:
   #your SPRING configuration properties go here
   SPRING:
     spring.datasource.url: "${ENV-DATABASE_URI}"
-    spring.datasource.username: "${ENV-DATABASE_USERNAME}"
+    spring.datasource.username: "${ENV-DATABASE_USER}"
     spring.datasource.password: "${ENV-DATABASE_PASSWORD}"
     spring.datasource.driver-class-name: org.mariadb.jdbc.Driver
     spring.jpa.show-sql: false
