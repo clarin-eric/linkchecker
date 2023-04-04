@@ -1,3 +1,7 @@
+# version 3.0.1
+- bugfix in class MetricsFetcherBolt to prevent null message
+- bugfix in dependency linkchecker-persistence
+
 # version 3.0.0
 - replacement of the persistence layer: the [resource availability status API (RASA)](https://github.com/clarin-eric/resource-availability-status-api) 
 is replaced by [curation-persistence](https://github.com/clarin-eric/curation-persistence)

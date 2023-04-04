@@ -40,7 +40,7 @@ config:
     - fetch.redirectCount
     - http.method.head
 
-  http.agent.name: "CLARIN Linkchecker: https://www.clarin.eu/linkchecker (!!! TEST !!!)"
+  http.agent.name: "CLARIN Linkchecker: https://www.clarin.eu/linkchecker"
   http.agent.version: "2.4"
   http.agent.description: "built with StormCrawler Archetype 2.4"
   http.agent.url: "https://www.clarin.eu/linkchecker"
@@ -128,7 +128,7 @@ config:
     spring.datasource.username: ${ENV-MYSQL_USER}
     spring.datasource.password: ${ENV-MYSQL_PASSWORD}
     spring.datasource.driver-class-name: org.mariadb.jdbc.Driver
-    spring.jpa.show-sql: true
+    spring.jpa.show-sql: false
     spring.jpa.hibernate.ddl-auto: none
     spring.database-platform: org.hibernate.dialect.MariaDBDialect
 
