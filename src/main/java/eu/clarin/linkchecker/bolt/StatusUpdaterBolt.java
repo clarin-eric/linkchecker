@@ -94,7 +94,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
       eu.clarin.linkchecker.persistence.model.Status statusEntity = new eu.clarin.linkchecker.persistence.model.Status(
             urlEntity, 
             Category.valueOf(md.getFirstValue("fetch.category")), 
-            md.getFirstValue("fetch.message"), 
+            md.getFirstValue("fetch.message").length() < 1024?md.getFirstValue("fetch.message"): md.getFirstValue("fetch.message").subSequence(0, 1017) + "[...]",
             md.getFirstValue("fetch.startTime") != null? 
                   Instant.ofEpochMilli(Long.parseLong(md.getFirstValue("fetch.startTime"))).atZone(ZoneId.systemDefault()).toLocalDateTime()
                   : LocalDateTime.now()
@@ -131,6 +131,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
       }
       catch (Exception ex) {
          log.error("can't save checked link \n{}", statusEntity);
+         log.error("metadata:\n" + md.toString());
          _collector.fail(t);
       }
    }
