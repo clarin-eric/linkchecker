@@ -659,13 +659,11 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                   continue;                  
                }
                
-               String message = exece.getMessage();
-               if (message == null)
-                  message = "";
+               String message = exece.getMessage();                
 
                // common exceptions for which we log only a short message
                if (exece.getCause() instanceof java.util.concurrent.TimeoutException
-                     || message.contains(" timed out")) {
+                     || (message != null && message.contains(" timed out"))) {
                   log.debug("Socket timeout fetching {}", fit.url);
                   message = "Socket timeout fetching";
                }
@@ -690,9 +688,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                
                metadata.setValue("fetch.category", getCategoryFromException(exece, fit.url).name());
 
-               metadata.setValue("fetch.message", exece.getMessage());
-
-//               metadata.setValue("fetch.startTime", Long.toString(start));
+               metadata.setValue("fetch.message", message);
 
                // send to status stream
                collector.emit(Constants.StatusStreamName, fit.t, new Values(fit.url, metadata, Status.DISCOVERED));
