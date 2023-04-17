@@ -19,7 +19,8 @@
 package eu.clarin.linkchecker.config;
 
 public class Constants {
-    public static final String RASA_MAXRESULTS_PARAM_NAME = "rasa.spout.max.results";
+    public static final String SPOUT_MAXRESULTS_PARAM_NAME = "spout.max.results";
+    public static final String SPOUT_GROUP_MAXRESULTS_PARAM_NAME = "spout.group.max.results";
     public static final String HTTP_REDIRECT_LIMIT = "http.redirectLimit";
     
     public static final String RedirectStreamName = "redirect";
