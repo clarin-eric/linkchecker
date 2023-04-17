@@ -45,6 +45,7 @@ public class LPASpout extends AbstractQueryingSpout {
    protected String logIdprefix = "";
 
    private int maxNumResults;
+   private int maxNumResultsPerGroup;
 
    @SuppressWarnings({ "rawtypes", "unchecked" })
    @Override
@@ -52,7 +53,8 @@ public class LPASpout extends AbstractQueryingSpout {
 
       super.open(conf, context, collector);
 
-      maxNumResults = ConfUtils.getInt(conf, Constants.RASA_MAXRESULTS_PARAM_NAME, 1000);
+      maxNumResults = ConfUtils.getInt(conf, Constants.SPOUT_MAXRESULTS_PARAM_NAME, 1000);
+      maxNumResultsPerGroup = ConfUtils.getInt(conf, Constants.SPOUT_GROUP_MAXRESULTS_PARAM_NAME, 100);
 
       Configuration.init(conf);
       Configuration.setActive(conf, true);
@@ -80,7 +82,7 @@ public class LPASpout extends AbstractQueryingSpout {
       
       LinkService lService = Configuration.ctx.getBean(LinkService.class);
       
-      lService.getUrlsToCheck(maxNumResults, 200, LocalDateTime.now().minusDays(1))
+      lService.getUrlsToCheck(maxNumResults, maxNumResultsPerGroup, LocalDateTime.now().minusDays(1))
          .stream()
          .filter(url -> !beingProcessed.containsKey(url.getName())).forEach(url -> {
             Metadata md = new Metadata();

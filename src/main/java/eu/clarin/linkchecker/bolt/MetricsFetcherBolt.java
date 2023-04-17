@@ -597,7 +597,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                   }
                }
                
-               // RASASpout sets HEAD request as default
+               // LPASpout sets HEAD request as default
                // if the head request is unsuccessful, the tuple is returned to the Partitioner 
                // with the information that we wont to replay it with a GET request
                else if ("true".equals(metadata.getFirstValue("http.method.head")) && !List.of(200, 304).contains(response.getStatusCode())) {                  
