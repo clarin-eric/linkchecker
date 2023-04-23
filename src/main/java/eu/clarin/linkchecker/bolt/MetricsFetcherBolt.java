@@ -908,7 +908,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
          return (scheme + "://" + domain + locationHeader);
       }
       else {
-         return locationHeader.matches("(http|ftp)?.+")?locationHeader: convertRelativeToAbsolute(url, "." + locationHeader);
+         return locationHeader.matches("(http|ftp).+")?locationHeader: convertRelativeToAbsolute(url, "." + locationHeader);
       }
    }
    private Category getCategoryFromException(Exception e, String url) {
