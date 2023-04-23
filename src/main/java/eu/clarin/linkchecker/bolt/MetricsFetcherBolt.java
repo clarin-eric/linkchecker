@@ -456,7 +456,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
 
             log.debug("[Fetcher #{}] {} : Fetching {}", taskID, getName(), fit.url);
 
-            Metadata metadata = null;
+            Metadata metadata = null;           
 
             if (fit.t.contains("metadata")) {
                metadata = (Metadata) fit.t.getValueByField("metadata");
@@ -835,6 +835,10 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
          }
          // Report to status stream and ack
          metadata.setValue(Constants.STATUS_ERROR_CAUSE, "malformed URL");
+         
+         metadata.setValue("fetch.category", getCategoryFromException(e, urlString).name());
+         metadata.setValue("fetch.message", e.getClass().getName());
+         
          collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, input,
                new Values(urlString, metadata, Status.ERROR));
          collector.ack(input);
@@ -889,24 +893,23 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
       if (locationHeader == null) {
          throw new MalformedURLException("Location Header in a redirect shouldn't be null.");
       }
-      String result;
+      
       if (locationHeader.startsWith(".")) {
          // remove query parameters
          url = url.split("\\?")[0];
          int lastIndex = url.lastIndexOf("/");
-         result = url.substring(0, lastIndex) + locationHeader.substring(1);
+         return (url.substring(0, lastIndex) + locationHeader.substring(1));
 
       }
       else if (locationHeader.startsWith("/")) {
          URI uri = new URI(url);
          String scheme = uri.getScheme();
          String domain = uri.getHost();
-         result = scheme + "://" + domain + locationHeader;
+         return (scheme + "://" + domain + locationHeader);
       }
       else {
-         return locationHeader;
+         return locationHeader.matches("(http|ftp)?.+")?locationHeader: convertRelativeToAbsolute(url, "." + locationHeader);
       }
-      return result;
    }
    private Category getCategoryFromException(Exception e, String url) {
       if (e instanceof MalformedURLException) {
