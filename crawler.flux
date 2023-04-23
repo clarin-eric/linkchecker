@@ -15,6 +15,9 @@ spouts:
     parallelism: 1
 
 bolts:
+  - id: "partitioner"
+    className: "com.digitalpebble.stormcrawler.bolt.URLPartitionerBolt"
+    parallelism: 1
   - id: "fetcher"
     className: "eu.clarin.linkchecker.bolt.MetricsFetcherBolt"
     parallelism: 1
@@ -24,9 +27,14 @@ bolts:
 
 streams:
   - from: "spout"
-    to: "fetcher"
+    to: "partitioner"
     grouping:
       type: SHUFFLE
+  - from: "partitioner"
+    to: "fetcher"
+    grouping:
+      type: FIELDS
+      args: ["key"]
   - from: "fetcher"
     to: "status"
     grouping:
@@ -34,7 +42,7 @@ streams:
       args: ["url"]
       streamId: "status"        
   - from: "fetcher"
-    to: "fetcher"
+    to: "partitioner"
     grouping:
       type: SHUFFLE
       streamId: "redirect"
