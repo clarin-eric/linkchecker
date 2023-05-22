@@ -1,3 +1,9 @@
+# version
+- using MockServer proxy for testing
+
+# version 3.0.2
+- adding missing PartitionerBolt again (bug fix!)
+
 # version 3.0.1
 - bugfix in class MetricsFetcherBolt to prevent null message
 - bugfix in dependency linkchecker-persistence

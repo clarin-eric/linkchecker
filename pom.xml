@@ -10,6 +10,7 @@
       <stormcrawler.version>2.8</stormcrawler.version>
       <lombok.version>1.18.24</lombok.version>
       <linkchecker-persistence.version>0.0.5</linkchecker-persistence.version>
+      <mock.version>5.14.0</mock.version>
    </properties>
    <distributionManagement>
       <snapshotRepository>
@@ -144,7 +145,7 @@
       </dependency>
       <dependency>
          <groupId>org.apache.storm</groupId>
-         <artifactId>storm-core</artifactId>
+         <artifactId>storm-server</artifactId>
          <version>${storm.version}</version>
          <scope>test</scope>
          <exclusions>
@@ -173,12 +174,17 @@
          <version>${storm.version}</version>
       </dependency>
       <dependency>
+     <groupId>org.mock-server</groupId>
+     <artifactId>mockserver-netty-no-dependencies</artifactId>
+     <version>${mock.version}</version>
+     <scope>test</scope>
+     </dependency>
+      <dependency>
          <groupId>org.mock-server</groupId>
-         <artifactId>mockserver-netty</artifactId>
-         <version>5.12.0</version>
-         <classifier>shaded</classifier>
+         <artifactId>mockserver-client-java-no-dependencies</artifactId>
+         <version>${mock.version}</version>
          <scope>test</scope>
-      </dependency>
+    </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
