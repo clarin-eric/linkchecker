@@ -478,17 +478,19 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
 
             try {
                
-               URL url = new URL(fit.url.replace(" ", "%20")); //whitespace replacement
+               String correctedUrlString = fit.url.replace(" ", "%20");
+               URL url = new URL(correctedUrlString); //whitespace replacement
+
                
                Protocol protocol = protocolFactory.getProtocol(url);
 
                if (protocol == null)
                   throw new RuntimeException("No protocol implementation found for " + fit.url);
 
-               BaseRobotRules rules = protocol.getRobotRules(fit.url);
+               BaseRobotRules rules = protocol.getRobotRules(url.toString());
 
                //checking for robots.txt
-               if (!rules.isAllowed(fit.url)) {
+               if (!rules.isAllowed(correctedUrlString)) {
                   metadata.setValue("fetch.message", "Blocked by robots.txt");
                   // pass the info about denied by robots
                   metadata.setValue("fetch.category", Category.Blocked_By_Robots_txt.name());
@@ -544,7 +546,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                }
                
                // checking for know login pages
-               if (Configuration.loginPageUrls.contains(fit.url)) {
+               if (Configuration.loginPageUrls.contains(correctedUrlString)) {
                   // this next if check means that the harvested page was not the login page.
                   // if the login page is harvested as a url, then it should be handled normally
 
@@ -575,7 +577,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                   continue;
                }
 
-               ProtocolResponse response = protocol.getProtocolOutput(fit.url, metadata);               
+               ProtocolResponse response = protocol.getProtocolOutput(correctedUrlString, metadata);               
                
                if (Configuration.redirectStatusCodes.contains(response.getStatusCode())) {
 
@@ -672,14 +674,9 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                   log.debug("Unknown host {}", fit.url);
                   message = "Unknown host";
                }
-               else {
+               else if(StringUtils.isBlank(message)){
+                  
                   message = exece.getClass().getName();
-                  if (log.isDebugEnabled()) {
-                     log.debug("Exception while fetching {}", fit.url, exece);
-                  }
-                  else {
-                     log.debug("Exception while fetching {} -> {}", fit.url, message);
-                  }
                }
 
                if (metadata.size() == 0) {
