@@ -1,0 +1,1 @@
+storm.metricstore.class: "org.apache.storm.metricstore.NoOpMetricStore"

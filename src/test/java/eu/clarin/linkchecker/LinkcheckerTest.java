@@ -41,7 +41,7 @@ public class LinkcheckerTest {
          cluster.submitTopology(def.getName(), def.getConfig(),
                FluxBuilder.buildTopology(new ExecutionContext(def, FluxBuilder.buildConfig(def))));
 
-         Utils.sleep(10000);
+         Utils.sleep(600000);
          
 
          // kill the topology
@@ -54,13 +54,11 @@ public class LinkcheckerTest {
          }
          
          cluster.shutdown();
-         Utils.sleep(5000);
          
       }
-      
-
-      
+       
       cas.close();
+      System.exit(0);
    }
 
    private static final boolean topologyExists(LocalCluster cluster, final String topologyName) throws TException {
