@@ -1,5 +1,5 @@
-# version
-- using MockServer proxy for testing
+# version 3.0.3
+- fix for issue #57
 
 # version 3.0.2
 - adding missing PartitionerBolt again (bug fix!)
