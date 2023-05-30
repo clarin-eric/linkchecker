@@ -24,6 +24,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockserver.integration.ClientAndServer;
+import org.mockserver.socket.PortFactory;
 
 import com.digitalpebble.stormcrawler.Metadata;
 
@@ -55,7 +56,7 @@ public class MectricsFetcherBoltTest {
    @BeforeAll
    public void setup() {      
       
-      this.cas = startClientAndServer(8181);      
+      this.cas = startClientAndServer(PortFactory.findFreePort());      
    }
    
    @BeforeEach
@@ -105,6 +106,10 @@ public class MectricsFetcherBoltTest {
          
          //setting h2 driver for testing
          ((Map<String, Object>) def.getConfig().get("SPRING")).put("spring.datasource.driver-class-name", "org.h2.Driver");
+         //setting MockServer proxy
+         def.getConfig().put("http.proxy.host", "localhost");
+         def.getConfig().put("http.proxy.port", this.cas.getPort());
+         
          
          return def.getConfig();
       }
