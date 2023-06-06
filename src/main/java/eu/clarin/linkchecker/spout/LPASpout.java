@@ -20,6 +20,8 @@ package eu.clarin.linkchecker.spout;
 import java.time.LocalDateTime;
 import java.util.Map;
 
+import javax.transaction.Transactional;
+
 import org.apache.storm.spout.Scheme;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
@@ -46,6 +48,9 @@ public class LPASpout extends AbstractQueryingSpout {
 
    private int maxNumResults;
    private int maxNumResultsPerGroup;
+   
+   private int counter = 0;
+   private long lastCheckpoint = System.currentTimeMillis();
 
    @SuppressWarnings({ "rawtypes", "unchecked" })
    @Override
@@ -73,6 +78,7 @@ public class LPASpout extends AbstractQueryingSpout {
    }
 
    @Override
+   @Transactional
    protected void populateBuffer() {
 
       log.debug("{} call LinkToBeCheckedRessource.getNextLinksToCheck()", logIdprefix);
@@ -81,23 +87,25 @@ public class LPASpout extends AbstractQueryingSpout {
       long timeStartQuery = System.currentTimeMillis();
       
       LinkService lService = Configuration.ctx.getBean(LinkService.class);
-      
-      lService.getUrlsToCheck(maxNumResults, maxNumResultsPerGroup, LocalDateTime.now().minusDays(1))
-         .stream()
-         .filter(url -> !beingProcessed.containsKey(url.getName())).forEach(url -> {
-            Metadata md = new Metadata();
-            md.setValue("urlId", String.valueOf(url.getId()));
-            md.setValue("originalUrl", url.getName());
-            md.setValue("http.method.head", "true");
-            buffer.add(url.getName(), md);
-         });
-      
-         this.markQueryReceivedNow();
-         long timeTaken = System.currentTimeMillis() - timeStartQuery;
-         queryTimes.addMeasurement(timeTaken);
 
-         log.info("{} SQL query returned {} hits, distributed on {} queues in {} msec", logIdprefix, buffer.size(),
-               buffer.numQueues(), timeTaken);
+      
+      lService.getUrlsToCheck(maxNumResultsPerGroup, maxNumResults, LocalDateTime.now().minusDays(1))
+      .stream()
+      .filter(url -> !beingProcessed.containsKey(url.getName())).forEach(url -> {
+
+         Metadata md = new Metadata();
+         md.setValue("urlId", String.valueOf(url.getId()));
+         md.setValue("originalUrl", url.getName());
+         md.setValue("http.method.head", "true");
+         buffer.add(url.getName(), md);
+      });
+      
+      this.markQueryReceivedNow();
+      long timeTaken = System.currentTimeMillis() - timeStartQuery;
+      queryTimes.addMeasurement(timeTaken);
+
+      log.info("{} SQL query returned {} hits, distributed on {} queues in {} msec", logIdprefix, buffer.size(),
+            buffer.numQueues(), timeTaken);
 
 
    }
@@ -106,6 +114,13 @@ public class LPASpout extends AbstractQueryingSpout {
 
    @Override
    public void ack(Object msgId) {
+      if(++this.counter == 100) {
+
+         log.info("Checked 100 links in {} ms", (System.currentTimeMillis() - this.lastCheckpoint));
+         
+         this.counter = 0;
+         this.lastCheckpoint = System.currentTimeMillis();
+      }
       log.debug("{}  Ack for {}", logIdprefix, msgId);
       super.ack(msgId);
    }
