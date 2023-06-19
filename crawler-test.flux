@@ -20,10 +20,10 @@ bolts:
     parallelism: 1
   - id: "fetcher"
     className: "eu.clarin.linkchecker.bolt.MetricsFetcherBolt"
-    parallelism: 1
+    parallelism: 5
   - id: "status"
     className: "eu.clarin.linkchecker.bolt.StatusUpdaterBolt"
-    parallelism: 1
+    parallelism: 5
 
 streams:
   - from: "spout"
@@ -38,8 +38,7 @@ streams:
   - from: "fetcher"
     to: "status"
     grouping:
-      type: FIELDS
-      args: ["url"]
+      type: SHUFFLE
       streamId: "status"        
   - from: "fetcher"
     to: "partitioner"
