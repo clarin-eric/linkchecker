@@ -1,5 +1,11 @@
+# version 3.0.4
+- configuring okhttp.HttpProtocol (issue #52)
+- shifting status logging from MetricsFetcherBolt to LPASpout (issue #59)
+- bug fix for issue #58
+
 # version 3.0.3
-- fix for issue #57
+- upgrade of storm crawler dependeny (issue #53)
+- bug fix for issue #57
 
 # version 3.0.2
 - adding missing PartitionerBolt again (bug fix!)
