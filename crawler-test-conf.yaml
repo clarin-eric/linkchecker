@@ -49,11 +49,11 @@ config:
   http.timeout: 5000
   
   # using mock proxy server for all requests
-  http.proxy.host: "localhost"
-  http.proxy.port: 8181
+  #http.proxy.host: "localhost"
+  #http.proxy.port: 8181
 
-  # http.protocol.implementation: "com.digitalpebble.stormcrawler.protocol.okhttp.HttpProtocol"
-  # https.protocol.implementation: "com.digitalpebble.stormcrawler.protocol.okhttp.HttpProtocol"
+  http.protocol.implementation: "com.digitalpebble.stormcrawler.protocol.okhttp.HttpProtocol"
+  https.protocol.implementation: "com.digitalpebble.stormcrawler.protocol.okhttp.HttpProtocol"
 
   # Defines delay between crawls in the same queue
   fetcher.server.delay: 2
