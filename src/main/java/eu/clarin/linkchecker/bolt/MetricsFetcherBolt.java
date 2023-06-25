@@ -108,8 +108,6 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
    private String[] beingFetched;
 
    // Clarin specific variables
-   private final AtomicInteger counter = new AtomicInteger(0);
-   private long lastCheckpoint = System.currentTimeMillis();
    private int HTTP_REDIRECT_LIMIT;
 
    @Override
@@ -500,7 +498,6 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                   // that site
                   asap = true;
                   
-                  countAndLog();
                   continue;
                }
                
@@ -529,7 +526,6 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                         // from that site
                         asap = true;
                         
-                        countAndLog();
                         continue;
                      }
                   }
@@ -558,7 +554,6 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                      collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, fit.t,
                            new Values(fit.url, metadata, Status.DISCOVERED));
                      
-                     countAndLog();
                      continue;
                   }
                }
@@ -698,7 +693,6 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                collector.ack(fit.t);
                beingFetched[threadNum] = "";
             }
-            countAndLog();
          }
       }
    }
@@ -877,14 +871,6 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
       }
    }
 
-   public synchronized void countAndLog() {
-      if (counter.incrementAndGet() >= 100) {
-         long secondsDiff = System.currentTimeMillis() - lastCheckpoint;
-         log.info("Checked {} links in {} ms", counter.get(), secondsDiff);
-         counter.set(0);
-         lastCheckpoint = System.currentTimeMillis();
-      }
-   }
    private String convertRelativeToAbsolute(String url, String locationHeader)
          throws URISyntaxException, MalformedURLException {
       if (locationHeader == null) {

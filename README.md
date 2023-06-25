@@ -4,7 +4,7 @@ adaptation for URL checking. Instead of crawling, it checks the status of URLs a
 persists them in a database (currently MariaDB/MySQL). 
 **Important** for understanding is the fact, that the linkchecker is not a stand alone application 
 but storm topology which is running inside a cluster. For more information on storm topologies, 
-have a look at the documentation of the [apache storm](https://storm.apache.org/releases/2.2.0/Concepts.html) project, please.   
+have a look at the documentation of the [apache storm](https://storm.apache.org/releases/2.4.0/Concepts.html) project, please.   
 
 # How to setup and run
 
@@ -16,22 +16,13 @@ have a look at the documentation of the [apache storm](https://storm.apache.org/
 
 ## In a local cluster
 1. Before you can run linkchecker, you need to install [Apache Storm](https://storm.apache.org/):
-Download Apache Storm 2.2.0 (current supported version) from this link: https://archive.apache.org/dist/storm/apache-storm-2.2.0/apache-storm-2.2.0.tar.gz
+Download Apache Storm 2.4.0 (current supported version) from this link: https://archive.apache.org/dist/storm/apache-storm-2.4.0/apache-storm-2.4.0.tar.gz
 
 2. Clone this repository.
 
 3. Run `mvn install` in the working directory
 
-4. Add your hikari connection pool propiertes to *crawler-conf.yaml* (and change any other parameters you wish, ex: http.agent):
-  
-  ```
-  HIKARI:
-   driverClassName: com.mysql.cj.jdbc.Driver
-   jdbcUrl: {your database url, ex: "jdbc:mysql://localhost:3307/stormychecker"}
-   username: {your database username}
-   password: {your database password}
-  ```
-5. Point to your crawler-conf.yaml file in *crawler.flux*:
+4. Point to your crawler-conf.yaml file in *crawler.flux*:
   
   ```
   includes:
@@ -45,11 +36,9 @@ Download Apache Storm 2.2.0 (current supported version) from this link: https://
   ```
   Note: If you set it "crawler-conf.yaml", then you can directly use the crawler-conf.yaml in this repository.
 
-6. To start the link checker on local mode, run `apache-storm-2.2.0/bin/storm storm local path/to/this/repository/target/linkchecker-2.1.0.jar  org.apache.storm.flux.Flux --local path/to/this/repository/crawler.flux --local-ttl 3600`
+5. To start the link checker on local mode, run `apache-storm-2.4.0/bin/storm storm local path/to/this/repository/target/linkchecker-<current version>.jar  org.apache.storm.flux.Flux --local path/to/this/repository/crawler.flux --local-ttl 3600`
 
-**For remote cluster setup, have a look at the documentation of the [apache storm](https://storm.apache.org/releases/2.2.0/Setting-up-a-Storm-cluster.html) project, please.**
-
-  
+**For remote cluster setup, have a look at the documentation of the [apache storm](https://storm.apache.org/releases/2.4.0/Setting-up-a-Storm-cluster.html) project, please.**
   
 # Simple Explanation of Current Implementation
 
@@ -62,8 +51,8 @@ Our SQL database has 6 tables:
 6. **url_context**: joins url-table n-n to the context table, so that each URL might appear in different contexts. Moreover the table contains the last time when the link was ingested and and a boolean flag which indicates if the join is still active. Only URLs which have at least one active join are considered to be checked!
 
 *crawler.flux* defines our topology. It defines all the spouts, bolts and streams.
-1. `at.ac.oeaw.acdh.linkchecker.spout.RASASpout` uses the [resource availability status API](https://github.com/clarin-eric/resource-availability-status-api) to fill up a buffer with URLs to check.
+1. `eu.clarin.linkchecker.spout.LPASpout` uses the [linkchecker-persistence API](https://github.com/clarin-eric/linkchecker-persistence) to fill up a buffer with URLs to check.
 2. `com.digitalpebble.stormcrawler.bolt.URLPartitionerBolt` partitions the URLs by a configured criteria
-3. `at.ac.oeaw.acdh.linkchecker.bolt.MetricsFetcherBolt` fetches the urls. It sends redirects back to URLPartitionerBolt and sends the rest onwards down the stream to StatusUpdaterBolt. Modification of  `com.digitalpebble.stormcrawler.bolt.FetcherBolt`
-4. `at.ac.oeaw.acdh.linkchecker.bolt.StatusUpdaterBolt` persists the results in the status table of the database via [resource availability status API](https://github.com/clarin-eric/resource-availability-status-api).
+3. `eu.clarin.linkchecker.bolt.MetricsFetcherBolt` fetches the urls. It sends redirects back to URLPartitionerBolt and sends the rest onwards down the stream to StatusUpdaterBolt. Modification of  `com.digitalpebble.stormcrawler.bolt.FetcherBolt`
+4. `eu.clarin.linkchecker.bolt.StatusUpdaterBolt` persists the results in the status table of the database via [https://github.com/clarin-eric/linkchecker-persistence).
 
