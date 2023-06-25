@@ -133,8 +133,8 @@ config:
   spout.max.delay.queries: 3600000
 
   # Min time (in msecs) to allow between 2 successive queries to SQL
-  # 5 minutes
-  spout.min.delay.queries: 60000
+  # 3 minutes
+  spout.min.delay.queries: 180000
 
 
 
