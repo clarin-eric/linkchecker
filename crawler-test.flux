@@ -24,6 +24,9 @@ bolts:
   - id: "status"
     className: "eu.clarin.linkchecker.bolt.StatusUpdaterBolt"
     parallelism: 5
+  - id: "stack"
+    className: "eu.clarin.linkchecker.bolt.SimpleStackBolt"
+    parallelism: 1 
 
 streams:
   - from: "spout"
@@ -45,3 +48,8 @@ streams:
     grouping:
       type: SHUFFLE
       streamId: "redirect"
+  - from: "fetcher"
+    to: "stack"
+    grouping:
+      type: SHUFFLE
+      streamId: "status"
