@@ -7,8 +7,9 @@ package eu.clarin.linkchecker.bolt;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.time.LocalDateTime;
+import java.util.ArrayDeque;
 import java.util.Map;
-import java.util.Stack;
 
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
@@ -29,9 +30,11 @@ public class SimpleStackBolt implements IRichBolt {
    
    private static final long serialVersionUID = 1L;
    
-   private Stack<Map<String, String[]>> stack = new Stack<Map<String, String[]>>();
+   private ArrayDeque<Map<String, String[]>> deque = new ArrayDeque<Map<String, String[]>>();
    
    private String outputFileStr;
+   
+   private long lastSaveTimeInMs = System.currentTimeMillis();
    
    @Override
    public void prepare(Map<String, Object> topoConf, TopologyContext context, OutputCollector collector) {
@@ -42,26 +45,31 @@ public class SimpleStackBolt implements IRichBolt {
    @Override
    public void execute(Tuple input) {
       
-      Metadata metadata = (Metadata) input.getValueByField("metadata");
+      Map<String,String[]> map = ((Metadata) input.getValueByField("metadata")).asMap();
+      map.put("checkingDate", new String[] {LocalDateTime.now().toString()});
       
-      if(this.stack.size() >= 100) {
+      deque.addFirst(map);
+      
+      if(this.deque.size() > 100) {
+         
+         this.deque.removeLast();
+      }
+      
+      if((System.currentTimeMillis() - this.lastSaveTimeInMs) > 10000) { //saving every 10 seconds
          
          try(FileOutputStream fileOutputStream = new FileOutputStream(outputFileStr)){
             
             ObjectOutputStream out = new ObjectOutputStream(fileOutputStream);
             
-            out.writeObject(this.stack);  
+            out.writeObject(this.deque);  
             
-            this.stack.clear();
+            this.lastSaveTimeInMs = System.currentTimeMillis();
          }
          catch(IOException ex) {
             
             log.error("can't serialize stack to file {}", this.outputFileStr);
-         }
-         
+         }         
       }
-      
-      this.stack.push(metadata.asMap());
    }
 
    @Override
