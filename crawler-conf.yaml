@@ -33,7 +33,8 @@ config:
     - fetch.startTime
     - fetch.redirectCount
     - http.method.head
-
+  
+  http.robots.agents: "${ENV-HTTP_AGENTS}"
   http.agent.name: "${ENV-HTTP_AGENT_NAME}"
   http.agent.version: 3.0.0
 #  http.agent.description: "${ENV-HTTP_AGENT_DESCRIPTION}"
