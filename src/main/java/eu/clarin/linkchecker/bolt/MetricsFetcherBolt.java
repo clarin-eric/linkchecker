@@ -535,6 +535,10 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                            rules.getCrawlDelay());
                   }
                   else {
+                     if(fiq.crawlDelay > 0 && rules.getCrawlDelay() > fiq.crawlDelay) {
+                        
+                        log.info("Crawl delay increased by robots.txt from {} to {} ms", fiq.crawlDelay, rules.getCrawlDelay());
+                     }
                      fiq.crawlDelay = rules.getCrawlDelay();
                      log.debug("Crawl delay for queue: {}  is set to {} as per robots.txt. url: {}", fit.queueID,
                            fiq.crawlDelay, fit.url);
