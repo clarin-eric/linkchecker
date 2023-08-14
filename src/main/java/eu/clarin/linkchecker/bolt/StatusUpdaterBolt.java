@@ -31,7 +31,10 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
+import org.apache.storm.topology.OutputFieldsDeclarer;
+import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
+import org.apache.storm.tuple.Values;
 
 import java.time.LocalDateTime;
 import java.util.Date;
@@ -117,6 +120,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
       try {
          sService.save(statusEntity);
+         _collector.emit(new Values(metadata));
          _collector.ack(t);
       }
       catch (Exception ex) {
@@ -129,5 +133,11 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
    @Override
    public void cleanup() {
 
+   }
+
+   @Override
+   public void declareOutputFields(OutputFieldsDeclarer declarer) {
+      
+      declarer.declare(new Fields("metadata"));
    }
 }

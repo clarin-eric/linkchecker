@@ -48,8 +48,7 @@ streams:
     grouping:
       type: SHUFFLE
       streamId: "redirect"
-  - from: "fetcher"
+  - from: "status"
     to: "stack"
     grouping:
       type: SHUFFLE
-      streamId: "status"
