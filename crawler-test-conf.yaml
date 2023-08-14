@@ -24,6 +24,7 @@ config:
   metadata.persist:
     - urlId
     - originalUrl
+    - fetch.checkingDate
     - fetch.statusCode
     - fetch.category
     - fetch.message

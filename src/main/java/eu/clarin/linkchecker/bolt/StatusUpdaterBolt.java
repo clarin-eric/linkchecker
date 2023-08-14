@@ -33,9 +33,7 @@ import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.tuple.Tuple;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
@@ -72,17 +70,9 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
       log.debug("metadata: {}", metadata);
       log.debug("tuple: {}", t);
 
-      StringBuilder mdAsString = new StringBuilder();
-      for (String mdKey : metadata.keySet()) {
-         String[] vals = metadata.getValues(mdKey);
-         for (String v : vals) {
-            mdAsString.append("\t").append(mdKey).append("=").append(v);
-         }
-      }
-
       Metadata md = (Metadata) t.getValueByField("metadata");
 
-      log.debug("metadata:\n" + md.toString());
+      log.debug("metadata:\n{}", md.toString());
 
       String str = null;
       
@@ -95,8 +85,8 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
             urlEntity, 
             Category.valueOf(md.getFirstValue("fetch.category")), 
             md.getFirstValue("fetch.message").length() < 1024?md.getFirstValue("fetch.message"): md.getFirstValue("fetch.message").subSequence(0, 1017) + "[...]",
-            md.getFirstValue("fetch.startTime") != null? 
-                  Instant.ofEpochMilli(Long.parseLong(md.getFirstValue("fetch.startTime"))).atZone(ZoneId.systemDefault()).toLocalDateTime()
+            md.getFirstValue("fetch.chechingDate") != null? 
+                  LocalDateTime.parse(md.getFirstValue("fetch.chechingDate"))
                   : LocalDateTime.now()
          );
 

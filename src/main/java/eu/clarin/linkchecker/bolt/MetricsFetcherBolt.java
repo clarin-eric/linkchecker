@@ -41,6 +41,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -462,6 +463,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
             if (metadata == null) {
                metadata = new Metadata();
             }
+            metadata.setValue("fetch.checkingDate", LocalDateTime.now().toString());
 
             // https://github.com/DigitalPebble/storm-crawler/issues/813
             metadata.remove("fetch.exception");
@@ -537,7 +539,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                   else {
                      if(fiq.crawlDelay > 0 && rules.getCrawlDelay() > fiq.crawlDelay) {
                         
-                        log.info("Crawl delay increased by robots.txt from {} to {} ms", fiq.crawlDelay, rules.getCrawlDelay());
+                        log.info("Crawl delay increased by robots.txt from {} to {} ms for URL '{}'", fiq.crawlDelay, rules.getCrawlDelay(), fit.url);
                      }
                      fiq.crawlDelay = rules.getCrawlDelay();
                      log.debug("Crawl delay for queue: {}  is set to {} as per robots.txt. url: {}", fit.queueID,
@@ -833,6 +835,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
          
          metadata.setValue("fetch.category", getCategoryFromException(e, urlString).name());
          metadata.setValue("fetch.message", e.getClass().getName());
+         metadata.setValue("fetch.checkingDate", LocalDateTime.now().toString());
          
          collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, input,
                new Values(urlString, metadata, Status.ERROR));

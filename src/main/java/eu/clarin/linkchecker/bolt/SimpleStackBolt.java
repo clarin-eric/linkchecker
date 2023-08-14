@@ -7,9 +7,7 @@ package eu.clarin.linkchecker.bolt;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.time.LocalDateTime;
 import java.util.ArrayDeque;
-import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.storm.task.OutputCollector;
@@ -46,8 +44,7 @@ public class SimpleStackBolt implements IRichBolt {
    @Override
    public void execute(Tuple input) {
       // we have to create a new Map instance not to modify the instance which is underlying the Metadata instance
-      Map<String,String[]> map = new HashMap<String,String[]>(((Metadata) input.getValueByField("metadata")).asMap());
-      map.put("checkingDate", new String[] {LocalDateTime.now().toString()});
+      Map<String,String[]> map = ((Metadata) input.getValueByField("metadata")).asMap();
       
       deque.addFirst(map);
       
