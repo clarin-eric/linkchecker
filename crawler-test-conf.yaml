@@ -41,7 +41,7 @@ config:
   http.agent.description: "built with StormCrawler Archetype 2.4"
   http.agent.url: "https://www.clarin.eu/linkchecker"
   http.agent.email: "clarin@wowasa.com"
-  http.redirectLimit: 5  
+  http.redirectLimit: 15  
   http.timeout: 5000
   
   # using mock proxy server for all requests
@@ -52,12 +52,12 @@ config:
   https.protocol.implementation: "com.digitalpebble.stormcrawler.protocol.okhttp.HttpProtocol"
 
   # Defines delay between crawls in the same queue
-  fetcher.server.delay: 2
+  fetcher.server.delay: 1
   # Defines the delay between crawls in the same queue if a queue has > 1 thread (fetcher.server.delay is use otherwise)
-  fetcher.server.min.delay: 2
+  fetcher.server.min.delay: 1
   # Defines the behavior of fetcher when the crawl-delay in the robots.txt is smaller than the value configured in fetcher.server.delay. 
   # If false the shorter crawl-delay from the robots.txt is used. If true the longer configured delay is forced.
-  fetcher.server.delay.force: true
+  fetcher.server.delay.force: false
 
   # The maximum number of bytes for returned HTTP response bodies.
   # Set -1 to disable the limit.
@@ -77,16 +77,13 @@ config:
   spout.max.results: 5000
   spout.group.max.results: 100
 
-  # time in secs for which the URLs will be considered for fetching after a ack of fail
-  spout.ttl.purgatory: 300
-
   #Max time to allow between 2 successive queries to the backend. Value in msecs, default 20000.
   # 1 hour
   spout.max.delay.queries: 3600000
 
   # Min time (in msecs) to allow between 2 successive queries to SQL
-  # 1 minute
-  spout.min.delay.queries: 300000
+  # 5 minutes
+  spout.min.delay.queries: 180000
 
   # Delay since previous query date (in secs) after which the nextFetchDate value will be reset to the current time
   # Setting this to -1 or a large value means that the ES will cache the results but also that less and less results

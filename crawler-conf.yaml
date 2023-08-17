@@ -48,10 +48,10 @@ config:
   https.protocol.implementation: "com.digitalpebble.stormcrawler.protocol.okhttp.HttpProtocol"
 
   # Defines delay (in secs) between crawls in the same queue
-  fetcher.server.delay: 2
+  fetcher.server.delay: 1
   # Defines the delay between crawls in the same queue if a queue has > 1 thread (fetcher.server.delay is use otherwise)
-  fetcher.server.min.delay: 2
-  fetcher.server.delay.force: true
+  fetcher.server.min.delay: 1
+  fetcher.server.delay.force: false
 
   # The maximum number of bytes for returned HTTP response bodies.
   # Set -1 to disable the limit.
@@ -75,9 +75,6 @@ config:
 
   spout.max.results: ${ENV-SPOUT_MAX_RESULTS}
   spout.group.max.results: ${ENV-SPOUT_GROUP_MAX_RESULTS}
-
-  # time in secs for which the URLs will be considered for fetching after a ack of fail
-  spout.ttl.purgatory: 300
 
   # Max time to allow between 2 successive queries to the backend. Value in msecs, default 20000.
   # 1 hour
