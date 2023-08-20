@@ -505,7 +505,11 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                
                //checking for crawl delays
                FetchItemQueue fiq = fetchQueues.getFetchItemQueue(fit.queueID);
+               
+               // if crawl delay from robots.txt >0 and not the same as the server.crawl.delay
                if (rules.getCrawlDelay() > 0 && rules.getCrawlDelay() != fiq.crawlDelay) {
+                  
+                  // if crawl delay from robots.txt > max.crawl.delay and max.crawl.delay> 0
                   if (rules.getCrawlDelay() > maxCrawlDelay && maxCrawlDelay >= 0) {
                      boolean force = false;
                      String msg = "skipping";
