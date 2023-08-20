@@ -58,6 +58,10 @@ config:
   # Defines the behavior of fetcher when the crawl-delay in the robots.txt is smaller than the value configured in fetcher.server.delay. 
   # If false the shorter crawl-delay from the robots.txt is used. If true the longer configured delay is forced.
   fetcher.server.delay.force: false
+  
+  # we decided to accept any crawl delay but we have to swith it off explicitly
+  # since otherwise a default of 30 seconds is set in MetricsFetcherBolt
+  fetcher.max.crawl.delay: -1
 
   # The maximum number of bytes for returned HTTP response bodies.
   # Set -1 to disable the limit.
@@ -84,11 +88,6 @@ config:
   # Min time (in msecs) to allow between 2 successive queries to SQL
   # 5 minutes
   spout.min.delay.queries: 180000
-
-  # Delay since previous query date (in secs) after which the nextFetchDate value will be reset to the current time
-  # Setting this to -1 or a large value means that the ES will cache the results but also that less and less results
-  # might be returned.
-  spout.reset.fetchdate.after: 120
   
   # linkchecker specific settings
   login.list.url: "https://raw.githubusercontent.com/clarin-eric/login-pages/master/list.txt"

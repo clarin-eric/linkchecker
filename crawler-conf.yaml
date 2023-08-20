@@ -52,6 +52,10 @@ config:
   # Defines the delay between crawls in the same queue if a queue has > 1 thread (fetcher.server.delay is use otherwise)
   fetcher.server.min.delay: 1
   fetcher.server.delay.force: false
+  
+  # we decided to accept any crawl delay but we have to swith it off explicitly
+  # since otherwise a default of 30 seconds is set in MetricsFetcherBolt
+  fetcher.max.crawl.delay: -1
 
   # The maximum number of bytes for returned HTTP response bodies.
   # Set -1 to disable the limit.
