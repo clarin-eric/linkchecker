@@ -41,7 +41,7 @@ public class LinkcheckerTest {
          cluster.submitTopology(def.getName(), def.getConfig(),
                FluxBuilder.buildTopology(new ExecutionContext(def, FluxBuilder.buildConfig(def))));
 
-         Utils.sleep(600000);
+         Utils.sleep(1800000);
          
 
          // kill the topology

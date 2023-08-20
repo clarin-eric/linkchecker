@@ -17,6 +17,7 @@
 
 package eu.clarin.linkchecker.spout;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 import javax.transaction.Transactional;
@@ -28,37 +29,37 @@ import org.apache.storm.topology.OutputFieldsDeclarer;
 
 import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.persistence.AbstractQueryingSpout;
+import com.digitalpebble.stormcrawler.util.ConfUtils;
 import com.digitalpebble.stormcrawler.util.StringTabScheme;
 
 import eu.clarin.linkchecker.config.Configuration;
-import eu.clarin.linkchecker.persistence.repository.GenericRepository;
+import eu.clarin.linkchecker.config.Constants;
+import eu.clarin.linkchecker.persistence.service.LinkService;
 import lombok.extern.slf4j.Slf4j;
 
 @SuppressWarnings("serial")
 @Slf4j
-public class LPASpout extends AbstractQueryingSpout {
+public class OldLPASpout extends AbstractQueryingSpout {
 
    private static final Scheme SCHEME = new StringTabScheme();
-   
-   private final String sql;
 
    /** Used to distinguish between instances in the logs **/
    protected String logIdprefix = "";
+
+   private int maxNumResults;
+   private int maxNumResultsPerGroup;
    
    private int counter = 0;
    private long lastCheckpoint = System.currentTimeMillis();
-   
-   
-   public LPASpout(String sql) {
-      super();
-      this.sql = sql;
-   }
 
    @SuppressWarnings({ "rawtypes", "unchecked" })
    @Override
    public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
 
       super.open(conf, context, collector);
+
+      maxNumResults = ConfUtils.getInt(conf, Constants.SPOUT_MAXRESULTS_PARAM_NAME, 1000);
+      maxNumResultsPerGroup = ConfUtils.getInt(conf, Constants.SPOUT_GROUP_MAXRESULTS_PARAM_NAME, 100);
 
       Configuration.init(conf);
       Configuration.setActive(conf, true);
@@ -85,17 +86,18 @@ public class LPASpout extends AbstractQueryingSpout {
       this.isInQuery.set(true);
       long timeStartQuery = System.currentTimeMillis();
       
-      GenericRepository gRep = Configuration.ctx.getBean(GenericRepository.class);
+      LinkService lService = Configuration.ctx.getBean(LinkService.class);
 
       
-      gRep.findAll(sql, true)
-      .filter(tuple -> !beingProcessed.containsKey(tuple.get("name"))).forEach(tuple -> {
+      lService.getUrlsToCheck(maxNumResultsPerGroup, maxNumResults, LocalDateTime.now().minusDays(1))
+      .stream()
+      .filter(url -> !beingProcessed.containsKey(url.getName())).forEach(url -> {
 
          Metadata md = new Metadata();
-         md.setValue("urlId", tuple.get("id").toString());
-         md.setValue("originalUrl", tuple.get("name").toString());
+         md.setValue("urlId", String.valueOf(url.getId()));
+         md.setValue("originalUrl", url.getName());
          md.setValue("http.method.head", "true");
-         buffer.add(tuple.get("name").toString(), md);
+         buffer.add(url.getName(), md);
       });
       
       this.markQueryReceivedNow();
