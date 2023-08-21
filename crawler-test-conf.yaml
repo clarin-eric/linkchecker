@@ -7,7 +7,7 @@
 config:
   topology.workers: 1
   topology.message.timeout.secs: 3600 # 1hour
-  topology.max.spout.pending: 1000
+  topology.max.spout.pending: 5000
   topology.debug: false
 
   fetcher.threads.number: 10
@@ -19,17 +19,12 @@ config:
   topology.kryo.register:
     - com.digitalpebble.stormcrawler.Metadata
 
-  # metadata to transfer to the outlinks
-  # used by Fetcher for redirections, sitemapparser, etc...
-  # these are also persisted for the parent document (see below)
-  # metadata.transfer:
-  # - customMetadataName
-
   # lists the metadata to persist to storage
   # these are not transfered to the outlinks
   metadata.persist:
     - urlId
     - originalUrl
+    - fetch.checkingDate
     - fetch.statusCode
     - fetch.category
     - fetch.message
@@ -40,12 +35,13 @@ config:
     - fetch.redirectCount
     - http.method.head
 
+  http.robots.agents: ""
   http.agent.name: "CLARIN Linkchecker: https://www.clarin.eu/linkchecker"
   http.agent.version: "2.4"
   http.agent.description: "built with StormCrawler Archetype 2.4"
   http.agent.url: "https://www.clarin.eu/linkchecker"
   http.agent.email: "clarin@wowasa.com"
-  http.redirectLimit: 5  
+  http.redirectLimit: 20  
   http.timeout: 5000
   
   # using mock proxy server for all requests
@@ -56,71 +52,21 @@ config:
   https.protocol.implementation: "com.digitalpebble.stormcrawler.protocol.okhttp.HttpProtocol"
 
   # Defines delay between crawls in the same queue
-  fetcher.server.delay: 2
+  fetcher.server.delay: 1
   # Defines the delay between crawls in the same queue if a queue has > 1 thread (fetcher.server.delay is use otherwise)
-  fetcher.server.min.delay: 2
+  fetcher.server.min.delay: 1
   # Defines the behavior of fetcher when the crawl-delay in the robots.txt is smaller than the value configured in fetcher.server.delay. 
   # If false the shorter crawl-delay from the robots.txt is used. If true the longer configured delay is forced.
-  fetcher.server.delay.force: true
+  fetcher.server.delay.force: false
+  
+  # we decided to accept any crawl delay but we have to swith it off explicitly
+  # since otherwise a default of 30 seconds is set in MetricsFetcherBolt
+  fetcher.max.crawl.delay: -1
 
   # The maximum number of bytes for returned HTTP response bodies.
   # Set -1 to disable the limit.
   # this is 0 so that we don't download any payload when doing GET requests, it will get trimmed.
   http.content.limit: 0
-
-  # FetcherBolt queue dump => comment out to activate
-  # if a file exists on the worker machine with the corresponding port number
-  # the FetcherBolt will log the content of its internal queues to the logs
-  # fetcherbolt.queue.debug.filepath: "/tmp/fetcher-dump-{port}"
-
-  # parsefilters.config.file: "parsefilters.json"
-  # urlfilters.config.file: "urlfilters.json"
-
-  # revisit a page daily (value in minutes)
-  # set it to -1 to never refetch a page
-  fetchInterval.default: 1440
-
-  # revisit a page with a fetch error after 2 hours (value in minutes)
-  # set it to -1 to never refetch a page
-  fetchInterval.fetch.error: 120
-
-  # never revisit a page with an error (or set a value in minutes)
-  fetchInterval.error: -1
-  
-  # set to true if you don't need any text to be extracted by JSoup
-  textextractor.no.text: true
-
-  # text extraction for JSoupParserBolt
-  textextractor.include.pattern:
-    - DIV[id="maincontent"]
-    - DIV[itemprop="articleBody"]
-    - ARTICLE
-
-  textextractor.exclude.tags:
-    - STYLE
-    - SCRIPT
-
-  # custom fetch interval to be used when a document has the key/value in its metadata
-  # and has been fetched successfully (value in minutes)
-  # fetchInterval.FETCH_ERROR.isFeed=true: 30
-  # fetchInterval.isFeed=true: 10
-
-  # configuration for the classes extending AbstractIndexerBolt
-  # indexer.md.filter: "someKey=aValue"
-  indexer.url.fieldname: "url"
-  indexer.text.fieldname: "content"
-  indexer.canonical.name: "canonical"
-  indexer.md.mapping:
-    - parse.title=title
-    - parse.keywords=keywords
-    - parse.description=description
-    - domain=domain
-
-  # Metrics consumers:
-  topology.metrics.consumer.register:
-    - class: "org.apache.storm.metric.LoggingMetricsConsumer"
-      parallelism.hint: 1
-
 
   #your SPRING configuration properties go here
   SPRING:
@@ -135,21 +81,13 @@ config:
   spout.max.results: 5000
   spout.group.max.results: 100
 
-  # time in secs for which the URLs will be considered for fetching after a ack of fail
-  spout.ttl.purgatory: 300
-
   #Max time to allow between 2 successive queries to the backend. Value in msecs, default 20000.
   # 1 hour
   spout.max.delay.queries: 3600000
 
   # Min time (in msecs) to allow between 2 successive queries to SQL
-  # 1 minute
-  spout.min.delay.queries: 300000
-
-  # Delay since previous query date (in secs) after which the nextFetchDate value will be reset to the current time
-  # Setting this to -1 or a large value means that the ES will cache the results but also that less and less results
-  # might be returned.
-  spout.reset.fetchdate.after: 120
+  # 3 minutes
+  spout.min.delay.queries: 180000
   
   # linkchecker specific settings
   login.list.url: "https://raw.githubusercontent.com/clarin-eric/login-pages/master/list.txt"
@@ -157,3 +95,5 @@ config:
   redirect.status.codes: [301, 302, 303, 307, 308] 
   undeterminded.status.codes: [405, 429]
   restricted.access.status.codes: [401, 403]
+  
+  directory.share: /data

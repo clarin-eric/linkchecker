@@ -96,6 +96,7 @@ public class Configuration {
          
          ctx.refresh();
          
+         isInitialized = true;        
       }
    }
 

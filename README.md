@@ -42,17 +42,19 @@ Download Apache Storm 2.4.0 (current supported version) from this link: https://
   
 # Simple Explanation of Current Implementation
 
-Our SQL database has 6 tables:
-1. **url:** This is the table that linkchecker reads the URLs to check from. So this will be populated by another application(in our case curation-module).
-2. **status:** This is the table that linkchecker saves the results into.
-3. **history:** If a URL is checked more than once, the previous checking result is saved in the history table and the record in the status table is updated.   
-4. **providerGroup**
-5. **context**: The table saves the context in which
-6. **url_context**: joins url-table n-n to the context table, so that each URL might appear in different contexts. Moreover the table contains the last time when the link was ingested and and a boolean flag which indicates if the join is still active. Only URLs which have at least one active join are considered to be checked!
+Our SQL database has got these tables:
+1. **url:** This is the table that linkchecker reads the URLs to check from. So this will be populated by another application (in our case curation-module or linkchecker-api).
+1. **status:** This is the table that linkchecker saves the results into.
+1. **history:** If a URL is checked more than once, the previous checking result is saved in the history table and the record in the status table is updated.   
+1. **obsolete** A flat table which keeps the records still for a while after purging the from the other tables 
+1. **providerGroup**
+1. **context**: The table saves the context (the file or the upload) in which the link is found 
+1. **url_context**: Joins url-table n-n to the context table, so that each URL might appear in different contexts. Moreover the table contains the last time when the link was ingested and and a boolean flag which indicates if the join is still active. Only URLs which have at least one active join are considered to be checked!
+1. **client** The table is basically used to identify the link source
 
 *crawler.flux* defines our topology. It defines all the spouts, bolts and streams.
 1. `eu.clarin.linkchecker.spout.LPASpout` uses the [linkchecker-persistence API](https://github.com/clarin-eric/linkchecker-persistence) to fill up a buffer with URLs to check.
-2. `com.digitalpebble.stormcrawler.bolt.URLPartitionerBolt` partitions the URLs by a configured criteria
-3. `eu.clarin.linkchecker.bolt.MetricsFetcherBolt` fetches the urls. It sends redirects back to URLPartitionerBolt and sends the rest onwards down the stream to StatusUpdaterBolt. Modification of  `com.digitalpebble.stormcrawler.bolt.FetcherBolt`
-4. `eu.clarin.linkchecker.bolt.StatusUpdaterBolt` persists the results in the status table of the database via [https://github.com/clarin-eric/linkchecker-persistence).
-
+1. `com.digitalpebble.stormcrawler.bolt.URLPartitionerBolt` partitions the URLs by a configured criteria
+1. `eu.clarin.linkchecker.bolt.MetricsFetcherBolt` fetches the urls. It sends redirects back to URLPartitionerBolt and sends the rest onwards down the stream to StatusUpdaterBolt. Modification of  `com.digitalpebble.stormcrawler.bolt.FetcherBolt`
+1. `eu.clarin.linkchecker.bolt.StatusUpdaterBolt` persists the results in the status table of the database via [https://github.com/clarin-eric/linkchecker-persistence).
+1. `eu.clarin.linkchecker.bolt.SimpleStackBolt` persists the latest checking results into a Java Object file for use in curation-web
