@@ -1,3 +1,11 @@
+# version 3.1.0
+- redesign of LPASpout: takes now a native SQL query as constructor parameter from crawler.flux file
+- modification of crawler.flux to have two instances of LPASpout for handle- and non handle URLs
+- logging crawl delays from robots.txt in MetricsFetcherBolt which are exceeding the configured fetcher.server.delay
+- writing latest checking results in a Object file to be used by curation-web
+- removing redundant settings from configuration file
+- bug fixes   
+
 # version 3.0.4
 - configuring okhttp.HttpProtocol (issue #52)
 - shifting status logging from MetricsFetcherBolt to LPASpout (issue #59)
