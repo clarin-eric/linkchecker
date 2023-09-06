@@ -10,7 +10,7 @@ config:
   topology.max.spout.pending: 5000
   topology.debug: false
 
-  fetcher.threads.number: 10
+  fetcher.threads.number: 1
 
   # override the JVM parameters for the workers
   topology.worker.childopts: "-Xmx2g -Djava.net.preferIPv4Stack=true"
@@ -53,6 +53,10 @@ config:
 
   # Defines delay between crawls in the same queue
   fetcher.server.delay: 1
+  
+  # Defines host specific exceptions from the general crawl delay
+  fetcher.server.delay.individual:
+    hdl.handle.net: -1
   # Defines the delay between crawls in the same queue if a queue has > 1 thread (fetcher.server.delay is use otherwise)
   fetcher.server.min.delay: 1
   # Defines the behavior of fetcher when the crawl-delay in the robots.txt is smaller than the value configured in fetcher.server.delay. 

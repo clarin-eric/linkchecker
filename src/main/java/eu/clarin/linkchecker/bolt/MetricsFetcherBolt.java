@@ -260,6 +260,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
 
       final int defaultMaxThread;
       final long crawlDelay;
+      final Map<String, Long> crawlDelayByServer;
       final long minCrawlDelay;
 
       int maxQueueSize;
@@ -285,6 +286,18 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
          log.debug("Using queue mode : {}", queueMode);
 
          this.crawlDelay = (long) (ConfUtils.getFloat(conf, "fetcher.server.delay", 1.0f) * 1000);
+         
+         this.crawlDelayByServer = new HashMap<String, Long>();
+         
+         // allow to set individual server delays by host
+         if(conf.containsKey("fetcher.server.delay.individual")) {
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Object> map = (Map<String, Object>) conf.get("fetcher.server.delay.individual");
+            
+            map.keySet().forEach(key -> this.crawlDelayByServer.put(key, (long) (ConfUtils.getFloat(map, key, 0.0f) * 1000)));
+         }
+
          this.minCrawlDelay = (long) (ConfUtils.getFloat(conf, "fetcher.server.min.delay", 0.0f) * 1000);
          this.maxQueueSize = ConfUtils.getInt(conf, "fetcher.max.queue.size", -1);
          if (this.maxQueueSize == -1) {
@@ -506,8 +519,13 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                //checking for crawl delays
                FetchItemQueue fiq = fetchQueues.getFetchItemQueue(fit.queueID);
                
+               // a host specific crawl delay is set it dominates any other setting! 
+               if(MetricsFetcherBolt.this.fetchQueues.crawlDelayByServer.containsKey(url.getHost())) {
+                  
+                  fiq.crawlDelay = MetricsFetcherBolt.this.fetchQueues.crawlDelayByServer.get(url.getHost());
+               }               
                // if crawl delay from robots.txt >0 and not the same as the server.crawl.delay
-               if (rules.getCrawlDelay() > 0 && rules.getCrawlDelay() != fiq.crawlDelay) {
+               else if (rules.getCrawlDelay() > 0 && rules.getCrawlDelay() != fiq.crawlDelay) {
                   
                   // if crawl delay from robots.txt > max.crawl.delay and max.crawl.delay> 0
                   if (rules.getCrawlDelay() > maxCrawlDelay && maxCrawlDelay >= 0) {

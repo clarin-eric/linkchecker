@@ -49,6 +49,11 @@ config:
 
   # Defines delay (in secs) between crawls in the same queue
   fetcher.server.delay: 1
+  
+  # Defines host specific exceptions from the general crawl delay
+  fetcher.server.delay.individual:
+    hdl.handle.net: -1
+    
   # Defines the delay between crawls in the same queue if a queue has > 1 thread (fetcher.server.delay is use otherwise)
   fetcher.server.min.delay: 1
   fetcher.server.delay.force: false
