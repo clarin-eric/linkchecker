@@ -1,3 +1,6 @@
+# version 3.1.1
+- allow to configure a host specific crawl delay
+
 # version 3.1.0
 - redesign of LPASpout: takes now a native SQL query as constructor parameter from crawler.flux file
 - modification of crawler.flux to have two instances of LPASpout for handle- and non handle URLs

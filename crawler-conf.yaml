@@ -52,7 +52,7 @@ config:
   
   # Defines host specific exceptions from the general crawl delay
   fetcher.server.delay.individual:
-    hdl.handle.net: -1
+    hdl.handle.net: 0.1
     
   # Defines the delay between crawls in the same queue if a queue has > 1 thread (fetcher.server.delay is use otherwise)
   fetcher.server.min.delay: 1
