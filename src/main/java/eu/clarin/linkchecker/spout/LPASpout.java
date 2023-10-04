@@ -18,7 +18,9 @@
 package eu.clarin.linkchecker.spout;
 
 import java.util.Map;
+import java.util.stream.Stream;
 
+import javax.persistence.Tuple;
 import javax.transaction.Transactional;
 
 import org.apache.storm.spout.Scheme;
@@ -88,15 +90,16 @@ public class LPASpout extends AbstractQueryingSpout {
       GenericRepository gRep = Configuration.ctx.getBean(GenericRepository.class);
 
       
-      gRep.findAll(sql, true)
-      .filter(tuple -> !beingProcessed.containsKey(tuple.get("name"))).forEach(tuple -> {
-
-         Metadata md = new Metadata();
-         md.setValue("urlId", tuple.get("id").toString());
-         md.setValue("originalUrl", tuple.get("name").toString());
-         md.setValue("http.method.head", "true");
-         buffer.add(tuple.get("name").toString(), md);
-      });
+      try(Stream<Tuple> stream = gRep.findAll(sql, true)){
+         stream.filter(tuple -> !beingProcessed.containsKey(tuple.get("name"))).forEach(tuple -> {
+   
+            Metadata md = new Metadata();
+            md.setValue("urlId", tuple.get("id").toString());
+            md.setValue("originalUrl", tuple.get("name").toString());
+            md.setValue("http.method.head", "true");
+            buffer.add(tuple.get("name").toString(), md);
+         });
+      }
       
       this.markQueryReceivedNow();
       long timeTaken = System.currentTimeMillis() - timeStartQuery;
