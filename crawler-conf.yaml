@@ -37,10 +37,10 @@ config:
   
   http.robots.agents: "${ENV-HTTP_AGENTS}"
   http.agent.name: "${ENV-HTTP_AGENT_NAME}"
-  http.agent.version: 3.0.0
-#  http.agent.description: "${ENV-HTTP_AGENT_DESCRIPTION}"
+  http.agent.version: 3.1.2
+  http.agent.description: "${ENV-HTTP_AGENT_DESCRIPTION}"
   http.agent.url: "${ENV-HTTP_AGENT_URL}"
-#  http.agent.email: "${ENV-HTTP_AGENT_EMAIL}"
+  http.agent.email: "${ENV-HTTP_AGENT_EMAIL}"
   http.redirectLimit: ${ENV-HTTP_REDIRECT_LIMIT}
   http.timeout: 5000
   
