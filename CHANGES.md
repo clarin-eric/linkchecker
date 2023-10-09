@@ -1,3 +1,6 @@
+# version 3.1.2
+- activating http.agent.email and http.agent.descripton again
+
 # version 3.1.1
 - allow to configure a host specific crawl delay
 
