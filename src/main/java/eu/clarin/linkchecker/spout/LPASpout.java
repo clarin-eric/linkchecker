@@ -20,13 +20,13 @@ package eu.clarin.linkchecker.spout;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import javax.persistence.Tuple;
-import javax.transaction.Transactional;
+import jakarta.persistence.Tuple;
 
 import org.apache.storm.spout.Scheme;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.digitalpebble.stormcrawler.Metadata;
 import com.digitalpebble.stormcrawler.persistence.AbstractQueryingSpout;
@@ -79,7 +79,7 @@ public class LPASpout extends AbstractQueryingSpout {
    }
 
    @Override
-   @Transactional
+   @Transactional(readOnly = true)
    protected void populateBuffer() {
 
       log.debug("{} call LinkToBeCheckedRessource.getNextLinksToCheck()", logIdprefix);
@@ -90,7 +90,7 @@ public class LPASpout extends AbstractQueryingSpout {
       GenericRepository gRep = Configuration.ctx.getBean(GenericRepository.class);
 
       
-      try(Stream<Tuple> stream = gRep.findAll(sql, true)){
+      try(Stream<Tuple> stream = gRep.findAll(sql, true).stream()){
          stream.filter(tuple -> !beingProcessed.containsKey(tuple.get("name"))).forEach(tuple -> {
    
             Metadata md = new Metadata();
