@@ -1,3 +1,6 @@
+# version 3.1.3
+- set http.timeout via environment variable
+
 # version 3.1.2
 - activating http.agent.email and http.agent.descripton again
 
