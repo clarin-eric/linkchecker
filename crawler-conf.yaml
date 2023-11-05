@@ -42,7 +42,7 @@ config:
   http.agent.url: "${ENV-HTTP_AGENT_URL}"
   http.agent.email: "${ENV-HTTP_AGENT_EMAIL}"
   http.redirectLimit: ${ENV-HTTP_REDIRECT_LIMIT}
-  http.timeout: 5000
+  http.timeout: ${ENV-HTTP_TIMEOUT}
   
   http.protocol.implementation: "com.digitalpebble.stormcrawler.protocol.okhttp.HttpProtocol"
   https.protocol.implementation: "com.digitalpebble.stormcrawler.protocol.okhttp.HttpProtocol"

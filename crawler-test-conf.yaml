@@ -42,7 +42,7 @@ config:
   http.agent.url: "https://www.clarin.eu/linkchecker"
   http.agent.email: "clarin@wowasa.com"
   http.redirectLimit: 20  
-  http.timeout: 5000
+  http.timeout: 10000
   
   # using mock proxy server for all requests
   #http.proxy.host: "localhost"
