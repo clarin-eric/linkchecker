@@ -20,12 +20,13 @@ import com.digitalpebble.stormcrawler.bolt.StatusEmitterBolt;
 import com.digitalpebble.stormcrawler.persistence.Status;
 import com.digitalpebble.stormcrawler.protocol.HttpHeaders;
 import com.digitalpebble.stormcrawler.protocol.Protocol;
-import com.digitalpebble.stormcrawler.protocol.ProtocolFactory;
+
 import com.digitalpebble.stormcrawler.protocol.ProtocolResponse;
 import com.digitalpebble.stormcrawler.util.ConfUtils;
 import crawlercommons.domains.PaidLevelDomain;
 import crawlercommons.robots.BaseRobotRules;
 import eu.clarin.linkchecker.config.Configuration;
+import eu.clarin.linkchecker.extension.HostProtocolFactory;
 import eu.clarin.linkchecker.persistence.utils.Category;
 import lombok.extern.slf4j.Slf4j;
 
@@ -95,7 +96,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
 
    private FetchItemQueues fetchQueues;
 
-   private ProtocolFactory protocolFactory;
+   private HostProtocolFactory protocolFactory;
 
    private int taskID = -1;
 
@@ -752,7 +753,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
 
       log.debug("[Fetcher #{}] : starting at {}", taskID, Instant.now());
 
-      protocolFactory = ProtocolFactory.getInstance(conf);
+      protocolFactory = HostProtocolFactory.getInstance(conf);
 
       this.fetchQueues = new FetchItemQueues(conf);
 
