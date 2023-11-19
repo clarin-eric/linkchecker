@@ -1,3 +1,7 @@
+# version 3.2.0
+- adding functionality for host specific http.timeout
+- upgrading dependencies to Storm 2.5.0 and Storm Crawler 2.10 
+
 # version 3.1.3
 - set http.timeout via environment variable
 
