@@ -966,5 +966,13 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                + " with the message: " + e.getMessage() + ". Please add this new exception into the code");
          return Category.Undetermined; // we dont know the exception, then we can't determine it: Undetermined.
       }
-   } 
+   }
+   
+   /*
+    * added for testing to know when all tuples are processed
+    */
+   public boolean isQueueEmpty() {
+      
+      return this.fetchQueues.inQueues.intValue() == 0;
+   }
 }
