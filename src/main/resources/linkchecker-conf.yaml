@@ -72,7 +72,7 @@ config:
   # Metrics consumers:
   topology.metrics.consumer.register:
     - class: "org.apache.storm.metric.LoggingMetricsConsumer"
-      parallelism.hint: 1
+      parallelism.hint: 10
 
   # your SPRING configuration properties go here
   SPRING:
@@ -83,9 +83,6 @@ config:
     spring.jpa.show-sql: false
     spring.jpa.hibernate.ddl-auto: none
     spring.database-platform: org.hibernate.dialect.MariaDBDialect
-
-  spout.max.results: ${ENV-SPOUT_MAX_RESULTS}
-  spout.group.max.results: ${ENV-SPOUT_GROUP_MAX_RESULTS}
 
   # Max time to allow between 2 successive queries to the backend. Value in msecs, default 20000.
   # 1 hour

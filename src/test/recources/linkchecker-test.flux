@@ -1,12 +1,12 @@
-name: "linkchecker"
+name: "linkchecker-test"
 
 includes:
     - resource: true
       file: "/crawler-default.yaml"
       override: false
 
-    - resource: false
-      file: "${ENV-LINKCHECKER_DIRECTORY}/crawler-conf.yaml"
+    - resource: true
+      file: "/crawler-test-conf.yaml"
       override: true
 
 spouts:
@@ -58,7 +58,7 @@ bolts:
     parallelism: 5
   - id: "stack"
     className: "eu.clarin.linkchecker.bolt.SimpleStackBolt"
-    parallelism: 1    
+    parallelism: 1 
 
 streams:
   - from: "nonHdlSpout"
@@ -68,7 +68,7 @@ streams:
   - from: "hdlSpout"
     to: "partitioner"
     grouping:
-      type: SHUFFLE  
+      type: SHUFFLE    
   - from: "partitioner"
     to: "fetcher"
     grouping:
@@ -77,8 +77,7 @@ streams:
   - from: "fetcher"
     to: "status"
     grouping:
-      type: FIELDS
-      args: ["url"]
+      type: SHUFFLE
       streamId: "status"        
   - from: "fetcher"
     to: "partitioner"
@@ -88,4 +87,4 @@ streams:
   - from: "status"
     to: "stack"
     grouping:
-      type: SHUFFLE    
+      type: SHUFFLE

@@ -1,6 +1,7 @@
 # version 3.2.0
 - adding functionality for host specific http.timeout
-- upgrading dependencies to Storm 2.5.0 and Storm Crawler 2.10 
+- upgrading dependencies to Storm 2.5.0 and Storm Crawler 2.10
+- moving flux and conf files to maven resource directory ([requires additional command line option -R](https://storm.apache.org/releases/2.6.0/flux.html))
 
 # version 3.1.3
 - set http.timeout via environment variable
