@@ -34,7 +34,7 @@ public class LinkcheckerTest {
          );
       
 
-      TopologyDef def = FluxParser.parseFile("crawler-test.flux", false, true, null, true);
+      TopologyDef def = FluxParser.parseResource("/linkchecker-test.flux", false, true, null, true);
 
       try (LocalCluster cluster = new LocalCluster()) {
          
