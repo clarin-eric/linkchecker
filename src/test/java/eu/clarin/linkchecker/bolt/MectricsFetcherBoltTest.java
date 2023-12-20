@@ -14,7 +14,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.apache.storm.flux.model.TopologyDef;
@@ -31,6 +33,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockingDetails;
 import org.mockito.Mockito;
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.matchers.Times;
@@ -43,6 +46,7 @@ import static org.mockserver.model.HttpError.*;
 import com.digitalpebble.stormcrawler.Metadata;
 
 import eu.clarin.linkchecker.config.Configuration;
+import eu.clarin.linkchecker.persistence.utils.Category;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
@@ -116,7 +120,7 @@ public class MectricsFetcherBoltTest {
       
       StandardTestSet testSet = new StandardTestSet();
       
-      createTuples(5).limit(Configuration.redirectStatusCodes.size()).forEach(tuple -> testSet.getBolt().execute(tuple));
+      createTuples(5).limit(Configuration.redirectStatusCodes.size()).forEach(tuple -> testSet.execute(tuple));
       
       testSet.verify();      
       
@@ -168,7 +172,7 @@ public class MectricsFetcherBoltTest {
       
       SimpleTestSet testSet = new SimpleTestSet();
       
-      testSet.getBolt().execute(createRandomTuple(true));
+      testSet.execute(createRandomTuple(true));
       
       testSet.verify();
       
@@ -207,7 +211,7 @@ public class MectricsFetcherBoltTest {
       
       StandardTestSet testSet = new StandardTestSet();
       
-      createTuples(5).limit(errorCodes.length +1).forEach(tuple -> testSet.getBolt().execute(tuple));
+      createTuples(5).limit(errorCodes.length +1).forEach(tuple -> testSet.execute(tuple));
       
       testSet.verify();      
       
@@ -235,7 +239,8 @@ public class MectricsFetcherBoltTest {
    }
    
    /*
-    * 
+    * We configure the server to respond with status code 200 but with a delay of 7 seconds. This is more than the general timeout of 5 seconds 
+    * but for URLs with host »id.acdh.oeaw.ac.at« we have configured a timeout of 10 seconds. 
     */
    @Test
    public void individualTimeoutTest() {
@@ -252,22 +257,64 @@ public class MectricsFetcherBoltTest {
       
       StandardTestSet testSet = new StandardTestSet();
       
-      testSet.getBolt().execute(createRandomTuple(false));
+      // random tuple processed with a HEAD request
+      testSet.execute(createRandomTuple(true));
+      // random tuple, processed with a GET request
+      testSet.execute(createRandomTuple(false));
+      // tuple with individual timeout, processed with HEAD request
+      testSet.execute(createTuple(1l, "http://id.acdh.oeaw.ac.at/test", true));
       
       testSet.verify();
       
-      assertAll(
-               () -> assertEquals(eu.clarin.linkchecker.config.Constants.RedirectStreamName, testSet.getStreamId().getValue())
-            
+      
+      // the random tuple with head request should be redirected to be processed again with a GET request
+      assertTrue(
+            IntStream
+            .range(0, 3)
+            .filter(i -> testSet.getStreamId().getAllValues().get(i).equals(eu.clarin.linkchecker.config.Constants.RedirectStreamName))
+            .mapToObj(i -> testSet.getValues().getAllValues().get(i))
+            .anyMatch(values -> !values.get(0).equals("http://id.acdh.oeaw.ac.at/test") 
+               && values.get(1) instanceof Metadata
+               && "false".equals(Metadata.class.cast(values.get(1)).getFirstValue("http.method.head")))
             );
       
-      testSet.getBolt().execute(createTuple(1l, "http://id.acdh.oeaw.ac.at/test", false));
+      // the tuple with the individual should go to status stream with category ok 
+      assertTrue(
+         IntStream
+         .range(0, 3)
+         .filter(i -> testSet.getStreamId().getAllValues().get(i).equals(com.digitalpebble.stormcrawler.Constants.StatusStreamName))
+         .mapToObj(i -> testSet.getValues().getAllValues().get(i))
+         .anyMatch(values -> values.get(0).equals("http://id.acdh.oeaw.ac.at/test") 
+            && values.get(1) instanceof Metadata
+            && Category.Ok.name().equals(Metadata.class.cast(values.get(1)).getFirstValue("fetch.category")))
+         );
+            
+
+      // the random tuple processed with GET request should go to status stream with category broken 
+      assertTrue(
+            IntStream
+            .range(0, 3)
+            .filter(i -> testSet.getStreamId().getAllValues().get(i).equals(com.digitalpebble.stormcrawler.Constants.StatusStreamName))
+            .mapToObj(i -> testSet.getValues().getAllValues().get(i))
+            .anyMatch(values -> !values.get(0).equals("http://id.acdh.oeaw.ac.at/test") 
+               && values.get(1) instanceof Metadata
+               && Category.Broken.name().equals(Metadata.class.cast(values.get(1)).getFirstValue("fetch.category")))
+            
+         );
       
       
    }
    
    public void individialCrawlDelayTest() {
       
+      this.cas
+      .when(
+            request()
+         )
+      .respond(
+            response()
+               .withStatusCode(HttpStatusCode.OK_200.code())
+         );
    }
    
    @Test
@@ -283,7 +330,7 @@ public class MectricsFetcherBoltTest {
                response().withStatusCode(200)
             );
       
-      createTuples(10).limit(100).forEach(tuple -> testSet.getBolt().execute(tuple));
+      createTuples(10).limit(100).forEach(tuple -> testSet.execute(tuple));
       
       testSet.verify();
       
@@ -296,14 +343,13 @@ public class MectricsFetcherBoltTest {
    
    @AfterEach
    public void reset() {
-      // clear all expectations
-      this.cas.reset();
-      
+      // resetting the MockServer
+      this.cas.reset();     
    }
    
    @AfterAll
    public void shutdown() {
-      
+      // closing the MockServer
       this.cas.close();
    }
    
@@ -354,7 +400,7 @@ public class MectricsFetcherBoltTest {
       
       Long id = new Random().nextLong();
       
-      return createTuple(id, "http://www.wowasa.com/page" + id, isHead);      
+      return createTuple(id, "http://www.wowasa" +id + ".com/page" + id, isHead);      
    }
    
    /*
@@ -375,9 +421,7 @@ public class MectricsFetcherBoltTest {
          
          this.streamId = ArgumentCaptor.forClass(String.class);
          this.anchor = ArgumentCaptor.forClass(Tuple.class);
-         this.values = ArgumentCaptor.forClass(Values.class);  
-         
-         getBolt().prepare(getConfiguration(), mock(TopologyContext.class), getCollector());         
+         this.values = ArgumentCaptor.forClass(Values.class);         
       }
       
       
@@ -386,7 +430,7 @@ public class MectricsFetcherBoltTest {
 
          super.verify();
          
-         Mockito.verify(getCollector(), atLeastOnce()).emit(streamId.capture(), anchor.capture(), values.capture());        
+         Mockito.verify(this.collector, times(this.invocations.get())).emit(this.streamId.capture(), this.anchor.capture(), this.values.capture());        
       }
    }
    
@@ -395,12 +439,15 @@ public class MectricsFetcherBoltTest {
     * The verify-method assures only that all input tuples have been processed  
     */
    
-   @Getter
    private class SimpleTestSet {
       
-      private final MetricsFetcherBolt bolt;
+      protected final MetricsFetcherBolt bolt;
       
-      private final OutputCollector collector;
+      protected final OutputCollector collector;
+      
+      private final MockingDetails mockingDetails;
+      
+      protected final AtomicInteger invocations;
       
       public SimpleTestSet() {
          
@@ -408,12 +455,22 @@ public class MectricsFetcherBoltTest {
          
          this.collector = mock();
          
-         bolt.prepare(getConfiguration(), mock(TopologyContext.class), collector);          
+         this.mockingDetails = Mockito.mockingDetails(collector);
+         
+         this.invocations = new AtomicInteger();
+         
+         bolt.prepare(getConfiguration(), mock(TopologyContext.class), this.collector);          
+      }
+      
+      public void execute(Tuple tuple) {
+         
+         this.bolt.execute(tuple);
+         this.invocations.incrementAndGet();
       }
       
       public void verify() {
 
-         while(!bolt.isQueueEmpty()) {
+         while(this.mockingDetails.getInvocations().size() < this.invocations.get() *2) {
             
             try {
                Thread.sleep(500);
