@@ -37,7 +37,7 @@ config:
   
   http.robots.agents: "${ENV-HTTP_AGENTS}"
   http.agent.name: "${ENV-HTTP_AGENT_NAME}"
-  http.agent.version: 3.1.2
+  http.agent.version: @version@
   http.agent.description: "${ENV-HTTP_AGENT_DESCRIPTION}"
   http.agent.url: "${ENV-HTTP_AGENT_URL}"
   http.agent.email: "${ENV-HTTP_AGENT_EMAIL}"
