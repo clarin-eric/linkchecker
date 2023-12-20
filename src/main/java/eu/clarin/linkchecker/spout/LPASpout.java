@@ -135,5 +135,7 @@ public class LPASpout extends AbstractQueryingSpout {
    @Override
    public void close() {
       super.close();
+      
+      Configuration.setActive(null, false);
    }
 }
