@@ -6,10 +6,15 @@ package eu.clarin.linkchecker.bolt;
 
 import static org.mockserver.integration.ClientAndServer.startClientAndServer;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
 import org.apache.storm.flux.model.TopologyDef;
@@ -19,36 +24,38 @@ import org.apache.storm.task.TopologyContext;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-
+import org.mockito.Mockito;
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.matchers.Times;
+import org.mockserver.model.HttpStatusCode;
 import org.mockserver.socket.PortFactory;
 import static org.mockserver.model.HttpRequest.*;
 import static org.mockserver.model.HttpResponse.*;
+import static org.mockserver.model.HttpError.*;
 
 import com.digitalpebble.stormcrawler.Metadata;
 
 import eu.clarin.linkchecker.config.Configuration;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
 import uk.org.webcompere.systemstubs.jupiter.*;
-
-import lombok.extern.slf4j.Slf4j;
 
 import static org.mockito.Mockito.*;
 
 /**
  *
  */
-@Slf4j
 @TestInstance(Lifecycle.PER_CLASS)
 @ExtendWith(SystemStubsExtension.class)
+@Slf4j
 public class MectricsFetcherBoltTest {  
 
    @SystemStub
@@ -57,8 +64,6 @@ public class MectricsFetcherBoltTest {
    private TopologyDef def;
    
    private ClientAndServer cas;
-   
-   private MetricsFetcherBolt bolt;
    
    @SuppressWarnings("unchecked")
    @BeforeAll
@@ -72,8 +77,8 @@ public class MectricsFetcherBoltTest {
       this.environment.set("DATABASE_PASSWORD", "password");
       
       this.environment.set("HTTP_AGENTS", "");
-      this.environment.set("HTTP_AGENT_NAME", "CLARIN Linkchecker (test)");
-      this.environment.set("HTTP_AGENT_DESCRIPTION", "CLARIN Linkchecker (test)");
+      this.environment.set("HTTP_AGENT_NAME", "CLARIN Linkchecker");
+      this.environment.set("HTTP_AGENT_DESCRIPTION", "");
       this.environment.set("HTTP_AGENT_URL", "https://www.clarin.eu/linkchecker");
       this.environment.set("HTTP_AGENT_EMAIL", "linkchecker@clarin.eu");
       
@@ -92,42 +97,208 @@ public class MectricsFetcherBoltTest {
       Configuration.init(getConfiguration());
    }
    
-   @BeforeEach
-   public void prepare() throws IOException {
+   @Test
+   public void redirectTest() {
       
-      this.bolt = new MetricsFetcherBolt();
+      // expectation
+      Configuration.redirectStatusCodes.forEach(redirectCode -> {
+         
+         this.cas
+         .when(
+               request()
+            )
+         .respond(
+               response()
+                  .withStatusCode(redirectCode)
+                  .withHeader("Location", "http://devnull.org")
+            ); 
+      });
+      
+      StandardTestSet testSet = new StandardTestSet();
+      
+      createTuples(5).limit(Configuration.redirectStatusCodes.size()).forEach(tuple -> testSet.getBolt().execute(tuple));
+      
+      testSet.verify();      
+      
+      // all tuples should be redirected
+      assertTrue(testSet.getStreamId().getAllValues().stream().allMatch(streamId -> streamId.equals(eu.clarin.linkchecker.config.Constants.RedirectStreamName)));
+      
+      // the second value (index 1) must be an instance of Metadata with a setting http.method.head=true, since our first call to the new URL must be a HEAD request
+      assertTrue(
+            testSet
+               .getValues()
+               .getAllValues()
+               .stream()
+               .map(values -> values.get(1))
+               .allMatch(value -> value instanceof Metadata && Metadata.class.cast(value).getFirstValue("http.method.head").equals("true"))
+            );
+      // the value for fetch.redirectCount must be 1, since it's a countable redirect
+      assertTrue(
+            testSet
+               .getValues()
+               .getAllValues()
+               .stream()
+               .map(values -> values.get(1))
+               .allMatch(value -> value instanceof Metadata && "1".equals(Metadata.class.cast(value).getFirstValue("fetch.redirectCount")))
+         );
+      // all redirect URLs (in values.get(0)) must be "http://devnull.org"
+      assertTrue(
+            testSet
+               .getValues()
+               .getAllValues()
+               .stream()
+               .map(values -> values.get(0))
+               .allMatch(value -> "http://devnull.org".equals(value))
+         );
+   }
+   
+   /*
+    * Here we test, if the User-agent string is send
+    */
+   @Test
+   public void userAgentTest() {
+      
+      this.cas
+      .when(
+            request()
+         )
+      .respond(
+            response().withStatusCode(200)
+         );
+      
+      SimpleTestSet testSet = new SimpleTestSet();
+      
+      testSet.getBolt().execute(createRandomTuple(true));
+      
+      testSet.verify();
+      
+      assertTrue(this.cas.retrieveRecordedRequests(null)[0].getFirstHeader("User-agent").startsWith("CLARIN Linkchecker"));     
+   }
+   
+   /*
+    * whenever we don't get an ok-status code at a head request we send the Tuple to the redirect stream, means we repeat the request with a GET request
+    */
+   @Test
+   public void headGetTest() {
+      
+      int[] errorCodes = {400, 401, 402, 403, 404, 500, 501, 502, 503};
+      
+      // creating expectations with the error codes
+      Arrays.stream(errorCodes).forEach(errorCode -> {
+         
+         this.cas
+            .when(
+                  request(), 
+                  Times.once()
+               )
+            .respond(
+                  response().withStatusCode(errorCode)
+               ); 
+      });
+      // creating an expectation to drop the connection
+      this.cas
+      .when(
+            request(), 
+            Times.once()
+         )
+      .error(
+            error().withDropConnection(true)
+         );             
+      
+      StandardTestSet testSet = new StandardTestSet();
+      
+      createTuples(5).limit(errorCodes.length +1).forEach(tuple -> testSet.getBolt().execute(tuple));
+      
+      testSet.verify();      
+      
+      // all tuples should be redirected
+      assertTrue(testSet.getStreamId().getAllValues().stream().allMatch(streamId -> streamId.equals(eu.clarin.linkchecker.config.Constants.RedirectStreamName)));
+      
+      // the second value (index 1) must be an instance of Metadata with a setting http.method.head=false, which will cause a GET request when injected next time to the bolt
+      assertTrue(
+            testSet
+               .getValues()
+               .getAllValues()
+               .stream()
+               .map(values -> values.get(1))
+               .allMatch(value -> value instanceof Metadata && Metadata.class.cast(value).getFirstValue("http.method.head").equals("false"))
+            );
+      // the value for fetch.redirectCount must either not be set or 0, since it's not a countable redirect but a switch for a GET request
+      assertTrue(
+            testSet
+               .getValues()
+               .getAllValues()
+               .stream()
+               .map(values -> values.get(1))
+               .allMatch(value -> value instanceof Metadata && (!Metadata.class.cast(value).containsKey("fetch.redirectCount") || Metadata.class.cast(value).getFirstValue("fetch.redirectCount").equals("0")))
+         );
+   }
+   
+   /*
+    * 
+    */
+   @Test
+   public void individualTimeoutTest() {
+      
+      this.cas
+      .when(
+            request()
+         )
+      .respond(
+            response()
+               .withStatusCode(HttpStatusCode.OK_200.code())
+               .withDelay(TimeUnit.SECONDS, 7)
+         );
+      
+      StandardTestSet testSet = new StandardTestSet();
+      
+      testSet.getBolt().execute(createRandomTuple(false));
+      
+      testSet.verify();
+      
+      assertAll(
+               () -> assertEquals(eu.clarin.linkchecker.config.Constants.RedirectStreamName, testSet.getStreamId().getValue())
+            
+            );
+      
+      testSet.getBolt().execute(createTuple(1l, "http://id.acdh.oeaw.ac.at/test", false));
+      
+      
+   }
+   
+   public void individialCrawlDelayTest() {
       
    }
    
    @Test
    public void parallelizationTest() throws InterruptedException {
       
-      Map<String, Object> conf = this.getConfiguration();       
-      TopologyContext context = mock(TopologyContext.class);
-      OutputCollector collector = mock(OutputCollector.class);
+      StandardTestSet testSet = new StandardTestSet();
       
-      ArgumentCaptor<String> streamId = ArgumentCaptor.forClass(String.class);
-      ArgumentCaptor<Tuple> anchor = ArgumentCaptor.forClass(Tuple.class);
-      ArgumentCaptor<Values> values = ArgumentCaptor.forClass(Values.class);
+      this.cas
+         .when(
+               request()
+            )
+         .respond(
+               response().withStatusCode(200)
+            );
       
+      createTuples(10).limit(100).forEach(tuple -> testSet.getBolt().execute(tuple));
       
-      bolt.prepare(conf, context, collector);
+      testSet.verify();
       
-      this.cas.when(request()).respond(response().withStatusCode(200));
+      //we must have 100 results
+      assertEquals(100, testSet.getStreamId().getAllValues().size());
+      // and all results go to status stream
+      assertTrue(testSet.getStreamId().getAllValues().stream().allMatch(streamId -> streamId.equals(com.digitalpebble.stormcrawler.Constants.StatusStreamName)));
       
-      getTuples(10).limit(100).forEach(tuple -> bolt.execute(tuple));
+   }
+   
+   @AfterEach
+   public void reset() {
+      // clear all expectations
+      this.cas.reset();
       
-      while(!bolt.isQueueEmpty()) {
-         
-         Thread.sleep(1000);
-      }
-      
-      verify(collector, atLeastOnce()).emit(streamId.capture(), anchor.capture(), values.capture());
-      
-      values.getAllValues().forEach(System.out::println);
-      
-      
-
    }
    
    @AfterAll
@@ -147,29 +318,111 @@ public class MectricsFetcherBoltTest {
       return map;
    }
    
-   private Stream<Tuple> getTuples(int numberOfHosts){
+   private Stream<Tuple> createTuples(int numberOfHosts){
       
-      AtomicInteger i = new AtomicInteger();
+      AtomicLong id = new AtomicLong();
       
       return Stream.generate(() -> {
          
-         String urlString = "http://www.wowasa" + i.get()%numberOfHosts + ".com/page" + i.get();
-         
-         Tuple tuple = mock(Tuple.class);
-         
-         when(tuple.getStringByField("url"))
-         .thenReturn(urlString);
-         
-         Metadata metadata = new Metadata();
-         
-         metadata.setValue("urlId", i.getAndIncrement() + "");
-         metadata.setValue("originalUrl", urlString);
-         metadata.setValue("http.method.head", "true");
-         
-         when(tuple.getValueByField("metadata"))
-         .thenReturn(metadata);
-         
-         return tuple;
+         return createTuple(id.get(), "http://www.wowasa" + id.get()%numberOfHosts + ".com/page" + id.getAndIncrement(), true);         
       });
+   }
+   
+   private Tuple createTuple(Long id, String urlString, boolean isHead) {
+      
+      Tuple tuple = mock(Tuple.class);
+      
+      when(tuple.getStringByField("url"))
+      .thenReturn(urlString);
+      
+      Metadata metadata = new Metadata();
+      
+      metadata.setValue("urlId", id + "");
+      metadata.setValue("originalUrl", urlString);
+      metadata.setValue("http.method.head", String.valueOf(isHead));
+      
+      when(tuple.contains("metadata"))
+      .thenReturn(true);
+      
+      when(tuple.getValueByField("metadata"))
+      .thenReturn(metadata);
+      
+      return tuple;
+   }
+   
+   private Tuple createRandomTuple(boolean isHead) {
+      
+      Long id = new Random().nextLong();
+      
+      return createTuple(id, "http://www.wowasa.com/page" + id, isHead);      
+   }
+   
+   /*
+    * The StandardTestSet enlarges the SimpleTestSet for accessible instances of ArgumentCaptor
+    * The verify-method not only waits for tuples to be processed but fills the captors.   
+    */
+   
+   @Getter
+   private class StandardTestSet extends SimpleTestSet{
+      
+      private final ArgumentCaptor<String> streamId;
+      private final ArgumentCaptor<Tuple> anchor;
+      private final ArgumentCaptor<Values> values;    
+      
+      public StandardTestSet() {
+         
+         super();
+         
+         this.streamId = ArgumentCaptor.forClass(String.class);
+         this.anchor = ArgumentCaptor.forClass(Tuple.class);
+         this.values = ArgumentCaptor.forClass(Values.class);  
+         
+         getBolt().prepare(getConfiguration(), mock(TopologyContext.class), getCollector());         
+      }
+      
+      
+      
+      public void verify() {
+
+         super.verify();
+         
+         Mockito.verify(getCollector(), atLeastOnce()).emit(streamId.capture(), anchor.capture(), values.capture());        
+      }
+   }
+   
+   /*
+    * The SimpleTestSet creates an accessible instance of MetricsFetcherBolt and a mock instance of OutputCollector. 
+    * The verify-method assures only that all input tuples have been processed  
+    */
+   
+   @Getter
+   private class SimpleTestSet {
+      
+      private final MetricsFetcherBolt bolt;
+      
+      private final OutputCollector collector;
+      
+      public SimpleTestSet() {
+         
+         this.bolt = new MetricsFetcherBolt(); 
+         
+         this.collector = mock();
+         
+         bolt.prepare(getConfiguration(), mock(TopologyContext.class), collector);          
+      }
+      
+      public void verify() {
+
+         while(!bolt.isQueueEmpty()) {
+            
+            try {
+               Thread.sleep(500);
+            }
+            catch (InterruptedException e) {
+               
+               log.error("", e);
+            }
+         }
+      }            
    }
 }
