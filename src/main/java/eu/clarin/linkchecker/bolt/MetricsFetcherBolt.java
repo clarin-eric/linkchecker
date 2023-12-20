@@ -48,7 +48,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -626,7 +625,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                // LPASpout sets HEAD request as default
                // if the head request is unsuccessful, the tuple is returned to the Partitioner 
                // with the information that we wont to replay it with a GET request
-               else if ("true".equals(metadata.getFirstValue("http.method.head")) && !List.of(200, 304).contains(response.getStatusCode())) {                  
+               else if ("true".equals(metadata.getFirstValue("http.method.head")) && !Configuration.okStatusCodes.contains(response.getStatusCode())) {                  
                   metadata.setValue("http.method.head", "false");
                   collector.emit(eu.clarin.linkchecker.config.Constants.RedirectStreamName, fit.t, new Values(fit.url, metadata));
                   continue;
