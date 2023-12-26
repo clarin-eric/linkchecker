@@ -9,18 +9,22 @@ import static org.mockserver.integration.ClientAndServer.startClientAndServer;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
+import org.apache.http.HttpStatus;
 import org.apache.storm.flux.model.TopologyDef;
 import org.apache.storm.flux.parser.FluxParser;
+import org.apache.storm.shade.org.apache.commons.lang.RandomStringUtils;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.tuple.Tuple;
@@ -38,6 +42,7 @@ import org.mockito.Mockito;
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.matchers.Times;
 import org.mockserver.model.HttpStatusCode;
+import org.mockserver.model.MediaType;
 import org.mockserver.socket.PortFactory;
 import static org.mockserver.model.HttpRequest.*;
 import static org.mockserver.model.HttpResponse.*;
@@ -55,7 +60,9 @@ import uk.org.webcompere.systemstubs.jupiter.*;
 import static org.mockito.Mockito.*;
 
 /**
- *
+ * Attention: 
+ * 1. since robots.txt settings are cached in static way, the createTuples method creates a set of new hosts each time the method is called
+ * 2. if you create expectations for a fixed number of times you mustn't forget that the first call for a new host is an internal call for robots.txt
  */
 @TestInstance(Lifecycle.PER_CLASS)
 @ExtendWith(SystemStubsExtension.class)
@@ -72,9 +79,9 @@ public class MectricsFetcherBoltTest {
    @SuppressWarnings("unchecked")
    @BeforeAll
    public void setup() throws IOException {      
-      
+      // starting the MockServer on a default port
       this.cas = startClientAndServer(PortFactory.findFreePort());   
-      
+      // setting environment variables for replacement in linkchecker-conf.yaml
       this.environment.set("LINKCHECKER_DIRECTORY", System.getProperty("user.dir"));
       this.environment.set("DATABASE_URI", "jdbc:h2:mem:linkcheckerTest;MODE=MYSQL;DATABASE_TO_LOWER=TRUE");
       this.environment.set("DATABASE_USER", "sa");
@@ -88,13 +95,13 @@ public class MectricsFetcherBoltTest {
       
       this.environment.set("HTTP_REDIRECT_LIMIT", "15");
       this.environment.set("HTTP_TIMEOUT", "5000");
-      
+      // parsing linkchecker.flux, which includes linkchecker-conf.yaml
       this.def = FluxParser.parseResource("/linkchecker.flux", false, true, null, true);
       
       
       //setting h2 driver for testing
       ((Map<String, Object>) def.getConfig().get("SPRING")).put("spring.datasource.driver-class-name", "org.h2.Driver");
-      //setting MockServer proxy
+      //setting MockServer as proxy-server
       def.getConfig().put("http.proxy.host", "localhost");
       def.getConfig().put("http.proxy.port", this.cas.getPort());
       
@@ -167,16 +174,109 @@ public class MectricsFetcherBoltTest {
             request()
          )
       .respond(
-            response().withStatusCode(200)
+            response().withStatusCode(HttpStatus.SC_OK)
          );
       
       SimpleTestSet testSet = new SimpleTestSet();
       
-      testSet.execute(createRandomTuple(true));
+      testSet.execute(createTuples(1, true).limit(1).findFirst().get());
       
       testSet.verify();
       
       assertTrue(this.cas.retrieveRecordedRequests(null)[0].getFirstHeader("User-agent").startsWith("CLARIN Linkchecker"));     
+   }
+   
+   /*
+    * Here we test if the robots.txt is respected and if it is overridden by an individual setting 
+    * Generally we have set a crawl delay of 1 second but the robots.txt in our testcase requires a crawl delay of 2 seconds. 
+    * For host "hdl.handle.net" we have configured an individual crawl delay of 0.1 seconds
+    */
+   
+   @Test
+   public void robotsTxtTest() {
+      
+      this.cas
+      .when(
+            request()
+            .withPath("/robots.txt")
+         )
+      .respond(
+            response()
+               .withStatusCode(HttpStatus.SC_OK)
+               .withBody("""
+                     User-agent: CLARIN Linkchecker: https://www.clarin.eu/linkchecker
+                     Allow: /
+                     Crawl-delay: 2
+                     """, MediaType.TEXT_PLAIN)
+
+         );
+      
+      this.cas
+      .when(
+            request()
+         )
+      .respond(
+            response()
+               .withStatusCode(HttpStatus.SC_OK)
+         );
+      
+      StandardTestSet testSet = new StandardTestSet();
+      
+      this.createTuples(1).limit(5).forEach(tuple -> testSet.execute(tuple));
+      
+      LongStream.range(0, 5).forEach(i -> testSet.execute(this.createTuple(i, "http://hdl.handle.net/handle" +i, true)));
+      
+      testSet.verify();
+      
+      AtomicLong previousDateInMs = new AtomicLong();
+      
+      // there must be no non handle link where the time difference between two successive requests on the same host is smaller than 2000 ms
+      // since the robots.txt requires 2000ms
+      assertFalse(
+      
+         testSet
+         .getValues()
+         .getAllValues()
+         .stream()
+         .filter(values -> !String.class.cast(values.get(0)).startsWith("http://hdl.handle.net/handle")) // filter for non handles
+         .map(values -> Metadata.class.cast(values.get(1)).getFirstValue("fetch.checkingDate")) // get the date string from the metadata field
+         .map(LocalDateTime::parse) // parse the date string to LocalDateTime
+         .map(ldt -> ldt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()) // get the time in ms from LocalDateTime
+         .map(dateInMs -> { // calculate the time delta between two successive request
+            
+            long dateDiffInMs = (previousDateInMs.get() == 0?9999:dateInMs - previousDateInMs.get());         
+            previousDateInMs.set(dateInMs);         
+            
+            return dateDiffInMs;
+         })
+         .anyMatch(dateDiffInMs -> dateDiffInMs < 2000)
+      );
+      
+      previousDateInMs.set(0);
+      
+      // for handle links the must be at least two successive requests with a time difference under 1000ms
+      // since we have configured an individual crawl delay which dominates the crawl delay of 2000ms from robots.txt
+      // and the general crawl delay of 1000ms
+      assertTrue(
+            
+            testSet
+            .getValues()
+            .getAllValues()
+            .stream()
+            .filter(values -> String.class.cast(values.get(0)).startsWith("http://hdl.handle.net/handle")) // filter for handles
+            .map(values -> Metadata.class.cast(values.get(1)).getFirstValue("fetch.checkingDate")) // get the date string from the metadata field
+            .map(LocalDateTime::parse) // parse the date string to LocalDateTime
+            .map(ldt -> ldt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()) // get the time in ms from LocalDateTime
+            .map(dateInMs -> { // calculate the time delta between two successive request
+               
+               long dateDiffInMs = (previousDateInMs.get() == 0?9999:dateInMs - previousDateInMs.get());         
+               previousDateInMs.set(dateInMs);         
+               
+               return dateDiffInMs;
+            })
+            .anyMatch(dateDiffInMs -> dateDiffInMs < 1000)
+         );
+      
    }
    
    /*
@@ -186,6 +286,16 @@ public class MectricsFetcherBoltTest {
    public void headGetTest() {
       
       int[] errorCodes = {400, 401, 402, 403, 404, 500, 501, 502, 503};
+      
+      this.cas
+      .when(
+            request()
+            .withPath("/robots.txt")
+         )
+      .respond(
+            response()
+               .withStatusCode(HttpStatus.SC_NOT_FOUND)
+         );
       
       // creating expectations with the error codes
       Arrays.stream(errorCodes).forEach(errorCode -> {
@@ -202,21 +312,22 @@ public class MectricsFetcherBoltTest {
       // creating an expectation to drop the connection
       this.cas
       .when(
-            request(), 
-            Times.once()
+            request()
          )
       .error(
             error().withDropConnection(true)
-         );             
+         );  
+             
       
       StandardTestSet testSet = new StandardTestSet();
       
-      createTuples(5).limit(errorCodes.length +1).forEach(tuple -> testSet.execute(tuple));
+      createTuples(10).limit(errorCodes.length +1).forEach(tuple -> testSet.execute(tuple));
       
       testSet.verify();      
       
       // all tuples should be redirected
       assertTrue(testSet.getStreamId().getAllValues().stream().allMatch(streamId -> streamId.equals(eu.clarin.linkchecker.config.Constants.RedirectStreamName)));
+
       
       // the second value (index 1) must be an instance of Metadata with a setting http.method.head=false, which will cause a GET request when injected next time to the bolt
       assertTrue(
@@ -251,16 +362,16 @@ public class MectricsFetcherBoltTest {
          )
       .respond(
             response()
-               .withStatusCode(HttpStatusCode.OK_200.code())
+               .withStatusCode(HttpStatus.SC_OK)
                .withDelay(TimeUnit.SECONDS, 7)
          );
       
       StandardTestSet testSet = new StandardTestSet();
       
       // random tuple processed with a HEAD request
-      testSet.execute(createRandomTuple(true));
+      testSet.execute(createTuples(1, true).limit(1).findFirst().get());
       // random tuple, processed with a GET request
-      testSet.execute(createRandomTuple(false));
+      testSet.execute(createTuples(1, false).limit(1).findFirst().get());
       // tuple with individual timeout, processed with HEAD request
       testSet.execute(createTuple(1l, "http://id.acdh.oeaw.ac.at/test", true));
       
@@ -304,7 +415,7 @@ public class MectricsFetcherBoltTest {
       
       
    }
-   
+   @Test
    public void individialCrawlDelayTest() {
       
       this.cas
@@ -315,6 +426,63 @@ public class MectricsFetcherBoltTest {
             response()
                .withStatusCode(HttpStatusCode.OK_200.code())
          );
+      
+      StandardTestSet testSet = new StandardTestSet();
+      
+      this.createTuples(1).limit(5).forEach(tuple -> testSet.execute(tuple));
+      
+      LongStream.range(0, 5).forEach(i -> testSet.execute(this.createTuple(i, "http://hdl.handle.net/handle" +i, true)));
+      
+      testSet.verify();
+      
+      AtomicLong previousDateInMs = new AtomicLong();
+      
+      // there must be no non handle link where the time difference between two successive requests on the same host is smaller than general delay of 1000 ms
+      assertFalse(
+      
+         testSet
+         .getValues()
+         .getAllValues()
+         .stream()
+         .filter(values -> !String.class.cast(values.get(0)).startsWith("http://hdl.handle.net/handle")) // filter for non handles
+         .map(values -> Metadata.class.cast(values.get(1)).getFirstValue("fetch.checkingDate")) // get the date string from the metadata field
+         .map(LocalDateTime::parse) // parse the date string to LocalDateTime
+         .map(ldt -> ldt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()) // get the time in ms from LocalDateTime
+         .map(dateInMs -> { // calculate the time delta between two successive request
+            
+            long dateDiffInMs = (previousDateInMs.get() == 0?9999:dateInMs - previousDateInMs.get());         
+            previousDateInMs.set(dateInMs);         
+            
+            return dateDiffInMs;
+         })
+         .anyMatch(dateDiffInMs -> dateDiffInMs < 1000)
+      );
+      
+      previousDateInMs.set(0);
+      
+      // for handle links the must be at least two successive requests with a time difference under 1000ms
+      // since we have configured an individual crawl delay which dominates the crawl delay of 2000ms from robots.txt
+      // and the general crawl delay of 1000ms
+      assertTrue(
+            
+            testSet
+            .getValues()
+            .getAllValues()
+            .stream()
+            .filter(values -> String.class.cast(values.get(0)).startsWith("http://hdl.handle.net/handle")) // filter for handles
+            .map(values -> Metadata.class.cast(values.get(1)).getFirstValue("fetch.checkingDate")) // get the date string from the metadata field
+            .map(LocalDateTime::parse) // parse the date string to LocalDateTime
+            .map(ldt -> ldt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()) // get the time in ms from LocalDateTime
+            .map(dateInMs -> { // calculate the time delta between two successive request
+               
+               long dateDiffInMs = (previousDateInMs.get() == 0?9999:dateInMs - previousDateInMs.get());         
+               previousDateInMs.set(dateInMs);         
+               
+               return dateDiffInMs;
+            })
+            .anyMatch(dateDiffInMs -> dateDiffInMs < 1000)
+         );
+      
    }
    
    @Test
@@ -343,7 +511,7 @@ public class MectricsFetcherBoltTest {
    
    @AfterEach
    public void reset() {
-      // resetting the MockServer
+      // resetting the MockServer, basically to remove all expectations
       this.cas.reset();     
    }
    
@@ -352,9 +520,11 @@ public class MectricsFetcherBoltTest {
       // closing the MockServer
       this.cas.close();
    }
-   
 
 
+   /**
+    * @return a Map<String, Object> parsed from linkchecker-conf.yaml
+    */
    private Map<String, Object> getConfiguration() {
       
       HashMap<String, Object> map = new HashMap<String, Object>();
@@ -364,16 +534,40 @@ public class MectricsFetcherBoltTest {
       return map;
    }
    
+   /**
+    * @param numberOfHosts the number of different hosts in the tuples of the stream 
+    * @return a Stream<Tuple>, each Tuple processable by MetricsFetcherBolt.execute as a HEAD request
+    */
+   
    private Stream<Tuple> createTuples(int numberOfHosts){
+      
+      return createTuples(numberOfHosts, true);
+   }
+
+   
+   /**
+    * @param numberOfHosts the number of different hosts in the tuples of the stream 
+    * @param isHeadRequest sets the property »http.method.head« to true or false which determinates, if the request is send as HEAD or GET
+    * @return a Stream<Tuple>, each Tuple processable by MetricsFetcherBolt.execute 
+    */
+   private Stream<Tuple> createTuples(int numberOfHosts, boolean isHeadRequest){
       
       AtomicLong id = new AtomicLong();
       
+      String hostName = RandomStringUtils.randomAlphabetic(10);
+      
       return Stream.generate(() -> {
          
-         return createTuple(id.get(), "http://www.wowasa" + id.get()%numberOfHosts + ".com/page" + id.getAndIncrement(), true);         
+         return createTuple(id.get(), "http://www." + hostName + id.get()%numberOfHosts + ".com/page" + id.getAndIncrement(), isHeadRequest);         
       });
    }
    
+   /**
+    * @param id corresponds to the id field of the url table
+    * @param urlString the complete URL as a String (f.e. http://www.wowasa.com/page1)
+    * @param isHead sets the property »http.method.head« to true or false which determinates, if the request is send as HEAD or GET 
+    * @return a Tuple processable by MetricsFetcherBolt.execute 
+    */
    private Tuple createTuple(Long id, String urlString, boolean isHead) {
       
       Tuple tuple = mock(Tuple.class);
@@ -396,12 +590,6 @@ public class MectricsFetcherBoltTest {
       return tuple;
    }
    
-   private Tuple createRandomTuple(boolean isHead) {
-      
-      Long id = new Random().nextLong();
-      
-      return createTuple(id, "http://www.wowasa" +id + ".com/page" + id, isHead);      
-   }
    
    /*
     * The StandardTestSet enlarges the SimpleTestSet for accessible instances of ArgumentCaptor
