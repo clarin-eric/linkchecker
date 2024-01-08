@@ -39,6 +39,9 @@
             <configuration>
                <source>17</source>
                <target>17</target>
+               <compilerArgs>
+                  <arg>-Xpkginfo:always</arg>
+               </compilerArgs>
             </configuration>
          </plugin>
          <plugin>
@@ -179,7 +182,6 @@
          <artifactId>flux-core</artifactId>
          <version>${storm.version}</version>
       </dependency>
-
       <dependency>
          <groupId>org.projectlombok</groupId>
          <artifactId>lombok</artifactId>
