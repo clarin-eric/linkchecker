@@ -20,7 +20,7 @@ import org.mockserver.integration.ClientAndServer;
 import static org.mockserver.model.HttpRequest.request;
 import static org.mockserver.model.HttpResponse.response;
 
-public class LinkcheckerTest {
+public class LinkcheckerTestApp {
 
    public static void main(final String[] args) throws Exception {
       
