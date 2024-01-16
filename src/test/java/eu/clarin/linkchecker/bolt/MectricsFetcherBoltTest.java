@@ -88,7 +88,7 @@ public class MectricsFetcherBoltTest {
       this.environment.set("DATABASE_PASSWORD", "password");
       
       this.environment.set("HTTP_AGENTS", "");
-      this.environment.set("HTTP_AGENT_NAME", "CLARIN_Linkchecker");
+      this.environment.set("HTTP_AGENT_NAME", "CLARIN Linkchecker");
       this.environment.set("HTTP_AGENT_DESCRIPTION", "");
       this.environment.set("HTTP_AGENT_URL", "https://www.clarin.eu/linkchecker");
       this.environment.set("HTTP_AGENT_EMAIL", "linkchecker@clarin.eu");
@@ -183,7 +183,7 @@ public class MectricsFetcherBoltTest {
       
       testSet.verify();
       
-      assertTrue(this.cas.retrieveRecordedRequests(null)[0].getFirstHeader("User-agent").startsWith("CLARIN_Linkchecker"));     
+      assertTrue(this.cas.retrieveRecordedRequests(null)[0].getFirstHeader("User-agent").startsWith("CLARIN Linkchecker"));     
    }
    
    /*
@@ -204,7 +204,7 @@ public class MectricsFetcherBoltTest {
             response()
                .withStatusCode(HttpStatus.SC_OK)
                .withBody("""
-                     User-agent: CLARIN_Linkchecker
+                     User-agent: CLARIN Linkchecker
                      Allow: /
                      Crawl-delay: 2
                      """, MediaType.TEXT_PLAIN)
