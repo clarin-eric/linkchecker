@@ -52,10 +52,10 @@ bolts:
     parallelism: 1
   - id: "fetcher"
     className: "eu.clarin.linkchecker.bolt.MetricsFetcherBolt"
-    parallelism: 5
+    parallelism: 1
   - id: "status"
     className: "eu.clarin.linkchecker.bolt.StatusUpdaterBolt"
-    parallelism: 5
+    parallelism: 1
   - id: "stack"
     className: "eu.clarin.linkchecker.bolt.SimpleStackBolt"
     parallelism: 1 
