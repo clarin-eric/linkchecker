@@ -717,8 +717,6 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
             finally {
                fetchQueues.finishFetchItem(fit, asap);
                activeThreads.decrementAndGet(); // count threads
-               // ack it whatever happens
-               collector.ack(fit.t);
                beingFetched[threadNum] = "";
             }
          }

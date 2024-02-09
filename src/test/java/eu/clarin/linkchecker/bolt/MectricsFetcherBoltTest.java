@@ -703,7 +703,7 @@ public class MectricsFetcherBoltTest {
       
       public void verify() {
 
-         while(this.mockingDetails.getInvocations().size() < this.invocations.get() *2) {
+         while(this.mockingDetails.getInvocations().size() < this.invocations.get()) {
             
             try {
                Thread.sleep(500);
