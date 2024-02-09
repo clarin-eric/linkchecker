@@ -98,7 +98,7 @@ config:
   login.list.url: "https://raw.githubusercontent.com/clarin-eric/login-pages/master/list.txt"
   ok.status.codes: [200, 304]
   redirect.status.codes: [301, 302, 303, 307, 308] 
-  undeterminded.status.codes: [405, 429]
+  undetermined.status.codes: [405, 429]
   restricted.access.status.codes: [401, 403]
   
   directory.share: /share
