@@ -617,7 +617,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                            response.getMetadata().getFirstValue(HttpHeaders.LOCATION));
                      metadata.setValue("fetch.redirectCount", Integer.toString(redirectCount));
 
-                     collector.emit(eu.clarin.linkchecker.config.Constants.RedirectStreamName, fit.t, new Values(redirectUrl, metadata));
+                     collector.emit(eu.clarin.linkchecker.config.Constants.REDIRECT_STREAM_NAME, fit.t, new Values(redirectUrl, metadata));
                      continue;
                   }
                }
@@ -627,7 +627,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                // with the information that we wont to replay it with a GET request
                else if ("true".equals(metadata.getFirstValue("http.method.head")) && !Configuration.okStatusCodes.contains(response.getStatusCode())) {                  
                   metadata.setValue("http.method.head", "false");
-                  collector.emit(eu.clarin.linkchecker.config.Constants.RedirectStreamName, fit.t, new Values(fit.url, metadata));
+                  collector.emit(eu.clarin.linkchecker.config.Constants.REDIRECT_STREAM_NAME, fit.t, new Values(fit.url, metadata));
                   continue;
                }               
                else if (Configuration.okStatusCodes.contains(response.getStatusCode())) {
@@ -680,7 +680,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                // recheck with GET request if the failed check was a GET request
                if("true".equals(metadata.getFirstValue("http.method.head"))){
                   metadata.setValue("http.method.head", "false");
-                  collector.emit(eu.clarin.linkchecker.config.Constants.RedirectStreamName, fit.t, new Values(fit.url, metadata));
+                  collector.emit(eu.clarin.linkchecker.config.Constants.REDIRECT_STREAM_NAME, fit.t, new Values(fit.url, metadata));
                   continue;                  
                }
                
@@ -789,7 +789,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
             new Fields("url", "metadata", "status")
          );
       declarer.declareStream(
-            eu.clarin.linkchecker.config.Constants.RedirectStreamName, 
+            eu.clarin.linkchecker.config.Constants.REDIRECT_STREAM_NAME,
             new Fields("url", "metadata")
          );
    }
