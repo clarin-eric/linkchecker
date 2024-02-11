@@ -47,7 +47,7 @@ import org.mockserver.socket.PortFactory;
 import static org.mockserver.model.HttpRequest.*;
 import static org.mockserver.model.HttpResponse.*;
 import static org.mockserver.model.HttpError.*;
-import org.mockserver.model.Not;
+
 import org.mockserver.model.NottableString;
 
 import com.digitalpebble.stormcrawler.Metadata;
@@ -135,7 +135,7 @@ public class MectricsFetcherBoltTest {
       testSet.verify();      
       
       // all tuples should be redirected
-      assertTrue(testSet.getStreamId().getAllValues().stream().allMatch(streamId -> streamId.equals(eu.clarin.linkchecker.config.Constants.RedirectStreamName)));
+      assertTrue(testSet.getStreamId().getAllValues().stream().allMatch(streamId -> streamId.equals(eu.clarin.linkchecker.config.Constants.REDIRECT_STREAM_NAME)));
       
       // the second value (index 1) must be an instance of Metadata with a setting http.method.head=true, since our first call to the new URL must be a HEAD request
       assertTrue(
@@ -329,7 +329,7 @@ public class MectricsFetcherBoltTest {
       testSet.verify();      
       
       // all tuples should be redirected
-      assertTrue(testSet.getStreamId().getAllValues().stream().allMatch(streamId -> streamId.equals(eu.clarin.linkchecker.config.Constants.RedirectStreamName)));
+      assertTrue(testSet.getStreamId().getAllValues().stream().allMatch(streamId -> streamId.equals(eu.clarin.linkchecker.config.Constants.REDIRECT_STREAM_NAME)));
 
       
       // the second value (index 1) must be an instance of Metadata with a setting http.method.head=false, which will cause a GET request when injected next time to the bolt
@@ -385,7 +385,7 @@ public class MectricsFetcherBoltTest {
       assertTrue(
             IntStream
             .range(0, 3)
-            .filter(i -> testSet.getStreamId().getAllValues().get(i).equals(eu.clarin.linkchecker.config.Constants.RedirectStreamName))
+            .filter(i -> testSet.getStreamId().getAllValues().get(i).equals(eu.clarin.linkchecker.config.Constants.REDIRECT_STREAM_NAME))
             .mapToObj(i -> testSet.getValues().getAllValues().get(i))
             .anyMatch(values -> !values.get(0).equals("http://id.acdh.oeaw.ac.at/test") 
                && values.get(1) instanceof Metadata
