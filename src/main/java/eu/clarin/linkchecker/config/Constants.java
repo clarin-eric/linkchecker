@@ -20,15 +20,11 @@ package eu.clarin.linkchecker.config;
 
 public class Constants {
     public static final String HTTP_REDIRECT_LIMIT = "http.redirectLimit";
-    
-    public static final String RedirectStreamName = "redirect";
-    
+    public static final String REDIRECT_STREAM_NAME = "redirect";
     public static final String LOGIN_LIST_URL = "login.list.url";
     public static final String OK_STATUS_CODES = "ok.status.codes";
     public static final String REDIRECT_STATUS_CODES = "redirect.status.codes";
     public static final String UNDETERMINED_STATUS_CODES = "undetermined.status.codes";
     public static final String RESTRICTED_ACCESS_STATUS_CODES = "restricted.access.status.codes";
 
-    private Constants() {
-    }
 }
