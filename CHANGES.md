@@ -1,5 +1,5 @@
 # version 3.3.0
-- upgrading dependencies to Storm 2.6.0 and Storm Crawler 2.11  
+- upgrading dependencies to Storm 2.6.1 and Storm Crawler 2.11  
   => requirement to change user agent string (issues #78, #79, #80)
 - removing acknowledgement from MetricsFetcherBolt (issue #81)
 
