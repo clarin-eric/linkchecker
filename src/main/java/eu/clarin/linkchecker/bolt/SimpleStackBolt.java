@@ -67,13 +67,14 @@ public class SimpleStackBolt implements IRichBolt {
             
             this.lastSaveTimeInMs = System.currentTimeMillis();
 
-            collector.ack(input);
          }
          catch(IOException ex) {
             
             log.error("can't serialize stack to file {}", this.outputFileStr);
          }         
       }
+
+      collector.ack(input);
    }
 
    @Override
