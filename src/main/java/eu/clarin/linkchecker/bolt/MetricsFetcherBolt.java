@@ -508,7 +508,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                   // pass the info about denied by robots
                   metadata.setValue("fetch.category", Category.Blocked_By_Robots_txt.name());
                   collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, fit.t,
-                        new Values(fit.url, metadata, Status.DISCOVERED));
+                        new Values(fit.url, metadata));
                   // no need to wait next time as we won't request from
                   // that site
                   asap = true;
@@ -545,7 +545,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                         metadata.setValue("fetch.category", Category.Blocked_By_Robots_txt.name());
 
                         collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, fit.t,
-                              new Values(fit.url, metadata, Status.DISCOVERED));
+                              new Values(fit.url, metadata));
                         // no need to wait next time as we won't request
                         // from that site
                         asap = true;
@@ -580,7 +580,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                      metadata.setValue("fetch.category", Category.Restricted_Access.name());
                      
                      collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, fit.t,
-                           new Values(fit.url, metadata, Status.DISCOVERED));
+                           new Values(fit.url, metadata));
                      
                      continue;
                   }
@@ -673,7 +673,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                mergedMD.setValue("fetch.redirectCount", Integer.toString(redirectCount));
 
                collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, fit.t,
-                     new Values(fit.url, mergedMD, Status.DISCOVERED));
+                     new Values(fit.url, mergedMD));
 
             }
             catch (Exception exece) {
@@ -711,12 +711,14 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                metadata.setValue("fetch.message", message);
 
                // send to status stream
-               collector.emit(Constants.StatusStreamName, fit.t, new Values(fit.url, metadata, Status.DISCOVERED));
+               collector.emit(Constants.StatusStreamName, fit.t, new Values(fit.url, metadata));
 
             }
             finally {
                fetchQueues.finishFetchItem(fit, asap);
                activeThreads.decrementAndGet(); // count threads
+               // ack it whatever happens
+               collector.ack(fit.t);
                beingFetched[threadNum] = "";
             }
          }
@@ -785,8 +787,8 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
    @Override
    public void declareOutputFields(OutputFieldsDeclarer declarer) {
       declarer.declareStream(
-            com.digitalpebble.stormcrawler.Constants.StatusStreamName, 
-            new Fields("url", "metadata", "status")
+            com.digitalpebble.stormcrawler.Constants.StatusStreamName,
+            new Fields("url", "metadata")
          );
       declarer.declareStream(
             eu.clarin.linkchecker.config.Constants.REDIRECT_STREAM_NAME,
@@ -858,7 +860,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
          metadata.setValue("fetch.checkingDate", LocalDateTime.now().toString());
          
          collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, input,
-               new Values(urlString, metadata, Status.ERROR));
+               new Values(urlString, metadata));
          collector.ack(input);
          return;
       }
