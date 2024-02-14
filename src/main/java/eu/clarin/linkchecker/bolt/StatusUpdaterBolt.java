@@ -31,6 +31,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
+import org.apache.storm.topology.IRichBolt;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
@@ -49,9 +50,11 @@ import java.util.regex.Pattern;
 
 @SuppressWarnings("serial")
 @Slf4j
-public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
+public class StatusUpdaterBolt implements IRichBolt {
 
    private static final Pattern INT_PATTERN = Pattern.compile("\\d+");
+
+   private OutputCollector collector;
 
    /**
     * Does not shard based on the total number of queues
@@ -62,15 +65,13 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
    @SuppressWarnings({ "rawtypes", "unchecked" })
    @Override
    public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
-      super.prepare(stormConf, context, collector);
+
+      this.collector = collector;
    }
 
    @Override
-   public synchronized void store(String url, Status status, Metadata metadata, Optional<Date> nextFetch, Tuple t)
-         throws Exception {
+   public synchronized void execute(Tuple t) {
 
-      log.debug("url: {}", url);
-      log.debug("metadata: {}", metadata);
       log.debug("tuple: {}", t);
 
       Metadata md = (Metadata) t.getValueByField("metadata");
@@ -120,13 +121,14 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
       try {
          sService.save(statusEntity);
-         _collector.emit(new Values(metadata));
-         _collector.ack(t);
+         collector.emit(t, new Values(md));
+
+         collector.ack(t);
       }
       catch (Exception ex) {
          log.error("can't save checked link \n{}", statusEntity);
          log.error("metadata:\n" + md.toString());
-         _collector.fail(t);
+         collector.fail(t);
       }
    }
 
@@ -139,5 +141,10 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
    public void declareOutputFields(OutputFieldsDeclarer declarer) {
       
       declarer.declare(new Fields("metadata"));
+   }
+
+   @Override
+   public Map<String, Object> getComponentConfiguration() {
+      return null;
    }
 }

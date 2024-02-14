@@ -1,18 +1,6 @@
 /**
- * Licensed to DigitalPebble Ltd under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * @author Wolfgang Walter SAUER (wowasa) &lt;clarin@wowasa.com&gt;
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
  */
 
 package eu.clarin.linkchecker.spout;
@@ -36,7 +24,6 @@ import eu.clarin.linkchecker.config.Configuration;
 import eu.clarin.linkchecker.persistence.repository.GenericRepository;
 import lombok.extern.slf4j.Slf4j;
 
-@SuppressWarnings("serial")
 @Slf4j
 public class LPASpout extends AbstractQueryingSpout {
 
@@ -56,7 +43,7 @@ public class LPASpout extends AbstractQueryingSpout {
       this.sql = sql;
    }
 
-   @SuppressWarnings({ "rawtypes", "unchecked" })
+   @SuppressWarnings({"unchecked" })
    @Override
    public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
 
@@ -82,7 +69,7 @@ public class LPASpout extends AbstractQueryingSpout {
    @Transactional(readOnly = true)
    protected void populateBuffer() {
 
-      log.debug("{} call LinkToBeCheckedRessource.getNextLinksToCheck()", logIdprefix);
+      log.debug("{} call LinkToBeCheckedResource.getNextLinksToCheck()", logIdprefix);
       
       this.isInQuery.set(true);
       long timeStartQuery = System.currentTimeMillis();
@@ -91,6 +78,7 @@ public class LPASpout extends AbstractQueryingSpout {
 
       
       try(Stream<Tuple> stream = gRep.findAll(sql, true).stream()){
+         //noinspection SuspiciousMethodCalls
          stream.filter(tuple -> !beingProcessed.containsKey(tuple.get("name"))).forEach(tuple -> {
    
             Metadata md = new Metadata();

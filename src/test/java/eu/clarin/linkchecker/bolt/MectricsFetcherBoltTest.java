@@ -48,6 +48,8 @@ import static org.mockserver.model.HttpRequest.*;
 import static org.mockserver.model.HttpResponse.*;
 import static org.mockserver.model.HttpError.*;
 
+import org.mockserver.model.NottableString;
+
 import com.digitalpebble.stormcrawler.Metadata;
 
 import eu.clarin.linkchecker.config.Configuration;
@@ -68,6 +70,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(SystemStubsExtension.class)
 @Slf4j
 public class MectricsFetcherBoltTest {  
+   
 
    @SystemStub
    private EnvironmentVariables environment;
@@ -88,7 +91,7 @@ public class MectricsFetcherBoltTest {
       this.environment.set("DATABASE_PASSWORD", "password");
       
       this.environment.set("HTTP_AGENTS", "");
-      this.environment.set("HTTP_AGENT_NAME", "CLARIN Linkchecker");
+      this.environment.set("HTTP_AGENT_NAME", "CLARIN-Linkchecker");
       this.environment.set("HTTP_AGENT_DESCRIPTION", "");
       this.environment.set("HTTP_AGENT_URL", "https://www.clarin.eu/linkchecker");
       this.environment.set("HTTP_AGENT_EMAIL", "linkchecker@clarin.eu");
@@ -132,7 +135,7 @@ public class MectricsFetcherBoltTest {
       testSet.verify();      
       
       // all tuples should be redirected
-      assertTrue(testSet.getStreamId().getAllValues().stream().allMatch(streamId -> streamId.equals(eu.clarin.linkchecker.config.Constants.RedirectStreamName)));
+      assertTrue(testSet.getStreamId().getAllValues().stream().allMatch(streamId -> streamId.equals(eu.clarin.linkchecker.config.Constants.REDIRECT_STREAM_NAME)));
       
       // the second value (index 1) must be an instance of Metadata with a setting http.method.head=true, since our first call to the new URL must be a HEAD request
       assertTrue(
@@ -183,7 +186,7 @@ public class MectricsFetcherBoltTest {
       
       testSet.verify();
       
-      assertTrue(this.cas.retrieveRecordedRequests(null)[0].getFirstHeader("User-agent").startsWith("CLARIN Linkchecker"));     
+      assertTrue(this.cas.retrieveRecordedRequests(null)[0].getFirstHeader("User-agent").startsWith("CLARIN-Linkchecker"));     
    }
    
    /*
@@ -204,7 +207,7 @@ public class MectricsFetcherBoltTest {
             response()
                .withStatusCode(HttpStatus.SC_OK)
                .withBody("""
-                     User-agent: CLARIN Linkchecker
+                     User-agent: CLARIN-Linkchecker
                      Allow: /
                      Crawl-delay: 2
                      """, MediaType.TEXT_PLAIN)
@@ -326,7 +329,7 @@ public class MectricsFetcherBoltTest {
       testSet.verify();      
       
       // all tuples should be redirected
-      assertTrue(testSet.getStreamId().getAllValues().stream().allMatch(streamId -> streamId.equals(eu.clarin.linkchecker.config.Constants.RedirectStreamName)));
+      assertTrue(testSet.getStreamId().getAllValues().stream().allMatch(streamId -> streamId.equals(eu.clarin.linkchecker.config.Constants.REDIRECT_STREAM_NAME)));
 
       
       // the second value (index 1) must be an instance of Metadata with a setting http.method.head=false, which will cause a GET request when injected next time to the bolt
@@ -382,7 +385,7 @@ public class MectricsFetcherBoltTest {
       assertTrue(
             IntStream
             .range(0, 3)
-            .filter(i -> testSet.getStreamId().getAllValues().get(i).equals(eu.clarin.linkchecker.config.Constants.RedirectStreamName))
+            .filter(i -> testSet.getStreamId().getAllValues().get(i).equals(eu.clarin.linkchecker.config.Constants.REDIRECT_STREAM_NAME))
             .mapToObj(i -> testSet.getValues().getAllValues().get(i))
             .anyMatch(values -> !values.get(0).equals("http://id.acdh.oeaw.ac.at/test") 
                && values.get(1) instanceof Metadata
@@ -506,6 +509,49 @@ public class MectricsFetcherBoltTest {
       assertEquals(100, testSet.getStreamId().getAllValues().size());
       // and all results go to status stream
       assertTrue(testSet.getStreamId().getAllValues().stream().allMatch(streamId -> streamId.equals(com.digitalpebble.stormcrawler.Constants.StatusStreamName)));     
+   }
+   
+   @Test
+   public void categorizationTest() {
+      
+      int[] statusCodes = {200, 304, 301, 302, 303, 307, 308, 405, 429, 401, 403};
+      
+      this.cas
+      .when(
+            request()
+               .withPath("/robots.txt")
+         )
+      .respond(
+            response().withStatusCode(404)
+         );
+      
+      
+      Arrays.stream(statusCodes).forEach( statusCode -> {
+         this.cas
+         .when(
+               request()
+                  .withPath(NottableString.not("/robots.txt")),
+               Times.once()
+            )
+         .respond(
+               response().withStatusCode(statusCode)
+            );
+      });
+      
+      StandardTestSet testSet = new StandardTestSet();
+      
+      createTuples(1, false).limit(statusCodes.length).forEach(tuple -> testSet.execute(tuple));
+      
+      testSet.verify();
+      
+      
+//      assertTrue(
+         testSet.getValues().getAllValues().stream()
+            .map(values -> Metadata.class.cast(values.get(1)))
+            .forEach(System.out::println);
+//            .anyMatch(statusCode -> "200".equals(statusCode))
+//         );
+      
    }
    
    @AfterEach
@@ -657,7 +703,8 @@ public class MectricsFetcherBoltTest {
       
       public void verify() {
 
-         while(this.mockingDetails.getInvocations().size() < this.invocations.get() *2) {
+         while(this.mockingDetails.getInvocations().stream().filter(invocation -> "emit".equals( invocation.getMethod().getName())).count() < this.invocations.get()) {
+
             
             try {
                Thread.sleep(500);

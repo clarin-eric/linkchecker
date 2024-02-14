@@ -28,6 +28,8 @@ import lombok.extern.slf4j.Slf4j;
 public class SimpleStackBolt implements IRichBolt {
    
    private static final long serialVersionUID = 1L;
+
+   private OutputCollector collector;
    
    private ArrayDeque<Map<String, String[]>> deque = new ArrayDeque<Map<String, String[]>>();
    
@@ -37,7 +39,9 @@ public class SimpleStackBolt implements IRichBolt {
    
    @Override
    public void prepare(Map<String, Object> topoConf, TopologyContext context, OutputCollector collector) {
-      
+
+      this.collector = collector;
+
       this.outputFileStr = ConfUtils.getString(topoConf, "directory.share", "/tmp") + "/latestChecks.obj";
    }
 
@@ -62,12 +66,15 @@ public class SimpleStackBolt implements IRichBolt {
             out.writeObject(this.deque);  
             
             this.lastSaveTimeInMs = System.currentTimeMillis();
+
          }
          catch(IOException ex) {
             
             log.error("can't serialize stack to file {}", this.outputFileStr);
          }         
       }
+
+      collector.ack(input);
    }
 
    @Override

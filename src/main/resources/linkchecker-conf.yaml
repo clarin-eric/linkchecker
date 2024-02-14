@@ -38,7 +38,7 @@ config:
   http.robots.agents: "${ENV-HTTP_AGENTS}"
   http.agent.name: "${ENV-HTTP_AGENT_NAME}"
   http.agent.version: @version@
-  http.agent.description: "${ENV-HTTP_AGENT_DESCRIPTION}"
+  http.agent.description: build with Apache Storm @storm.version@/Storm Crawler @stormcrawler.version@
   http.agent.url: "${ENV-HTTP_AGENT_URL}"
   http.agent.email: "${ENV-HTTP_AGENT_EMAIL}"
   http.redirectLimit: ${ENV-HTTP_REDIRECT_LIMIT}
@@ -98,7 +98,7 @@ config:
   login.list.url: "https://raw.githubusercontent.com/clarin-eric/login-pages/master/list.txt"
   ok.status.codes: [200, 304]
   redirect.status.codes: [301, 302, 303, 307, 308] 
-  undeterminded.status.codes: [405, 429]
+  undetermined.status.codes: [405, 429]
   restricted.access.status.codes: [401, 403]
   
   directory.share: /share

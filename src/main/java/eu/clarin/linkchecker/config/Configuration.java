@@ -1,6 +1,5 @@
 package eu.clarin.linkchecker.config;
 
-import org.apache.storm.shade.org.json.simple.JSONArray;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -14,7 +13,6 @@ import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.StandardEnvironment;
 
 import com.digitalpebble.stormcrawler.util.ConfUtils;
-import com.esotericsoftware.minlog.Log;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -159,8 +157,8 @@ public class Configuration {
       List<Integer> list = new ArrayList<Integer>();
       Object ret = conf.get(key);
 
-      if (ret != null && JSONArray.class.isInstance(ret)) {
-         JSONArray array = JSONArray.class.cast(ret);
+      if (ret != null && ArrayList.class.isInstance(ret)) {
+         ArrayList<?> array = ArrayList.class.cast(ret);
 
          for (Object obj : array) {
             if (Number.class.isInstance(obj)) {
