@@ -27,4 +27,6 @@ public class Constants {
     public static final String UNDETERMINED_STATUS_CODES = "undetermined.status.codes";
     public static final String RESTRICTED_ACCESS_STATUS_CODES = "restricted.access.status.codes";
 
+    public static final String LOG_INTERVAL_UNCHECKED_LINKS = "logInterval.uncheckedLinks";
+
 }

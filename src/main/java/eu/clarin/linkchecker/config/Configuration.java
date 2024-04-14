@@ -62,6 +62,8 @@ public class Configuration {
    public static List<Integer> undeterminedStatusCodes;
 
    public static List<Integer> restrictedAccessStatusCodes;
+
+   public static long logIntervalUncheckedLinks;
    
    public static final AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 
@@ -84,6 +86,8 @@ public class Configuration {
          redirectStatusCodes = getIntegerList(Constants.REDIRECT_STATUS_CODES, conf);
          undeterminedStatusCodes = getIntegerList(Constants.UNDETERMINED_STATUS_CODES, conf);
          restrictedAccessStatusCodes = getIntegerList(Constants.RESTRICTED_ACCESS_STATUS_CODES, conf);
+
+         logIntervalUncheckedLinks = ConfUtils.getLong(conf, Constants.LOG_INTERVAL_UNCHECKED_LINKS, 86400000l);
          
          ConfigurableEnvironment environment = new StandardEnvironment();
          MutablePropertySources propertySources = environment.getPropertySources();
