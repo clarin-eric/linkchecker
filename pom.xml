@@ -10,7 +10,7 @@
 
    <properties>
       <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-      <storm.version>2.6.1</storm.version>
+      <storm.version>2.6.2</storm.version>
       <stormcrawler.version>2.11</stormcrawler.version>
       <lombok.version>1.18.32</lombok.version>
       <linkchecker-persistence.version>1.0.1</linkchecker-persistence.version>
