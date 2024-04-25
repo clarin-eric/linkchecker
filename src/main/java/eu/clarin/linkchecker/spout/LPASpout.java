@@ -35,7 +35,9 @@ public class LPASpout extends AbstractQueryingSpout {
    protected String logIdprefix = "";
    
    private int counter = 0;
-   private long lastCheckpoint = System.currentTimeMillis();
+   private long lastCheckpoint =  System.currentTimeMillis();
+
+   private static long lastUncheckedLinks = 0;
    
    
    public LPASpout(String sql) {
@@ -96,7 +98,8 @@ public class LPASpout extends AbstractQueryingSpout {
       log.info("{} SQL query returned {} hits, distributed on {} queues in {} msec", logIdprefix, buffer.size(),
             buffer.numQueues(), timeTaken);
 
-
+      //we log the number of unchecked links
+      LPASpout.logUncheckedLinks();
    }
 
    
@@ -125,5 +128,19 @@ public class LPASpout extends AbstractQueryingSpout {
       super.close();
       
       Configuration.setActive(null, false);
+   }
+
+   private static synchronized void logUncheckedLinks(){
+      if((LPASpout.lastUncheckedLinks + Configuration.logIntervalUncheckedLinks) < System.currentTimeMillis()){
+
+         LPASpout.lastUncheckedLinks = System.currentTimeMillis();
+
+         GenericRepository gRep = Configuration.ctx.getBean(GenericRepository.class);
+
+         try(Stream<Tuple> stream = gRep.findAll("SELECT COUNT(*) FROM url u WHERE u.id NOT IN (SELECT s.url_id from status s)", true).stream()){
+
+            stream.forEach(tuple -> log.info("number of unchecked links: {}", tuple.get(0)));
+         }
+      }
    }
 }

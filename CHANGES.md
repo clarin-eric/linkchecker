@@ -1,3 +1,7 @@
+# version 3.4.0
+- logging number of unchecked links (issue #84)
+- dependency upgrade for linkchecker-persistence
+
 # version 3.3.0
 - upgrading dependencies to Storm 2.6.1 and Storm Crawler 2.11  
   => requirement to change user agent string (issues #78, #79, #80)
