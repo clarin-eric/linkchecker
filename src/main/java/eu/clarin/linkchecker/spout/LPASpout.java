@@ -119,7 +119,7 @@ public class LPASpout extends AbstractQueryingSpout {
 
    @Override
    public void fail(Object msgId) {
-      log.info("{}  Fail for {}", logIdprefix, msgId);
+      log.debug("{}  Fail for {}", logIdprefix, msgId);
       super.fail(msgId);
    }
 
