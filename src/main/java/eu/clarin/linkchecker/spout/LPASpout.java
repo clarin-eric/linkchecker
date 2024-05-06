@@ -137,7 +137,16 @@ public class LPASpout extends AbstractQueryingSpout {
 
          GenericRepository gRep = Configuration.ctx.getBean(GenericRepository.class);
 
-         try(Stream<Tuple> stream = gRep.findAll("SELECT COUNT(*) FROM url u WHERE u.id NOT IN (SELECT s.url_id from status s)", true).stream()){
+         try(Stream<Tuple> stream = gRep.findAll(
+                 """
+                        SELECT COUNT(*) 
+                        FROM url u 
+                        WHERE u.id NOT IN (SELECT s.url_id from status s) 
+                        AND u.id IN (SELECT uc.url_id FROM url_context uc WHERE uc.active = TRUE)
+                        """,
+                 true).stream()
+
+         ){
 
             stream.forEach(tuple -> log.info("number of unchecked links: {}", tuple.get(0)));
          }
