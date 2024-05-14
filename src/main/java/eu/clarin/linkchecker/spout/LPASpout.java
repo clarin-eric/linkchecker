@@ -141,7 +141,8 @@ public class LPASpout extends AbstractQueryingSpout {
                  """
                         SELECT COUNT(*) 
                         FROM url u 
-                        WHERE u.id NOT IN (SELECT s.url_id from status s) 
+                        WHERE u.valid = TRUE
+                        AND u.id NOT IN (SELECT s.url_id from status s) 
                         AND u.id IN (SELECT uc.url_id FROM url_context uc WHERE uc.active = TRUE)
                         """,
                  true).stream()
