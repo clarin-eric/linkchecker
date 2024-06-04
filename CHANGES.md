@@ -1,3 +1,6 @@
+# version 3.4.1
+- correction in query for number of unchecked links to exclude non-active links
+
 # version 3.4.0
 - logging number of unchecked links (issue #84)
 - dependency upgrade for linkchecker-persistence
