@@ -16,6 +16,8 @@
         <stormcrawler.version>2.11</stormcrawler.version>
         <lombok.version>1.18.34</lombok.version>
         <linkchecker-persistence.version>1.0.3</linkchecker-persistence.version>
+        <mariadb.version>3.4.1</mariadb.version>
+        <h2.version>2.3.232</h2.version>
         <mockserver.version>5.15.0</mockserver.version>
         <mockito.version>5.13.0</mockito.version>
         <junit.version>5.10.1</junit.version>
@@ -178,7 +180,7 @@
         <dependency>
             <groupId>org.mariadb.jdbc</groupId>
             <artifactId>mariadb-java-client</artifactId>
-            <version>3.4.1</version>
+            <version>${mariadb.version}</version>
         </dependency>
         <dependency>
             <groupId>jakarta.xml.bind</groupId>
@@ -229,7 +231,7 @@
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <version>2.3.232</version>
+            <version>${h2.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
