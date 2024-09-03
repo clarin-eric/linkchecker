@@ -1,3 +1,6 @@
+# version 4.0.0
+- based on Java 21
+
 # version 3.4.1
 - correction in query for number of unchecked links to exclude non-active links
 
