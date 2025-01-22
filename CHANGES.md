@@ -1,3 +1,7 @@
+# version 4.0.1
+- upgrade to storm 2.7.2
+- upgrade to storm crawler 3.2.0 (all project internal package name have changed)
+
 # version 4.0.0
 - based on Java 21
 

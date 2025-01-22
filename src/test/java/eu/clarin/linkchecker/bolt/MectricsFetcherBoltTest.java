@@ -50,7 +50,7 @@ import static org.mockserver.model.HttpError.*;
 
 import org.mockserver.model.NottableString;
 
-import com.digitalpebble.stormcrawler.Metadata;
+import org.apache.stormcrawler.Metadata;
 
 import eu.clarin.linkchecker.config.Configuration;
 import eu.clarin.linkchecker.persistence.utils.Category;
@@ -396,7 +396,7 @@ public class MectricsFetcherBoltTest {
       assertTrue(
          IntStream
          .range(0, 3)
-         .filter(i -> testSet.getStreamId().getAllValues().get(i).equals(com.digitalpebble.stormcrawler.Constants.StatusStreamName))
+         .filter(i -> testSet.getStreamId().getAllValues().get(i).equals(org.apache.stormcrawler.Constants.StatusStreamName))
          .mapToObj(i -> testSet.getValues().getAllValues().get(i))
          .anyMatch(values -> values.get(0).equals("http://id.acdh.oeaw.ac.at/test") 
             && values.get(1) instanceof Metadata
@@ -408,7 +408,7 @@ public class MectricsFetcherBoltTest {
       assertTrue(
             IntStream
             .range(0, 3)
-            .filter(i -> testSet.getStreamId().getAllValues().get(i).equals(com.digitalpebble.stormcrawler.Constants.StatusStreamName))
+            .filter(i -> testSet.getStreamId().getAllValues().get(i).equals(org.apache.stormcrawler.Constants.StatusStreamName))
             .mapToObj(i -> testSet.getValues().getAllValues().get(i))
             .anyMatch(values -> !values.get(0).equals("http://id.acdh.oeaw.ac.at/test") 
                && values.get(1) instanceof Metadata
@@ -508,7 +508,7 @@ public class MectricsFetcherBoltTest {
       //we must have 100 results
       assertEquals(100, testSet.getStreamId().getAllValues().size());
       // and all results go to status stream
-      assertTrue(testSet.getStreamId().getAllValues().stream().allMatch(streamId -> streamId.equals(com.digitalpebble.stormcrawler.Constants.StatusStreamName)));     
+      assertTrue(testSet.getStreamId().getAllValues().stream().allMatch(streamId -> streamId.equals(org.apache.stormcrawler.Constants.StatusStreamName)));     
    }
    
    @Test

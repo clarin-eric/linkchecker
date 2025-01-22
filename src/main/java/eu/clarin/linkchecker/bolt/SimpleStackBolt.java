@@ -16,8 +16,8 @@ import org.apache.storm.topology.IRichBolt;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.tuple.Tuple;
 
-import com.digitalpebble.stormcrawler.Metadata;
-import com.digitalpebble.stormcrawler.util.ConfUtils;
+import org.apache.stormcrawler.Metadata;
+import org.apache.stormcrawler.util.ConfUtils;
 
 import lombok.extern.slf4j.Slf4j;
 

@@ -1,5 +1,5 @@
 /**
- * The class takes com.digitalpebble.stormcrawler.protocol.ProtocolFactory as a sample, adds the capacity of host specific http timeouts and simplifies the code 
+ * The class takes org.apache.stormcrawler.protocol.ProtocolFactory as a sample, adds the capacity of host specific http timeouts and simplifies the code 
  * 
  * @author Wolfgang Walter SAUER (wowasa) &lt;clarin@wowasa.com&gt;
  *
@@ -13,10 +13,10 @@ import java.util.Map;
 import org.apache.commons.lang.StringUtils;
 import org.apache.storm.Config;
 
-import com.digitalpebble.stormcrawler.protocol.Protocol;
-import com.digitalpebble.stormcrawler.protocol.ProtocolFactory;
-import com.digitalpebble.stormcrawler.util.ConfUtils;
-import com.digitalpebble.stormcrawler.util.InitialisationUtil;
+import org.apache.stormcrawler.protocol.Protocol;
+import org.apache.stormcrawler.protocol.ProtocolFactory;
+import org.apache.stormcrawler.util.ConfUtils;
+import org.apache.stormcrawler.util.InitialisationUtil;
 
 /**
  *
@@ -65,7 +65,7 @@ public class HostProtocolFactory {
               
               if(protocol.matches("https?")) {
                  
-                 protocolimplementation = "com.digitalpebble.stormcrawler.protocol.httpclient.HttpProtocol";
+                 protocolimplementation = "org.apache.stormcrawler.protocol.httpclient.HttpProtocol";
               }
               else {
                  

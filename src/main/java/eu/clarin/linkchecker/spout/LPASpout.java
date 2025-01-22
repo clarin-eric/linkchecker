@@ -16,9 +16,9 @@ import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.digitalpebble.stormcrawler.Metadata;
-import com.digitalpebble.stormcrawler.persistence.AbstractQueryingSpout;
-import com.digitalpebble.stormcrawler.util.StringTabScheme;
+import org.apache.stormcrawler.Metadata;
+import org.apache.stormcrawler.persistence.AbstractQueryingSpout;
+import org.apache.stormcrawler.util.StringTabScheme;
 
 import eu.clarin.linkchecker.config.Configuration;
 import eu.clarin.linkchecker.persistence.repository.GenericRepository;

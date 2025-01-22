@@ -18,9 +18,9 @@
 
 package eu.clarin.linkchecker.bolt;
 
-import com.digitalpebble.stormcrawler.Metadata;
-import com.digitalpebble.stormcrawler.persistence.AbstractStatusUpdaterBolt;
-import com.digitalpebble.stormcrawler.persistence.Status;
+import org.apache.stormcrawler.Metadata;
+import org.apache.stormcrawler.persistence.AbstractStatusUpdaterBolt;
+import org.apache.stormcrawler.persistence.Status;
 
 import eu.clarin.linkchecker.config.Configuration;
 import eu.clarin.linkchecker.persistence.model.Url;

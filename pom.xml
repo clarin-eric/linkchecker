@@ -5,15 +5,15 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>eu.clarin.cmdi</groupId>
     <artifactId>linkchecker</artifactId>
-    <version>4.0.0-SNAPSHOT</version>
+    <version>4.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <storm.version>2.6.3</storm.version>
-        <stormcrawler.version>2.11</stormcrawler.version>
+        <storm.version>2.7.1</storm.version>
+        <stormcrawler.version>3.2.0</stormcrawler.version>
         <lombok.version>1.18.34</lombok.version>
         <linkchecker-persistence.version>1.0.3</linkchecker-persistence.version>
         <mariadb.version>3.4.1</mariadb.version>
@@ -125,8 +125,18 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.digitalpebble.stormcrawler</groupId>
-            <artifactId>storm-crawler-core</artifactId>
+            <groupId>org.apache.stormcrawler</groupId>
+            <artifactId>stormcrawler-core</artifactId>
+            <version>${stormcrawler.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.stormcrawler</groupId>
+            <artifactId>stormcrawler-tika</artifactId>
+            <version>${stormcrawler.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.stormcrawler</groupId>
+            <artifactId>stormcrawler-urlfrontier</artifactId>
             <version>${stormcrawler.version}</version>
         </dependency>
         <dependency>
@@ -144,16 +154,6 @@
             <groupId>org.apache.storm</groupId>
             <artifactId>flux-wrappers</artifactId>
             <version>${storm.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.digitalpebble.stormcrawler</groupId>
-            <artifactId>storm-crawler-tika</artifactId>
-            <version>${stormcrawler.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.digitalpebble.stormcrawler</groupId>
-            <artifactId>storm-crawler-urlfrontier</artifactId>
-            <version>${stormcrawler.version}</version>
         </dependency>
         <dependency>
             <groupId>com.github.crawler-commons</groupId>
@@ -176,6 +176,11 @@
                     <artifactId>spring-boot-starter-logging</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.11.0</version>
         </dependency>
         <dependency>
             <groupId>org.mariadb.jdbc</groupId>
