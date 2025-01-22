@@ -5,22 +5,22 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>eu.clarin.cmdi</groupId>
     <artifactId>linkchecker</artifactId>
-    <version>4.0.0</version>
+    <version>4.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <storm.version>2.6.3</storm.version>
-        <stormcrawler.version>2.11</stormcrawler.version>
-        <lombok.version>1.18.34</lombok.version>
-        <linkchecker-persistence.version>1.0.3</linkchecker-persistence.version>
+        <storm.version>2.7.1</storm.version>
+        <stormcrawler.version>3.2.0</stormcrawler.version>
+        <lombok.version>1.18.36</lombok.version>
+        <linkchecker-persistence.version>2.0.0</linkchecker-persistence.version>
         <mariadb.version>3.4.1</mariadb.version>
         <h2.version>2.3.232</h2.version>
         <mockserver.version>5.15.0</mockserver.version>
-        <mockito.version>5.13.0</mockito.version>
-        <junit.version>5.10.1</junit.version>
+        <mockito.version>5.15.2</mockito.version>
+        <junit.version>5.11.4</junit.version>
     </properties>
     <build>
         <resources>
@@ -71,10 +71,6 @@
                                 <transformer
                                         implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>org.apache.storm.flux.Flux</mainClass>
-                                    <manifestEntries>
-                                        <Change></Change>
-                                        <Build-Date></Build-Date>
-                                    </manifestEntries>
                                 </transformer>
                             </transformers>
                             <!-- The filters below are necessary if you want to include the Tika
@@ -125,8 +121,18 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.digitalpebble.stormcrawler</groupId>
-            <artifactId>storm-crawler-core</artifactId>
+            <groupId>org.apache.stormcrawler</groupId>
+            <artifactId>stormcrawler-core</artifactId>
+            <version>${stormcrawler.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.stormcrawler</groupId>
+            <artifactId>stormcrawler-tika</artifactId>
+            <version>${stormcrawler.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.stormcrawler</groupId>
+            <artifactId>stormcrawler-urlfrontier</artifactId>
             <version>${stormcrawler.version}</version>
         </dependency>
         <dependency>
@@ -144,16 +150,6 @@
             <groupId>org.apache.storm</groupId>
             <artifactId>flux-wrappers</artifactId>
             <version>${storm.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.digitalpebble.stormcrawler</groupId>
-            <artifactId>storm-crawler-tika</artifactId>
-            <version>${stormcrawler.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.digitalpebble.stormcrawler</groupId>
-            <artifactId>storm-crawler-urlfrontier</artifactId>
-            <version>${stormcrawler.version}</version>
         </dependency>
         <dependency>
             <groupId>com.github.crawler-commons</groupId>
@@ -176,6 +172,11 @@
                     <artifactId>spring-boot-starter-logging</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.11.0</version>
         </dependency>
         <dependency>
             <groupId>org.mariadb.jdbc</groupId>

@@ -46,8 +46,8 @@ config:
   http.timeout.individual:
     id.acdh.oeaw.ac.at: 10000
   
-  http.protocol.implementation: "com.digitalpebble.stormcrawler.protocol.okhttp.HttpProtocol"
-  https.protocol.implementation: "com.digitalpebble.stormcrawler.protocol.okhttp.HttpProtocol"
+  http.protocol.implementation: "org.apache.stormcrawler.protocol.okhttp.HttpProtocol"
+  https.protocol.implementation: "org.apache.stormcrawler.protocol.okhttp.HttpProtocol"
 
   # Defines delay (in secs) between crawls in the same queue
   fetcher.server.delay: 1

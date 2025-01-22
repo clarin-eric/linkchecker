@@ -14,15 +14,15 @@
  */
 package eu.clarin.linkchecker.bolt;
 
-import com.digitalpebble.stormcrawler.Constants;
-import com.digitalpebble.stormcrawler.Metadata;
-import com.digitalpebble.stormcrawler.bolt.StatusEmitterBolt;
-import com.digitalpebble.stormcrawler.persistence.Status;
-import com.digitalpebble.stormcrawler.protocol.HttpHeaders;
-import com.digitalpebble.stormcrawler.protocol.Protocol;
+import org.apache.stormcrawler.Constants;
+import org.apache.stormcrawler.Metadata;
+import org.apache.stormcrawler.bolt.StatusEmitterBolt;
+import org.apache.stormcrawler.persistence.Status;
+import org.apache.stormcrawler.protocol.HttpHeaders;
+import org.apache.stormcrawler.protocol.Protocol;
 
-import com.digitalpebble.stormcrawler.protocol.ProtocolResponse;
-import com.digitalpebble.stormcrawler.util.ConfUtils;
+import org.apache.stormcrawler.protocol.ProtocolResponse;
+import org.apache.stormcrawler.util.ConfUtils;
 import crawlercommons.domains.PaidLevelDomain;
 import crawlercommons.robots.BaseRobotRules;
 import eu.clarin.linkchecker.config.Configuration;
@@ -507,7 +507,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                   metadata.setValue("fetch.message", "Blocked by robots.txt");
                   // pass the info about denied by robots
                   metadata.setValue("fetch.category", Category.Blocked_By_Robots_txt.name());
-                  collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, fit.t,
+                  collector.emit(org.apache.stormcrawler.Constants.StatusStreamName, fit.t,
                         new Values(fit.url, metadata));
                   // no need to wait next time as we won't request from
                   // that site
@@ -544,7 +544,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                         metadata.setValue("fetch.message", "Crawl delay too long.");
                         metadata.setValue("fetch.category", Category.Blocked_By_Robots_txt.name());
 
-                        collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, fit.t,
+                        collector.emit(org.apache.stormcrawler.Constants.StatusStreamName, fit.t,
                               new Values(fit.url, metadata));
                         // no need to wait next time as we won't request
                         // from that site
@@ -579,7 +579,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                            + " points to a login page, therefore has restricted access.");
                      metadata.setValue("fetch.category", Category.Restricted_Access.name());
                      
-                     collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, fit.t,
+                     collector.emit(org.apache.stormcrawler.Constants.StatusStreamName, fit.t,
                            new Values(fit.url, metadata));
                      
                      continue;
@@ -672,7 +672,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                
                mergedMD.setValue("fetch.redirectCount", Integer.toString(redirectCount));
 
-               collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, fit.t,
+               collector.emit(org.apache.stormcrawler.Constants.StatusStreamName, fit.t,
                      new Values(fit.url, mergedMD));
 
             }
@@ -787,7 +787,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
    @Override
    public void declareOutputFields(OutputFieldsDeclarer declarer) {
       declarer.declareStream(
-            com.digitalpebble.stormcrawler.Constants.StatusStreamName,
+            org.apache.stormcrawler.Constants.StatusStreamName,
             new Fields("url", "metadata")
          );
       declarer.declareStream(
@@ -859,7 +859,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
          metadata.setValue("fetch.message", e.getClass().getName());
          metadata.setValue("fetch.checkingDate", LocalDateTime.now().toString());
          
-         collector.emit(com.digitalpebble.stormcrawler.Constants.StatusStreamName, input,
+         collector.emit(org.apache.stormcrawler.Constants.StatusStreamName, input,
                new Values(urlString, metadata));
          collector.ack(input);
          return;

@@ -12,7 +12,7 @@ import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.StandardEnvironment;
 
-import com.digitalpebble.stormcrawler.util.ConfUtils;
+import org.apache.stormcrawler.util.ConfUtils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
