@@ -48,7 +48,7 @@ spouts:
 
 bolts:
   - id: "partitioner"
-    className: "com.digitalpebble.stormcrawler.bolt.URLPartitionerBolt"
+    className: "org.apache.stormcrawler.bolt.URLPartitionerBolt"
     parallelism: 1
   - id: "fetcher"
     className: "eu.clarin.linkchecker.bolt.MetricsFetcherBolt"
