@@ -54,7 +54,7 @@ The creation script is available in the [linkchecker-persictence API](https://gi
 
 *linkchecker.flux* defines the components(spouts, bolts and streams) if our topology and loads the configuration file *linkchecker-conf.yaml*.
 1. `eu.clarin.linkchecker.spout.LPASpout` uses the [linkchecker-persistence API](https://github.com/clarin-eric/linkchecker-persistence) to fill up a buffer with URLs to check.
-1. `com.digitalpebble.stormcrawler.bolt.URLPartitionerBolt` partitions the URLs by a configured criteria
-1. `eu.clarin.linkchecker.bolt.MetricsFetcherBolt` fetches the urls. It sends redirects back to URLPartitionerBolt and sends the rest onwards down the stream to StatusUpdaterBolt. Modification of  `com.digitalpebble.stormcrawler.bolt.FetcherBolt`
+1. `org.apache.stormcrawler.bolt.URLPartitionerBolt` partitions the URLs by a configured criteria
+1. `eu.clarin.linkchecker.bolt.MetricsFetcherBolt` fetches the urls. It sends redirects back to URLPartitionerBolt and sends the rest onwards down the stream to StatusUpdaterBolt. Modification of  `org.apache.stormcrawler.bolt.FetcherBolt`
 1. `eu.clarin.linkchecker.bolt.StatusUpdaterBolt` persists the results in the status table of the database via the [linkchecker-persistence API](https://github.com/clarin-eric/linkchecker-persistence).
 1. `eu.clarin.linkchecker.bolt.SimpleStackBolt` persists the latest checking results into a Java Object file for use in curation-web

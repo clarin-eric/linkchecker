@@ -17,7 +17,7 @@ config:
 
   # mandatory when using Flux
   topology.kryo.register:
-    - com.digitalpebble.stormcrawler.Metadata
+    - org.apache.stormcrawler.Metadata
 
   # lists the metadata to persist to storage
   # these are not transfered to the outlinks
