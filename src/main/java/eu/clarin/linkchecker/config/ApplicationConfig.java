@@ -8,9 +8,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @ComponentScan(basePackages = {"eu.clarin.linkchecker.persistence"})
-@EnableJpaRepositories("eu.clarin.linkchecker.persistence.repository")
+@EnableJpaRepositories({"eu.clarin.linkchecker.persistence.repository", "eu.clarin.linkchecker.persistence.generic"})
 @EntityScan("eu.clarin.linkchecker.persistence.model")
-//@EnableAutoConfiguration(exclude = {org.springframework.boot.autoconfigure.gson.GsonAutoConfiguration.class})
 @EnableAutoConfiguration
 @Configuration
 public class ApplicationConfig {

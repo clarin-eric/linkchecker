@@ -17,7 +17,7 @@
         <lombok.version>1.18.36</lombok.version>
         <linkchecker-persistence.version>2.2.0-SNAPSHOT</linkchecker-persistence.version>
         <mariadb.version>3.4.1</mariadb.version>
-        <h2.version>2.3.232</h2.version>
+        <h2.version>2.4.240</h2.version>
         <mockserver.version>5.15.0</mockserver.version>
         <mockito.version>5.15.2</mockito.version>
         <junit.version>5.11.4</junit.version>
