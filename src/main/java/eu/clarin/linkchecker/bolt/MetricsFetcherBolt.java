@@ -14,11 +14,10 @@
  */
 package eu.clarin.linkchecker.bolt;
 
+import org.apache.http.HttpHeaders;
 import org.apache.stormcrawler.Constants;
 import org.apache.stormcrawler.Metadata;
 import org.apache.stormcrawler.bolt.StatusEmitterBolt;
-import org.apache.stormcrawler.persistence.Status;
-import org.apache.stormcrawler.protocol.HttpHeaders;
 import org.apache.stormcrawler.protocol.Protocol;
 
 import org.apache.stormcrawler.protocol.ProtocolResponse;
@@ -59,7 +58,7 @@ import java.util.regex.Pattern;
 
 import javax.net.ssl.SSLException;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.ConnectionClosedException;
 import org.apache.http.NoHttpResponseException;
 import org.apache.http.client.RedirectException;

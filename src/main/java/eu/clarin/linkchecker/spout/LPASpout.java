@@ -21,7 +21,7 @@ import org.apache.stormcrawler.persistence.AbstractQueryingSpout;
 import org.apache.stormcrawler.util.StringTabScheme;
 
 import eu.clarin.linkchecker.config.Configuration;
-import eu.clarin.linkchecker.persistence.repository.GenericRepository;
+import eu.clarin.linkchecker.persistence.generic.GenericRepository;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
