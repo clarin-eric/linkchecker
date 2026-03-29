@@ -18,14 +18,16 @@
 
 package eu.clarin.linkchecker.bolt;
 
+import eu.clarin.linkchecker.persistence.model.History;
+import eu.clarin.linkchecker.persistence.model.Status;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.EntityTransaction;
 import org.apache.stormcrawler.Metadata;
 import org.apache.stormcrawler.persistence.AbstractStatusUpdaterBolt;
-import org.apache.stormcrawler.persistence.Status;
 
 import eu.clarin.linkchecker.config.Configuration;
 import eu.clarin.linkchecker.persistence.model.Url;
-import eu.clarin.linkchecker.persistence.repository.UrlRepository;
-import eu.clarin.linkchecker.persistence.service.StatusService;
 import eu.clarin.linkchecker.persistence.utils.Category;
 import lombok.extern.slf4j.Slf4j;
 
@@ -38,9 +40,7 @@ import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.Map;
-import java.util.Optional;
 import java.util.regex.Pattern;
 
 /**
@@ -56,6 +56,7 @@ public class StatusUpdaterBolt implements IRichBolt {
 
    private OutputCollector collector;
 
+
    /**
     * Does not shard based on the total number of queues
     **/
@@ -67,6 +68,7 @@ public class StatusUpdaterBolt implements IRichBolt {
    public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
 
       this.collector = collector;
+
    }
 
    @Override
@@ -79,57 +81,102 @@ public class StatusUpdaterBolt implements IRichBolt {
       log.debug("metadata:\n{}", md.toString());
 
       String str = null;
-      
-      UrlRepository uRep = Configuration.ctx.getBean(UrlRepository.class);
-      StatusService sService = Configuration.ctx.getBean(StatusService.class);
-      
-      Url urlEntity = uRep.findById(Long.valueOf(md.getFirstValue("urlId"))).get();
-      
-      eu.clarin.linkchecker.persistence.model.Status statusEntity = new eu.clarin.linkchecker.persistence.model.Status(
-            urlEntity, 
-            Category.valueOf(md.getFirstValue("fetch.category")), 
-            md.getFirstValue("fetch.message").length() < 1024?md.getFirstValue("fetch.message"): md.getFirstValue("fetch.message").subSequence(0, 1017) + "[...]",
-            md.getFirstValue("fetch.chechingDate") != null? 
-                  LocalDateTime.parse(md.getFirstValue("fetch.chechingDate"))
-                  : LocalDateTime.now()
-         );
 
+      EntityManager entityManager = Configuration.emFactory.createEntityManager();
 
-      if ((str = md.getFirstValue("fetch.statusCode")) != null && INT_PATTERN.matcher(str).matches()) {
-         statusEntity.setStatusCode(Integer.parseInt(md.getFirstValue("fetch.statusCode")));
-      }
-      if (md.getFirstValue("fetch.contentType") != null) {
-         statusEntity.setContentType(
-               (md.getFirstValue("fetch.contentType").length() < 256) ? md.getFirstValue("fetch.contentType")
-                     : md.getFirstValue("fetch.contentType").substring(0, 250) + "...");
-      }
+      EntityTransaction tx = entityManager.getTransaction();
 
-      if ((str = md.getFirstValue("fetch.byteLength")) != null && INT_PATTERN.matcher(str).matches()) {
-         statusEntity.setContentLength(Long.parseLong(md.getFirstValue("fetch.byteLength")));
-      }
+      try{
+         tx.begin();
+         Url urlEntity = entityManager.find(Url.class, Long.valueOf(md.getFirstValue("urlId")));
 
-      if ((str = md.getFirstValue("fetch.duration")) != null && INT_PATTERN.matcher(str).matches()) {
-         statusEntity.setDuration(Integer.parseInt(md.getFirstValue("fetch.duration")));
-      }
+         // resetting priority to 0
+         if(urlEntity.getPriority() > 0) {
+            urlEntity.setPriority(0);
+            entityManager.merge(urlEntity);
+         }
 
-      statusEntity.setRedirectCount(md.getFirstValue("fetch.redirectCount") == null ? 0
-            : Integer.parseInt(md.getFirstValue("fetch.redirectCount")));
+         Status statusEntity = urlEntity.getStatus();
 
-      String methodBool = md.getFirstValue("http.method.head");
-      String method = methodBool == null ? "N/A" : methodBool.equalsIgnoreCase("true") ? "HEAD" : "GET";
-      statusEntity.setMethod(method);
+         if(statusEntity != null){
 
-      try {
-         sService.save(statusEntity);
+            History historyEntity = new History(urlEntity, statusEntity.getCategory(), statusEntity.getCheckingDate());
+            historyEntity.setStatusCode(statusEntity.getStatusCode());
+            historyEntity.setContentLength(statusEntity.getContentLength());
+            historyEntity.setDuration(statusEntity.getDuration());
+            historyEntity.setMethod(statusEntity.getMethod());
+            historyEntity.setMessage(statusEntity.getMessage());
+            historyEntity.setRedirectCount(statusEntity.getRedirectCount());
+
+            entityManager.persist(historyEntity);
+         }
+         else {
+
+            statusEntity = new Status(
+                    urlEntity,
+                    Category.valueOf(md.getFirstValue("fetch.category")),
+                    md.getFirstValue("fetch.message").length() < 1024?md.getFirstValue("fetch.message"): md.getFirstValue("fetch.message").subSequence(0, 1017) + "[...]",
+                    md.getFirstValue("fetch.chechingDate") != null?
+                            LocalDateTime.parse(md.getFirstValue("fetch.chechingDate"))
+                            : LocalDateTime.now()
+                 );
+         }
+         if ((str = md.getFirstValue("fetch.statusCode")) != null && INT_PATTERN.matcher(str).matches()) {
+            statusEntity.setStatusCode(Integer.parseInt(md.getFirstValue("fetch.statusCode")));
+         }
+         else {
+            statusEntity.setStatusCode(null);
+         }
+         if (md.getFirstValue("fetch.contentType") != null) {
+            statusEntity.setContentType(
+                  (md.getFirstValue("fetch.contentType").length() < 256) ? md.getFirstValue("fetch.contentType")
+                        : md.getFirstValue("fetch.contentType").substring(0, 250) + "...");
+         }
+         else{
+            statusEntity.setContentType(null);
+         }
+         if ((str = md.getFirstValue("fetch.byteLength")) != null && INT_PATTERN.matcher(str).matches()) {
+            statusEntity.setContentLength(Long.parseLong(md.getFirstValue("fetch.byteLength")));
+         }
+         else{
+            statusEntity.setContentLength(null);
+         }
+         if ((str = md.getFirstValue("fetch.duration")) != null && INT_PATTERN.matcher(str).matches()) {
+            statusEntity.setDuration(Integer.parseInt(md.getFirstValue("fetch.duration")));
+         }
+         else{
+            statusEntity.setDuration(null);
+         }
+         if((str = md.getFirstValue("fetch.redirectCount"))!= null && INT_PATTERN.matcher(str).matches()){
+            statusEntity.setRedirectCount(Integer.parseInt(md.getFirstValue("fetch.redirectCount")));
+         }
+         else {
+            statusEntity.setRedirectCount(null);
+         }
+
+         String methodBool = md.getFirstValue("http.method.head");
+         String method = methodBool == null ? "N/A" : methodBool.equalsIgnoreCase("true") ? "HEAD" : "GET";
+         statusEntity.setMethod(method);
+
+         if(statusEntity.getId() != null){
+            entityManager.merge(statusEntity);
+         }
+         else{
+            entityManager.persist(statusEntity);
+         }
+
+         tx.commit();
+
          collector.emit(t, new Values(md));
 
          collector.ack(t);
       }
       catch (Exception ex) {
-         log.error("can't save checked link \n{}", statusEntity);
-         log.error("metadata:\n" + md.toString());
+         log.error("can't save checked link \n{}", md.toString(), ex);
+         tx.rollback();
          collector.fail(t);
       }
+      entityManager.close();
    }
 
    @Override

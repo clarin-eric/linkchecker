@@ -73,14 +73,14 @@ config:
   http.content.limit: 0
 
   #your SPRING configuration properties go here
-  SPRING:
-    spring.datasource.url: ${ENV-DATABASE_URI}
-    spring.datasource.username: ${ENV-MYSQL_USER}
-    spring.datasource.password: ${ENV-MYSQL_PASSWORD}
-    spring.datasource.driver-class-name: org.mariadb.jdbc.Driver
-    spring.jpa.show-sql: false
-    spring.jpa.hibernate.ddl-auto: none
-    spring.database-platform: org.hibernate.dialect.MariaDBDialect
+
+  javax.persistence.jdbc.url: ${ENV-DATABASE_URI}
+  javax.persistence.jdbc.user: ${ENV-MYSQL_USER}
+  javax.persistence.jdbc.password: ${ENV-MYSQL_PASSWORD}
+  javax.persistence.jdbc.driver: org.mariadb.jdbc.Driver
+  hibernate.show_sql: false
+  hibernate.hbm2ddl.auto: none
+  hibernate.dialect: org.hibernate.dialect.MariaDBDialect
 
   spout.max.results: 5000
   spout.group.max.results: 100
@@ -100,4 +100,4 @@ config:
   undetermined.status.codes: [405, 429]
   restricted.access.status.codes: [401, 403]
   
-  directory.share: /data
+  directory.share: /tmp

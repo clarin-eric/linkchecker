@@ -8,20 +8,21 @@ package eu.clarin.linkchecker.spout;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 
 import org.apache.storm.spout.Scheme;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
-import org.springframework.transaction.annotation.Transactional;
+
 
 import org.apache.stormcrawler.Metadata;
 import org.apache.stormcrawler.persistence.AbstractQueryingSpout;
 import org.apache.stormcrawler.util.StringTabScheme;
 
 import eu.clarin.linkchecker.config.Configuration;
-import eu.clarin.linkchecker.persistence.generic.GenericRepository;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -68,18 +69,16 @@ public class LPASpout extends AbstractQueryingSpout {
    }
 
    @Override
-   @Transactional(readOnly = true)
    protected void populateBuffer() {
 
       log.debug("{} call LinkToBeCheckedResource.getNextLinksToCheck()", logIdprefix);
       
       this.isInQuery.set(true);
       long timeStartQuery = System.currentTimeMillis();
-      
-      GenericRepository gRep = Configuration.ctx.getBean(GenericRepository.class);
 
-      
-      try(Stream<Tuple> stream = gRep.findAll(sql, true).stream()){
+      EntityManager entityManager = Configuration.emFactory.createEntityManager();
+
+      try(Stream<Tuple> stream = entityManager.createNativeQuery(sql, Tuple.class).getResultStream()){
          //noinspection SuspiciousMethodCalls
          stream.filter(tuple -> !beingProcessed.containsKey(tuple.get("name"))).forEach(tuple -> {
    
@@ -90,6 +89,8 @@ public class LPASpout extends AbstractQueryingSpout {
             buffer.add(tuple.get("name").toString(), md);
          });
       }
+
+      entityManager.close();
       
       this.markQueryReceivedNow();
       long timeTaken = System.currentTimeMillis() - timeStartQuery;
@@ -135,9 +136,9 @@ public class LPASpout extends AbstractQueryingSpout {
 
          LPASpout.lastUncheckedLinks = System.currentTimeMillis();
 
-         GenericRepository gRep = Configuration.ctx.getBean(GenericRepository.class);
+         EntityManager entityManager = Configuration.emFactory.createEntityManager();
 
-         try(Stream<Tuple> stream = gRep.findAll(
+         try(Stream<Tuple> stream = entityManager.createNativeQuery(
                  """
                         SELECT COUNT(*) 
                         FROM url u 
@@ -145,12 +146,14 @@ public class LPASpout extends AbstractQueryingSpout {
                         AND u.id NOT IN (SELECT s.url_id from status s) 
                         AND u.id IN (SELECT uc.url_id FROM url_context uc WHERE uc.active = TRUE)
                         """,
-                 true).stream()
+                 Tuple.class).getResultStream()
 
          ){
 
             stream.forEach(tuple -> log.info("number of unchecked links: {}", tuple.get(0)));
          }
+
+         entityManager.close();
       }
    }
 }

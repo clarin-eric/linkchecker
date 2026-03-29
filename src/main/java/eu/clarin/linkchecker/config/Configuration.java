@@ -1,34 +1,33 @@
 package eu.clarin.linkchecker.config;
 
+import com.google.common.reflect.ClassPath;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.PersistenceConfiguration;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.core.env.MapPropertySource;
-import org.springframework.core.env.MutablePropertySources;
-import org.springframework.core.env.StandardEnvironment;
 
 import org.apache.stormcrawler.util.ConfUtils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
-import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
 
@@ -36,147 +35,146 @@ import static java.util.concurrent.TimeUnit.MINUTES;
  * This class is for global variables. Since they are variables, I can't put
  * them under constants.
  */
+@Slf4j
 public class Configuration {
 
-   private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(Configuration.class);
+    public static ReentrantLock loginPagesLock = new ReentrantLock();
+    public static List<String> loginPageUrls = new ArrayList<>();
 
-   public static AtomicInteger sec = new AtomicInteger(0);
-   public static Timestamp latestFetchDate;
+    private static String loginListContent;
 
-   public static ReentrantLock loginPagesLock = new ReentrantLock();
-   public static List<String> loginPageUrls = new ArrayList<>();
+    private static boolean isInitialized = false;
+    private static boolean isActive = false;
 
-   // private static String loginListURL =
-   // "https://raw.githubusercontent.com/clarin-eric/login-pages/master/list.txt";
-   private static String loginListContent;
+    public static List<Integer> okStatusCodes;
 
-   private static boolean isInitialized = false;
-   private static boolean isActive = false;
+    public static List<Integer> redirectStatusCodes;
 
-   public static List<Integer> okStatusCodes;
+    // this determines what status codes will not be considered broken links. urls
+    // with these codes will also not factor into the url-scores
+    public static List<Integer> undeterminedStatusCodes;
 
-   public static List<Integer> redirectStatusCodes;
+    public static List<Integer> restrictedAccessStatusCodes;
 
-   // this determines what status codes will not be considered broken links. urls
-   // with these codes will also not factor into the url-scores
-   public static List<Integer> undeterminedStatusCodes;
+    public static long logIntervalUncheckedLinks;
 
-   public static List<Integer> restrictedAccessStatusCodes;
+    public static EntityManagerFactory emFactory;
 
-   public static long logIntervalUncheckedLinks;
-   
-   public static final AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
+    public static synchronized void init(Map<String, Object> conf) {
+        if (!isInitialized) {
+            fillLoginPageUrls(ConfUtils.getString(conf, Constants.LOGIN_LIST_URL));
 
-//    @SuppressWarnings("unchecked")
-   @SuppressWarnings("unchecked")
-   public static synchronized void init(Map<String, Object> conf) {
-      if (!isInitialized) {
-         fillLoginPageUrls(ConfUtils.getString(conf, Constants.LOGIN_LIST_URL));
+            // update the list once a day at 1 am
+            Runnable loginPageUrlUpdater = () -> Configuration.fillLoginPageUrls(ConfUtils.getString(conf, Constants.LOGIN_LIST_URL));
 
-         // update the list once a day at 1 am
-         Runnable loginPageUrlUpdater = () -> {
-            Configuration.fillLoginPageUrls(ConfUtils.getString(conf, Constants.LOGIN_LIST_URL));
-         };
+            long oneAM = LocalDateTime.now().until(LocalDate.now().plusDays(1).atTime(1, 0), ChronoUnit.MINUTES);
+            try (ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1)) {
+                scheduler.scheduleAtFixedRate(loginPageUrlUpdater, oneAM, TimeUnit.DAYS.toMinutes(1), MINUTES);
+            }
 
-         long oneAM = LocalDateTime.now().until(LocalDate.now().plusDays(1).atTime(1, 0), ChronoUnit.MINUTES);
-         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-         scheduler.scheduleAtFixedRate(loginPageUrlUpdater, oneAM, TimeUnit.DAYS.toMinutes(1), MINUTES);
+            okStatusCodes = getIntegerList(Constants.OK_STATUS_CODES, conf);
+            redirectStatusCodes = getIntegerList(Constants.REDIRECT_STATUS_CODES, conf);
+            undeterminedStatusCodes = getIntegerList(Constants.UNDETERMINED_STATUS_CODES, conf);
+            restrictedAccessStatusCodes = getIntegerList(Constants.RESTRICTED_ACCESS_STATUS_CODES, conf);
 
-         okStatusCodes = getIntegerList(Constants.OK_STATUS_CODES, conf);
-         redirectStatusCodes = getIntegerList(Constants.REDIRECT_STATUS_CODES, conf);
-         undeterminedStatusCodes = getIntegerList(Constants.UNDETERMINED_STATUS_CODES, conf);
-         restrictedAccessStatusCodes = getIntegerList(Constants.RESTRICTED_ACCESS_STATUS_CODES, conf);
+            logIntervalUncheckedLinks = ConfUtils.getLong(conf, Constants.LOG_INTERVAL_UNCHECKED_LINKS, 86400000L);
 
-         logIntervalUncheckedLinks = ConfUtils.getLong(conf, Constants.LOG_INTERVAL_UNCHECKED_LINKS, 86400000l);
-         
-         ConfigurableEnvironment environment = new StandardEnvironment();
-         MutablePropertySources propertySources = environment.getPropertySources();
-         
-         propertySources.addFirst(new MapPropertySource("MY_MAP", (Map<String, Object>) conf.get("SPRING")));
-         
-         ctx.setEnvironment(environment);
-         ctx.register(ApplicationConfig.class);
-         
-         ctx.refresh();
-         
-         isInitialized = true;        
-      }
-   }
-
-   public static synchronized void setActive(Map<String, Object> conf, boolean active) {
-      if (active) {
-
-         isActive = true;
-      }
-      else if (isActive) {
-
-         isActive = false;
-      }
-   }
-
-   public static boolean isActive() {
-      return isActive;
-   }
-
-   private static void fillLoginPageUrls(String loginListURL) {
-
-      CloseableHttpClient httpclient = HttpClients.createDefault();
-      HttpGet httpGet = new HttpGet(loginListURL);
-      try (CloseableHttpResponse response = httpclient.execute(httpGet);) {
-
-         String newContent = EntityUtils.toString(response.getEntity(), "UTF-8");
-
-         // do nothing if the new list is the same as old, meaning newContent equals
-         // loginListContent
-         if (!newContent.equals(loginListContent)) {
-            loginListContent = newContent;
-
-            loginPagesLock.lock();
-            // fill loginPageUrls
-
-            loginPageUrls.clear();
-            try (BufferedReader reader = new BufferedReader(new StringReader(loginListContent))) {
-               String line = reader.readLine();
-               while (line != null) {
-                  loginPageUrls.add(line);
-                  line = reader.readLine();
-               }
+            final PersistenceConfiguration persistenceConfiguration = new PersistenceConfiguration("linkchecker");
+            persistenceConfiguration.properties(conf.entrySet().stream()
+                    .filter(entry -> Objects.nonNull(entry.getValue())) // Filtert null Values
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            Map.Entry::getValue
+                    )));
+            try {
+                ClassPath
+                        .from(ClassLoader.getSystemClassLoader())
+                        .getTopLevelClasses("eu.clarin.linkchecker.persistence.model")
+                        .stream()
+                        .map(ClassPath.ClassInfo::load )
+                        .forEach(persistenceConfiguration::managedClass);
             }
             catch (IOException e) {
-               // quit
+                throw new RuntimeException(e);
             }
+            emFactory = persistenceConfiguration.createEntityManagerFactory();
 
-            loginPagesLock.unlock();
-         }
-      }
-      catch (IOException e) {
-         e.printStackTrace();
-      }
+            isInitialized = true;
+        }
+    }
 
-      LOG.info("login page urls: " + loginPageUrls);
+    public static synchronized void setActive(Map<String, Object> conf, boolean active) {
+        if (active) {
 
-   }
+            isActive = true;
+        } else if (isActive) {
 
-   private static List<Integer> getIntegerList(String key, Map<String, Object> conf) {
-      List<Integer> list = new ArrayList<Integer>();
-      Object ret = conf.get(key);
+            isActive = false;
+        }
+    }
 
-      if (ret != null && ArrayList.class.isInstance(ret)) {
-         ArrayList<?> array = ArrayList.class.cast(ret);
+    private static void fillLoginPageUrls(String loginListURL) {
 
-         for (Object obj : array) {
-            if (Number.class.isInstance(obj)) {
-               list.add(Number.class.cast(obj).intValue());
+        try (CloseableHttpClient httpclient = HttpClients.createDefault()) {
+            HttpGet httpGet = new HttpGet(loginListURL);
+            try (CloseableHttpResponse response = httpclient.execute(httpGet)) {
+
+                String newContent = EntityUtils.toString(response.getEntity(), "UTF-8");
+
+                // do nothing if the new list is the same as old, meaning newContent equals
+                // loginListContent
+                if (!newContent.equals(loginListContent)) {
+                    loginListContent = newContent;
+
+                    loginPagesLock.lock();
+                    // fill loginPageUrls
+
+                    loginPageUrls.clear();
+                    try (BufferedReader reader = new BufferedReader(new StringReader(loginListContent))) {
+                        String line = reader.readLine();
+                        while (line != null) {
+                            loginPageUrls.add(line);
+                            line = reader.readLine();
+                        }
+                    }
+                    catch (IOException e) {
+                        // quit
+                    }
+
+                    loginPagesLock.unlock();
+                }
             }
-         }
-      }
-      else {
-         
-         LOG.error("can't map yaml list with key '{}' to Java List<Integer>", key);
-         
-         throw new RuntimeException();
-      }
+            catch (IOException e) {
+                log.error("can't set login page URLs", e);
+            }
+        }
+        catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
-      return list;
-   }
+        log.info("login page urls: " + loginPageUrls);
+
+    }
+
+    private static List<Integer> getIntegerList(String key, Map<String, Object> conf) {
+        List<Integer> list = new ArrayList<>();
+        Object ret = conf.get(key);
+
+        if (ret instanceof ArrayList) {
+            ArrayList<?> array = (ArrayList) ret;
+
+            for (Object obj : array) {
+                if (obj instanceof Number) {
+                    list.add(((Number) obj).intValue());
+                }
+            }
+        } else {
+
+            log.error("can't map yaml list with key '{}' to Java List<Integer>", key);
+
+            throw new RuntimeException();
+        }
+
+        return list;
+    }
 }
