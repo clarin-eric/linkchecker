@@ -83,6 +83,8 @@ config:
     spring.jpa.show-sql: false
     spring.jpa.hibernate.ddl-auto: none
     spring.database-platform: org.hibernate.dialect.MariaDBDialect
+    spring.jpa.hibernate.naming.physical-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+    spring.main.lazy-initialization: true
 
   # Max time to allow between 2 successive queries to the backend. Value in msecs, default 20000.
   # 1 hour
