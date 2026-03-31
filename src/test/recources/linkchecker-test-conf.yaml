@@ -72,7 +72,7 @@ config:
   # this is 0 so that we don't download any payload when doing GET requests, it will get trimmed.
   http.content.limit: 0
 
-  #your SPRING configuration properties go here
+  #your hibernate configuration properties go here
 
   javax.persistence.jdbc.url: ${ENV-DATABASE_URI}
   javax.persistence.jdbc.user: ${ENV-MYSQL_USER}
@@ -81,6 +81,7 @@ config:
   hibernate.show_sql: false
   hibernate.hbm2ddl.auto: none
   hibernate.dialect: org.hibernate.dialect.MariaDBDialect
+  hibernate.physical_naming_strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
 
   spout.max.results: 5000
   spout.group.max.results: 100

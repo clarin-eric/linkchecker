@@ -74,15 +74,15 @@ config:
     - class: "org.apache.storm.metric.LoggingMetricsConsumer"
       parallelism.hint: 10
 
-  # your SPRING configuration properties go here
-  SPRING:
-    spring.datasource.url: "${ENV-DATABASE_URI}"
-    spring.datasource.username: "${ENV-DATABASE_USER}"
-    spring.datasource.password: "${ENV-DATABASE_PASSWORD}"
-    spring.datasource.driver-class-name: org.mariadb.jdbc.Driver
-    spring.jpa.show-sql: false
-    spring.jpa.hibernate.ddl-auto: none
-    spring.database-platform: org.hibernate.dialect.MariaDBDialect
+  # your hibernate configuration properties go here
+  javax.persistence.jdbc.url: ${ENV-DATABASE_URI}
+  javax.persistence.jdbc.user: ${ENV-MYSQL_USER}
+  javax.persistence.jdbc.password: ${ENV-MYSQL_PASSWORD}
+  javax.persistence.jdbc.driver: org.mariadb.jdbc.Driver
+  hibernate.show_sql: false
+  hibernate.hbm2ddl.auto: none
+  hibernate.dialect: org.hibernate.dialect.MariaDBDialect
+  hibernate.physical_naming_strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
 
   # Max time to allow between 2 successive queries to the backend. Value in msecs, default 20000.
   # 1 hour
