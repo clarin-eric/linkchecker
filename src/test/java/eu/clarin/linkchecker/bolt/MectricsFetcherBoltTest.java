@@ -14,6 +14,7 @@ import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -24,7 +25,6 @@ import java.util.stream.Stream;
 import org.apache.http.HttpStatus;
 import org.apache.storm.flux.model.TopologyDef;
 import org.apache.storm.flux.parser.FluxParser;
-import org.apache.storm.shade.org.apache.commons.lang.RandomStringUtils;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.tuple.Tuple;
@@ -598,8 +598,17 @@ public class MectricsFetcherBoltTest {
    private Stream<Tuple> createTuples(int numberOfHosts, boolean isHeadRequest){
       
       AtomicLong id = new AtomicLong();
-      
-      String hostName = RandomStringUtils.randomAlphabetic(10);
+
+      int leftLimit = 97; // letter 'a'
+      int rightLimit = 122; // letter 'z'
+      int targetStringLength = 10;
+
+      Random random = new Random();
+
+      String hostName = random.ints(leftLimit, rightLimit + 1)
+              .limit(targetStringLength)
+              .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
+              .toString();
       
       return Stream.generate(() -> {
          
