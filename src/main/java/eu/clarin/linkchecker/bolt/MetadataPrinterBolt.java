@@ -58,8 +58,7 @@ public class MetadataPrinterBolt extends AbstractStatusUpdaterBolt {
 
       System.out.println(metadata.toString());
 
-
-      _collector.ack(t);
+      collector.ack(t);
 
    }
 

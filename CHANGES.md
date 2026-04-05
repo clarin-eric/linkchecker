@@ -1,3 +1,8 @@
+# version 4.1.0
+- upgrading to storm 2.8.3
+- upgrading to storm crawler 3.5.1
+- upgrading to linkchecker-persistence 2.2 (with upgrade to Spring Boot 4.*)
+
 # version 4.0.1
 - upgrade to storm 2.7.2
 - upgrade to storm crawler 3.2.0 (all project internal package name have changed)
