@@ -8,6 +8,7 @@ package eu.clarin.linkchecker.spout;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import eu.clarin.linkchecker.persistence.repository.GenericRepository;
 import jakarta.persistence.Tuple;
 
 import org.apache.storm.spout.Scheme;
@@ -21,7 +22,7 @@ import org.apache.stormcrawler.persistence.AbstractQueryingSpout;
 import org.apache.stormcrawler.util.StringTabScheme;
 
 import eu.clarin.linkchecker.config.Configuration;
-import eu.clarin.linkchecker.persistence.generic.GenericRepository;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
