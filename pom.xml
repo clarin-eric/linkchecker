@@ -14,7 +14,7 @@
         <storm.version>2.8.5</storm.version>
         <stormcrawler.version>3.5.1</stormcrawler.version>
         <lombok.version>1.18.36</lombok.version>
-        <linkchecker-persistence.version>2.0.0</linkchecker-persistence.version>
+        <linkchecker-persistence.version>2.0.1</linkchecker-persistence.version>
         <mariadb.version>3.5.7</mariadb.version>
         <h2.version>2.4.240</h2.version>
         <mockserver.version>5.15.0</mockserver.version>
