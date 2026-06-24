@@ -1,5 +1,6 @@
 package eu.clarin.linkchecker.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -36,9 +37,8 @@ import static java.util.concurrent.TimeUnit.MINUTES;
  * This class is for global variables. Since they are variables, I can't put
  * them under constants.
  */
+@Slf4j
 public class Configuration {
-
-   private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(Configuration.class);
 
    public static AtomicInteger sec = new AtomicInteger(0);
    public static Timestamp latestFetchDate;
@@ -95,8 +95,7 @@ public class Configuration {
          propertySources.addFirst(new MapPropertySource("MY_MAP", (Map<String, Object>) conf.get("SPRING")));
          
          ctx.setEnvironment(environment);
-         ctx.register(ApplicationConfig.class);
-         
+
          ctx.refresh();
          
          isInitialized = true;        
@@ -153,7 +152,7 @@ public class Configuration {
          e.printStackTrace();
       }
 
-      LOG.info("login page urls: " + loginPageUrls);
+      log.info("login page urls: " + loginPageUrls);
 
    }
 
@@ -172,7 +171,7 @@ public class Configuration {
       }
       else {
          
-         LOG.error("can't map yaml list with key '{}' to Java List<Integer>", key);
+         log.error("can't map yaml list with key '{}' to Java List<Integer>", key);
          
          throw new RuntimeException();
       }
