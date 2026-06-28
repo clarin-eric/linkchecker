@@ -26,7 +26,6 @@ import crawlercommons.domains.PaidLevelDomain;
 import crawlercommons.robots.BaseRobotRules;
 import eu.clarin.linkchecker.config.Configuration;
 import eu.clarin.linkchecker.extension.HostProtocolFactory;
-import eu.clarin.linkchecker.persistence.utils.Category;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
@@ -505,7 +504,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                if (!rules.isAllowed(correctedUrlString)) {
                   metadata.setValue("fetch.message", "Blocked by robots.txt");
                   // pass the info about denied by robots
-                  metadata.setValue("fetch.category", Category.Blocked_By_Robots_txt.name());
+                  metadata.setValue("fetch.category", "Blocked_By_Robots_txt");
                   collector.emit(org.apache.stormcrawler.Constants.StatusStreamName, fit.t,
                         new Values(fit.url, metadata));
                   // no need to wait next time as we won't request from
@@ -541,7 +540,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                      else {
                         // pass the info about crawl delay
                         metadata.setValue("fetch.message", "Crawl delay too long.");
-                        metadata.setValue("fetch.category", Category.Blocked_By_Robots_txt.name());
+                        metadata.setValue("fetch.category", "Blocked_By_Robots_txt");
 
                         collector.emit(org.apache.stormcrawler.Constants.StatusStreamName, fit.t,
                               new Values(fit.url, metadata));
@@ -576,7 +575,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                   if (!fit.url.equals(metadata.getFirstValue("originalUrl"))) {
                      metadata.setValue("fetch.message", metadata.getFirstValue("originalUrl")
                            + " points to a login page, therefore has restricted access.");
-                     metadata.setValue("fetch.category", Category.Restricted_Access.name());
+                     metadata.setValue("fetch.category", "Restricted_Access");
                      
                      collector.emit(org.apache.stormcrawler.Constants.StatusStreamName, fit.t,
                            new Values(fit.url, metadata));
@@ -607,7 +606,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
 
                      metadata.setValue("fetch.message",
                            "Redirects exceeded " + HTTP_REDIRECT_LIMIT + " redirects for " + originalUrl);
-                     metadata.setValue("fetch.category", Category.Undetermined.name());
+                     metadata.setValue("fetch.category", "Undetermined");
 
                   }
                   else {
@@ -630,20 +629,20 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                   continue;
                }               
                else if (Configuration.okStatusCodes.contains(response.getStatusCode())) {
-                  metadata.setValue("fetch.message", Category.Ok.name());
-                  metadata.setValue("fetch.category", Category.Ok.name());
+                  metadata.setValue("fetch.message", "Ok");
+                  metadata.setValue("fetch.category", "Ok");
                }
                else if (Configuration.undeterminedStatusCodes.contains(response.getStatusCode())) {
                   metadata.setValue("fetch.message", "Undetermined, Status code: " + response.getStatusCode());
-                  metadata.setValue("fetch.category", Category.Undetermined.name());
+                  metadata.setValue("fetch.category", "Undetermined");
                }
                else if (Configuration.restrictedAccessStatusCodes.contains(response.getStatusCode())) {
                   metadata.setValue("fetch.message", "Restricted access, Status code: " + response.getStatusCode());
-                  metadata.setValue("fetch.category", Category.Restricted_Access.name());
+                  metadata.setValue("fetch.category", "Restricted_Access.");
                }
                else {
                   metadata.setValue("fetch.message", "Broken, Status code: " + response.getStatusCode());
-                  metadata.setValue("fetch.category", Category.Broken.name());
+                  metadata.setValue("fetch.category", "Broken");
                }
 
                long timeFetching = System.currentTimeMillis() - start;
@@ -705,7 +704,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
                   metadata = new Metadata();
                }
                
-               metadata.setValue("fetch.category", getCategoryFromException(exece, fit.url).name());
+               metadata.setValue("fetch.category", getCategoryFromException(exece, fit.url));
 
                metadata.setValue("fetch.message", message);
 
@@ -854,7 +853,7 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
          // Report to status stream and ack
          metadata.setValue(Constants.STATUS_ERROR_CAUSE, "malformed URL");
          
-         metadata.setValue("fetch.category", getCategoryFromException(e, urlString).name());
+         metadata.setValue("fetch.category", getCategoryFromException(e, urlString));
          metadata.setValue("fetch.message", e.getClass().getName());
          metadata.setValue("fetch.checkingDate", LocalDateTime.now().toString());
          
@@ -922,47 +921,47 @@ public class MetricsFetcherBolt extends StatusEmitterBolt {
          return locationHeader.matches("(http|ftp).+")?locationHeader: convertRelativeToAbsolute(url, "." + locationHeader);
       }
    }
-   private Category getCategoryFromException(Exception e, String url) {
+   private String getCategoryFromException(Exception e, String url) {
       if (e instanceof MalformedURLException) {
-         return Category.Broken;
+         return "Broken";
       }
       else if (e instanceof IllegalArgumentException) {
-         return Category.Broken;
+         return "Broken";
       }
       else if (e instanceof RedirectException) {
-         return Category.Undetermined;
+         return "Undetermined";
       }
       else if (e instanceof ConnectException) {
-         return Category.Broken;
+         return "Broken";
       }
       else if (e instanceof SocketTimeoutException) {
-         return Category.Broken;
+         return "Broken";
       }
       else if (e instanceof NoHttpResponseException) {
-         return Category.Broken;
+         return "Broken";
       }
       else if (e instanceof ConnectTimeoutException) {
-         return Category.Broken;
+         return "Broken";
       }
       else if (e instanceof UnknownHostException) {
-         return Category.Broken;
+         return "Broken";
       }
       else if (e instanceof SSLException) {
-         return Category.Undetermined;
+         return "Undetermined";
       }
       else if (e instanceof NoRouteToHostException) {
-         return Category.Broken;
+         return "Broken";
       }
       else if (e instanceof SocketException) {
-         return Category.Undetermined;
+         return "Undetermined";
       }
       else if (e instanceof ConnectionClosedException) {
-         return Category.Broken;
+         return "Broken";
       }
       else {
          log.debug("For the URL: \"" + url + "\" there was a yet undefined exception: " + e.getClass().toString()
                + " with the message: " + e.getMessage() + ". Please add this new exception into the code");
-         return Category.Undetermined; // we dont know the exception, then we can't determine it: Undetermined.
+         return "Undetermined"; // we dont know the exception, then we can't determine it: Undetermined.
       }
    }
 }

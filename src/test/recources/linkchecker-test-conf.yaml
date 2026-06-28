@@ -72,17 +72,13 @@ config:
   # this is 0 so that we don't download any payload when doing GET requests, it will get trimmed.
   http.content.limit: 0
 
-  #your SPRING configuration properties go here
-  SPRING:
-    spring.datasource.url: ${ENV-DATABASE_URI}
-    spring.datasource.username: ${ENV-DATABASE_USER}
-    spring.datasource.password: ${ENV-DATABASE_PASSWORD}
-    spring.datasource.driver-class-name: org.mariadb.jdbc.Driver
-    spring.jpa.show-sql: false
-    spring.jpa.hibernate.ddl-auto: none
-    spring.database-platform: org.hibernate.dialect.MariaDBDialect
-    spring.jpa.hibernate.naming.physical-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
-    spring.main.lazy-initialization: true
+  #your hikari configuration properties go here
+  hikari:
+    jdbcUrl: "${ENV-DATABASE_URI}"
+    dataSource.user: "${ENV-DATABASE_USER}"
+    dataSource.password: "${ENV-DATABASE_PASSWORD}"
+    driverClassName: org.mariadb.jdbc.Driver
+
 
   spout.max.results: 5000
   spout.group.max.results: 100

@@ -1,20 +1,16 @@
 package eu.clarin.linkchecker.config;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.core.env.MapPropertySource;
-import org.springframework.core.env.MutablePropertySources;
-import org.springframework.core.env.StandardEnvironment;
-
 import org.apache.stormcrawler.util.ConfUtils;
 
+import javax.sql.DataSource;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
@@ -25,6 +21,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -65,7 +62,7 @@ public class Configuration {
 
    public static long logIntervalUncheckedLinks;
    
-   public static final AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
+   public static DataSource dataSource;
 
 //    @SuppressWarnings("unchecked")
    @SuppressWarnings("unchecked")
@@ -88,15 +85,12 @@ public class Configuration {
          restrictedAccessStatusCodes = getIntegerList(Constants.RESTRICTED_ACCESS_STATUS_CODES, conf);
 
          logIntervalUncheckedLinks = ConfUtils.getLong(conf, Constants.LOG_INTERVAL_UNCHECKED_LINKS, 86400000l);
-         
-         ConfigurableEnvironment environment = new StandardEnvironment();
-         MutablePropertySources propertySources = environment.getPropertySources();
-         
-         propertySources.addFirst(new MapPropertySource("MY_MAP", (Map<String, Object>) conf.get("SPRING")));
-         
-         ctx.setEnvironment(environment);
 
-         ctx.refresh();
+         Properties props = new Properties();
+         props.putAll((Map<String, String>) conf.get("hikari"));
+
+         HikariConfig config = new HikariConfig(props);
+         dataSource = new HikariDataSource(config);
          
          isInitialized = true;        
       }

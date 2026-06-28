@@ -5,17 +5,17 @@
 
 package eu.clarin.linkchecker.spout;
 
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Map;
-import java.util.stream.Stream;
-
-import eu.clarin.linkchecker.persistence.generic.GenericRepository;
-import jakarta.persistence.Tuple;
 
 import org.apache.storm.spout.Scheme;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
-import org.springframework.transaction.annotation.Transactional;
+
 
 import org.apache.stormcrawler.Metadata;
 import org.apache.stormcrawler.persistence.AbstractQueryingSpout;
@@ -69,28 +69,28 @@ public class LPASpout extends AbstractQueryingSpout {
    }
 
    @Override
-   @Transactional(readOnly = true)
    protected void populateBuffer() {
-
-      log.debug("{} call LinkToBeCheckedResource.getNextLinksToCheck()", logIdprefix);
       
       this.isInQuery.set(true);
       long timeStartQuery = System.currentTimeMillis();
-      
-      GenericRepository gRep = Configuration.ctx.getBean(GenericRepository.class);
 
-      
-      try(Stream<Tuple> stream = gRep.findAll(sql, true).stream()){
-         //noinspection SuspiciousMethodCalls
-         stream.filter(tuple -> !beingProcessed.containsKey(tuple.get("name"))).forEach(tuple -> {
-   
-            Metadata md = new Metadata();
-            md.setValue("urlId", tuple.get("id").toString());
-            md.setValue("originalUrl", tuple.get("name").toString());
-            md.setValue("http.method.head", "true");
-            buffer.add(tuple.get("name").toString(), md);
-         });
+
+      try(Connection con = Configuration.dataSource.getConnection(); Statement stmt = con.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+
+         while(rs.next()){
+            if(!beingProcessed.containsKey(rs.getString("name"))) {
+               Metadata md = new Metadata();
+               md.setValue("urlId", rs.getString("id"));
+               md.setValue("originalUrl", rs.getString("name"));
+               md.setValue("http.method.head", "true");
+               buffer.add(rs.getString("name"), md);
+            }
+         };
       }
+      catch (SQLException e) {
+
+      }
+
       
       this.markQueryReceivedNow();
       long timeTaken = System.currentTimeMillis() - timeStartQuery;
@@ -102,8 +102,6 @@ public class LPASpout extends AbstractQueryingSpout {
       //we log the number of unchecked links
       LPASpout.logUncheckedLinks();
    }
-
-   
 
    @Override
    public void ack(Object msgId) {
@@ -136,21 +134,23 @@ public class LPASpout extends AbstractQueryingSpout {
 
          LPASpout.lastUncheckedLinks = System.currentTimeMillis();
 
-         GenericRepository gRep = Configuration.ctx.getBean(GenericRepository.class);
-
-         try(Stream<Tuple> stream = gRep.findAll(
+         try(Connection con = Configuration.dataSource.getConnection(); Statement stmt = con.createStatement(); ResultSet rs = stmt.executeQuery(
                  """
                         SELECT COUNT(*) 
                         FROM url u 
                         WHERE u.valid = TRUE
                         AND u.id NOT IN (SELECT s.url_id from status s) 
                         AND u.id IN (SELECT uc.url_id FROM url_context uc WHERE uc.active = TRUE)
-                        """,
-                 true).stream()
+                        """)
 
-         ){
+            ){
 
-            stream.forEach(tuple -> log.info("number of unchecked links: {}", tuple.get(0)));
+               if(rs.next()) {
+                  log.info("number of unchecked links: {}", rs.getString(1));
+               }
+         }
+         catch (SQLException e) {
+
          }
       }
    }

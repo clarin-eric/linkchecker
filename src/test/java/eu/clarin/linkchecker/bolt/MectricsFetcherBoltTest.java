@@ -53,7 +53,6 @@ import org.mockserver.model.NottableString;
 import org.apache.stormcrawler.Metadata;
 
 import eu.clarin.linkchecker.config.Configuration;
-import eu.clarin.linkchecker.persistence.utils.Category;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
@@ -103,7 +102,7 @@ public class MectricsFetcherBoltTest {
       
       
       //setting h2 driver for testing
-      ((Map<String, Object>) def.getConfig().get("SPRING")).put("spring.datasource.driver-class-name", "org.h2.Driver");
+      ((Map<String, Object>) def.getConfig().get("hikari")).put("driverClassName", "org.h2.Driver");
       //setting MockServer as proxy-server
       def.getConfig().put("http.proxy.host", "localhost");
       def.getConfig().put("http.proxy.port", this.cas.getPort());
@@ -400,7 +399,7 @@ public class MectricsFetcherBoltTest {
          .mapToObj(i -> testSet.getValues().getAllValues().get(i))
          .anyMatch(values -> values.get(0).equals("http://id.acdh.oeaw.ac.at/test") 
             && values.get(1) instanceof Metadata
-            && Category.Ok.name().equals(Metadata.class.cast(values.get(1)).getFirstValue("fetch.category")))
+            && "Ok".equals(Metadata.class.cast(values.get(1)).getFirstValue("fetch.category")))
          );
             
 
@@ -412,7 +411,7 @@ public class MectricsFetcherBoltTest {
             .mapToObj(i -> testSet.getValues().getAllValues().get(i))
             .anyMatch(values -> !values.get(0).equals("http://id.acdh.oeaw.ac.at/test") 
                && values.get(1) instanceof Metadata
-               && Category.Broken.name().equals(Metadata.class.cast(values.get(1)).getFirstValue("fetch.category")))
+               && "Broken".equals(Metadata.class.cast(values.get(1)).getFirstValue("fetch.category")))
             
          );
       

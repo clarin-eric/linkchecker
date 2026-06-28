@@ -14,13 +14,13 @@
         <storm.version>2.8.8</storm.version>
         <stormcrawler.version>3.5.1</stormcrawler.version>
         <lombok.version>1.18.36</lombok.version>
-        <linkchecker-persistence.version>2.2.1</linkchecker-persistence.version>
         <mariadb.version>3.5.7</mariadb.version>
         <h2.version>2.4.240</h2.version>
         <mockserver.version>5.15.0</mockserver.version>
         <mockito.version>5.15.2</mockito.version>
         <junit.version>5.11.4</junit.version>
         <urlfrontier.version>2.4</urlfrontier.version>
+        <hikari.version>7.1.0</hikari.version>
     </properties>
     <build>
         <resources>
@@ -140,20 +140,6 @@
             <artifactId>stormcrawler-core</artifactId>
             <version>${stormcrawler.version}</version>
         </dependency>
-        <!--
-        <dependency>
-            <groupId>org.apache.stormcrawler</groupId>
-            <artifactId>stormcrawler-tika</artifactId>
-            <version>${stormcrawler.version}</version>
-        </dependency>
-        -->
-        <!--
-        <dependency>
-            <groupId>org.apache.stormcrawler</groupId>
-            <artifactId>stormcrawler-urlfrontier</artifactId>
-            <version>${stormcrawler.version}</version>
-        </dependency>
-        -->
         <dependency>
             <groupId>org.apache.storm</groupId>
             <artifactId>storm-client</artifactId>
@@ -171,20 +157,6 @@
             <artifactId>flux-core</artifactId>
             <version>${storm.version}</version>
         </dependency>
-<!--
-        <dependency>
-            <groupId>org.apache.storm</groupId>
-            <artifactId>flux-wrappers</artifactId>
-            <version>${storm.version}</version>
-        </dependency>
-        -->
-        <!--
-        <dependency>
-            <groupId>com.github.crawler-commons</groupId>
-            <artifactId>urlfrontier-client</artifactId>
-            <version>${urlfrontier.version}</version>
-        </dependency>
-        -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -192,32 +164,14 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>eu.clarin</groupId>
-            <artifactId>linkchecker-persistence</artifactId>
-            <version>${linkchecker-persistence.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.springframework.boot</groupId>
-                    <artifactId>spring-boot-starter-logging</artifactId>
-                </exclusion>
-            </exclusions>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>${hikari.version}</version>
         </dependency>
-        <!--
-        <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>2.11.0</version>
-        </dependency>
-        -->
         <dependency>
             <groupId>org.mariadb.jdbc</groupId>
             <artifactId>mariadb-java-client</artifactId>
             <version>${mariadb.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>jakarta.xml.bind</groupId>
-            <artifactId>jakarta.xml.bind-api</artifactId>
-            <version>4.0.2</version>
         </dependency>
         <dependency>
             <groupId>org.apache.storm</groupId>

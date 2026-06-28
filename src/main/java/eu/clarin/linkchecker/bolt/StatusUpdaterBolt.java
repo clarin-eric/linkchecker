@@ -18,15 +18,12 @@
 
 package eu.clarin.linkchecker.bolt;
 
+import jdk.jfr.Category;
 import org.apache.stormcrawler.Metadata;
-import org.apache.stormcrawler.persistence.AbstractStatusUpdaterBolt;
-import org.apache.stormcrawler.persistence.Status;
+
 
 import eu.clarin.linkchecker.config.Configuration;
-import eu.clarin.linkchecker.persistence.model.Url;
-import eu.clarin.linkchecker.persistence.repository.UrlRepository;
-import eu.clarin.linkchecker.persistence.service.StatusService;
-import eu.clarin.linkchecker.persistence.utils.Category;
+
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.storm.task.OutputCollector;
@@ -37,10 +34,11 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 
+import java.sql.*;
 import java.time.LocalDateTime;
-import java.util.Date;
+
 import java.util.Map;
-import java.util.Optional;
+
 import java.util.regex.Pattern;
 
 /**
@@ -52,99 +50,272 @@ import java.util.regex.Pattern;
 @Slf4j
 public class StatusUpdaterBolt implements IRichBolt {
 
-   private static final Pattern INT_PATTERN = Pattern.compile("\\d+");
+    private static final Pattern INT_PATTERN = Pattern.compile("\\d+");
 
-   private OutputCollector collector;
+    private OutputCollector collector;
 
-   /**
-    * Does not shard based on the total number of queues
-    **/
-   public StatusUpdaterBolt() {
-   }
+    /**
+     * Does not shard based on the total number of queues
+     **/
+    public StatusUpdaterBolt() {
+    }
 
-   @SuppressWarnings({ "rawtypes", "unchecked" })
-   @Override
-   public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    @Override
+    public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
 
-      this.collector = collector;
-   }
+        this.collector = collector;
+    }
 
-   @Override
-   public synchronized void execute(Tuple t) {
+    @Override
+    public synchronized void execute(Tuple t) {
 
-      log.debug("tuple: {}", t);
+        log.debug("tuple: {}", t);
 
-      Metadata md = (Metadata) t.getValueByField("metadata");
+        Metadata md = (Metadata) t.getValueByField("metadata");
 
-      log.debug("metadata:\n{}", md.toString());
+        log.debug("metadata:\n{}", md.toString());
 
-      String str = null;
-      
-      UrlRepository uRep = Configuration.ctx.getBean(UrlRepository.class);
-      StatusService sService = Configuration.ctx.getBean(StatusService.class);
-      
-      Url urlEntity = uRep.findById(Long.valueOf(md.getFirstValue("urlId"))).get();
-      
-      eu.clarin.linkchecker.persistence.model.Status statusEntity = new eu.clarin.linkchecker.persistence.model.Status(
-            urlEntity, 
-            Category.valueOf(md.getFirstValue("fetch.category")), 
-            md.getFirstValue("fetch.message").length() < 1024?md.getFirstValue("fetch.message"): md.getFirstValue("fetch.message").subSequence(0, 1017) + "[...]",
-            md.getFirstValue("fetch.chechingDate") != null? 
-                  LocalDateTime.parse(md.getFirstValue("fetch.chechingDate"))
-                  : LocalDateTime.now()
-         );
+        String str = null;
+
+        long urlId = Long.valueOf(md.getFirstValue("urlId"));
+
+        Connection con = null;
+
+        try {
+
+            con = Configuration.dataSource.getConnection();
+
+            con.setAutoCommit(false);
+
+            Long statusId = null;
+            Integer statusCode = null;
+            String message = null;
+            String category = null;
+            String method = null;
+            String contentType = null;
+            Long contentLength = null;
+            Integer duration = null;
+            Timestamp checkingDate = null;
+            Integer redirectCount = null;
 
 
-      if ((str = md.getFirstValue("fetch.statusCode")) != null && INT_PATTERN.matcher(str).matches()) {
-         statusEntity.setStatusCode(Integer.parseInt(md.getFirstValue("fetch.statusCode")));
-      }
-      if (md.getFirstValue("fetch.contentType") != null) {
-         statusEntity.setContentType(
-               (md.getFirstValue("fetch.contentType").length() < 256) ? md.getFirstValue("fetch.contentType")
-                     : md.getFirstValue("fetch.contentType").substring(0, 250) + "...");
-      }
+            try (PreparedStatement stmt = con.prepareStatement("SELECT * FROM status s WHERE s.url_id = ?")) {
 
-      if ((str = md.getFirstValue("fetch.byteLength")) != null && INT_PATTERN.matcher(str).matches()) {
-         statusEntity.setContentLength(Long.parseLong(md.getFirstValue("fetch.byteLength")));
-      }
+                stmt.setLong(1, urlId);
+                try (ResultSet rs = stmt.executeQuery()) {
 
-      if ((str = md.getFirstValue("fetch.duration")) != null && INT_PATTERN.matcher(str).matches()) {
-         statusEntity.setDuration(Integer.parseInt(md.getFirstValue("fetch.duration")));
-      }
+                    if (rs.next()) {
+                        statusId = rs.getLong("id");
+                        statusCode = rs.getInt("status_code");
+                        message = rs.getString("message");
+                        category = rs.getString("category");
+                        method = rs.getString("method");
+                        contentType = rs.getString("content_type");
+                        contentLength = rs.getLong("content_length");
+                        duration = rs.getInt("duration");
+                        checkingDate = rs.getTimestamp("checking_date");
+                        redirectCount = rs.getInt("redirect_count");
+                    }
+                }
+            }
+            // copy old status to history table
+            if (statusId != null) {
 
-      statusEntity.setRedirectCount(md.getFirstValue("fetch.redirectCount") == null ? 0
-            : Integer.parseInt(md.getFirstValue("fetch.redirectCount")));
+                try (PreparedStatement stmt = con.prepareStatement(
+                        """
+                                INSERT INTO history(url_id, status_code, message, category, method, content_type, content_length, duration, checking_date, redirect_count)
+                                VALUES (?,?,?,?,?,?,?,?,?,?)
+                                """
+                )) {
 
-      String methodBool = md.getFirstValue("http.method.head");
-      String method = methodBool == null ? "N/A" : methodBool.equalsIgnoreCase("true") ? "HEAD" : "GET";
-      statusEntity.setMethod(method);
+                    stmt.setLong(1, urlId);
+                    stmt.setInt(2, statusCode);
+                    stmt.setString(3, message);
+                    stmt.setString(4, category);
+                    stmt.setString(5, method);
+                    stmt.setString(6, contentType);
+                    stmt.setLong(7, contentLength);
+                    stmt.setInt(8, duration);
+                    stmt.setTimestamp(9, checkingDate);
+                    stmt.setInt(10, redirectCount);
 
-      try {
-         sService.save(statusEntity);
-         collector.emit(t, new Values(md));
+                    stmt.execute();
+                }
 
-         collector.ack(t);
-      }
-      catch (Exception ex) {
-         log.error("can't save checked link \n{}", statusEntity);
-         log.error("metadata:\n" + md.toString());
-         collector.fail(t);
-      }
-   }
+                try (PreparedStatement stmt = con.prepareStatement(
+                     """
+                        UPDATE status(status_code, message, category, method, content_type, content_length, duration, checking_date, redirect_count)
+                        VALUES (?,?,?,?,?,?,?,?,?)
+                        WHERE status_code = ?
+                        """
+                )) {
 
-   @Override
-   public void cleanup() {
+                    if ((str = md.getFirstValue("fetch.statusCode")) != null && INT_PATTERN.matcher(str).matches()) {
+                        stmt.setInt(1, Integer.parseInt(md.getFirstValue("fetch.statusCode")));
+                    } else {
+                        stmt.setNull(1, Types.INTEGER);
+                    }
+                    if ((str = md.getFirstValue("fetch.message")) != null) {
 
-   }
+                        stmt.setString(2, str.length() < 1024 ? str : str.subSequence(0, 1017) + "[...]");
+                    } else {
+                        stmt.setNull(2, Types.VARCHAR);
+                    }
+                    if ((str = md.getFirstValue("fetch.category")) != null) {
 
-   @Override
-   public void declareOutputFields(OutputFieldsDeclarer declarer) {
-      
-      declarer.declare(new Fields("metadata"));
-   }
+                        stmt.setString(3, str);
+                    } else {
 
-   @Override
-   public Map<String, Object> getComponentConfiguration() {
-      return null;
-   }
+                        stmt.setString(3, "Undetermined");
+                    }
+                    if ((str = md.getFirstValue("http.method.head")) != null) {
+                        stmt.setString(4, str.equalsIgnoreCase("true") ? "HEAD" : "GET");
+                    } else {
+                        stmt.setNull(4, Types.VARCHAR);
+                    }
+                    if ((str = md.getFirstValue("fetch.contentType")) != null) {
+                        stmt.setString(5, str.length() < 256 ? md.getFirstValue("fetch.contentType")
+                                : md.getFirstValue("fetch.contentType").substring(0, 250) + "...");
+                    } else {
+                        stmt.setNull(5, Types.VARCHAR);
+                    }
+                    if (((str = md.getFirstValue("fetch.byteLength")) != null && INT_PATTERN.matcher(str).matches())) {
+                        stmt.setLong(6, Long.parseLong(str));
+                    } else {
+                        stmt.setNull(6, Types.BIGINT);
+                    }
+                    if ((str = md.getFirstValue("fetch.duration")) != null && INT_PATTERN.matcher(str).matches()) {
+                        stmt.setInt(7, Integer.parseInt(str));
+                    } else {
+                        stmt.setNull(7, Types.INTEGER);
+                    }
+                    if ((str = md.getFirstValue("fetch.checkingDate")) != null) {
+                        stmt.setTimestamp(8, Timestamp.valueOf(LocalDateTime.parse(str)));
+                    } else {
+                        stmt.setTimestamp(8, Timestamp.valueOf(LocalDateTime.now()));
+                    }
+                    if ((str = md.getFirstValue("fetch.duration")) != null && INT_PATTERN.matcher(str).matches()) {
+                        stmt.setInt(9, Integer.parseInt(str));
+                    } else {
+                        stmt.setNull(9, Types.INTEGER);
+                    }
+                    stmt.setLong(10, statusId);
+
+                    stmt.executeUpdate();
+                }
+            }
+            try (PreparedStatement stmt = con.prepareStatement(
+                 """
+                    INSERT INTO status(status_code, message, category, method, content_type, content_length, duration, checking_date, redirect_count, url_id)
+                    VALUES (?,?,?,?,?,?,?,?,?,?)
+                    """
+            )) {
+                if ((str = md.getFirstValue("fetch.statusCode")) != null && INT_PATTERN.matcher(str).matches()) {
+                    stmt.setInt(1, Integer.parseInt(md.getFirstValue("fetch.statusCode")));
+                } else {
+                    stmt.setNull(1, Types.INTEGER);
+                }
+                if ((str = md.getFirstValue("fetch.message")) != null) {
+
+                    stmt.setString(2, str.length() < 1024 ? str : str.subSequence(0, 1017) + "[...]");
+                } else {
+                    stmt.setNull(2, Types.VARCHAR);
+                }
+                if ((str = md.getFirstValue("fetch.category")) != null) {
+
+                    stmt.setString(3, str);
+                } else {
+
+                    stmt.setString(3, "Undetermined");
+                }
+                if ((str = md.getFirstValue("http.method.head")) != null) {
+                    stmt.setString(4, str.equalsIgnoreCase("true") ? "HEAD" : "GET");
+                } else {
+                    stmt.setNull(4, Types.VARCHAR);
+                }
+                if ((str = md.getFirstValue("fetch.contentType")) != null) {
+                    stmt.setString(5, str.length() < 256 ? md.getFirstValue("fetch.contentType")
+                            : md.getFirstValue("fetch.contentType").substring(0, 250) + "...");
+                } else {
+                    stmt.setNull(5, Types.VARCHAR);
+                }
+                if (((str = md.getFirstValue("fetch.byteLength")) != null && INT_PATTERN.matcher(str).matches())) {
+                    stmt.setLong(6, Long.parseLong(str));
+                } else {
+                    stmt.setNull(6, Types.BIGINT);
+                }
+                if ((str = md.getFirstValue("fetch.duration")) != null && INT_PATTERN.matcher(str).matches()) {
+                    stmt.setInt(7, Integer.parseInt(str));
+                } else {
+                    stmt.setNull(7, Types.INTEGER);
+                }
+                if ((str = md.getFirstValue("fetch.checkingDate")) != null) {
+                    stmt.setTimestamp(8, Timestamp.valueOf(LocalDateTime.parse(str)));
+                } else {
+                    stmt.setTimestamp(8, Timestamp.valueOf(LocalDateTime.now()));
+                }
+                if ((str = md.getFirstValue("fetch.duration")) != null && INT_PATTERN.matcher(str).matches()) {
+                    stmt.setInt(9, Integer.parseInt(str));
+                } else {
+                    stmt.setNull(9, Types.INTEGER);
+                }
+                stmt.setLong(10, urlId);
+
+                stmt.execute();
+
+            }
+
+            con.commit();
+
+            collector.emit(t, new Values(md));
+
+            collector.ack(t);
+        }
+
+        catch (SQLException e) {
+            log.error("can't save checked link \n{}\n{}", md.toString(), e);
+            collector.fail(t);
+            try {
+                con.rollback();
+            }
+            catch (SQLException ex) {
+                //
+            }
+        } finally {
+            try {
+                con.setAutoCommit(true);
+            }
+            catch (SQLException e) {
+                //
+            }
+
+            try {
+                con.close();
+            }
+            catch (SQLException e) {
+                //
+            }
+        }
+    }
+
+    @Override
+    public void cleanup() {
+
+    }
+
+    @Override
+    public void declareOutputFields(OutputFieldsDeclarer declarer) {
+
+        declarer.declare(new Fields("metadata"));
+    }
+
+    @Override
+    public Map<String, Object> getComponentConfiguration() {
+        return null;
+    }
+
+    private void fillStatement(PreparedStatement stmt, Metadata md) {
+
+    }
 }

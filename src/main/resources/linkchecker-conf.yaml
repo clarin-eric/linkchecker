@@ -74,17 +74,12 @@ config:
     - class: "org.apache.storm.metric.LoggingMetricsConsumer"
       parallelism.hint: 10
 
-  # your SPRING configuration properties go here
-  SPRING:
-    spring.datasource.url: "${ENV-DATABASE_URI}"
-    spring.datasource.username: "${ENV-DATABASE_USER}"
-    spring.datasource.password: "${ENV-DATABASE_PASSWORD}"
-    spring.datasource.driver-class-name: org.mariadb.jdbc.Driver
-    spring.jpa.show-sql: false
-    spring.jpa.hibernate.ddl-auto: none
-    spring.database-platform: org.hibernate.dialect.MariaDBDialect
-    spring.jpa.hibernate.naming.physical-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
-    logging.level.root: TRACE
+  #your hikari configuration properties go here
+  hikari:
+    jdbcUrl: "${ENV-DATABASE_URI}"
+    dataSource.user: "${ENV-DATABASE_USER}"
+    dataSource.password: "${ENV-DATABASE_PASSWORD}"
+    driverClassName: org.mariadb.jdbc.Driver
 
   # Max time to allow between 2 successive queries to the backend. Value in msecs, default 20000.
   # 1 hour
