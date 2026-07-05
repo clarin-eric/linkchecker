@@ -103,6 +103,7 @@ public class StatusUpdaterBolt implements IRichBolt {
             try (PreparedStatement stmt = con.prepareStatement("SELECT * FROM status s WHERE s.url_id = ?")) {
 
                 stmt.setLong(1, urlId);
+
                 try (ResultSet rs = stmt.executeQuery()) {
 
                     if (rs.next()) {
@@ -145,9 +146,9 @@ public class StatusUpdaterBolt implements IRichBolt {
 
                 try (PreparedStatement stmt = con.prepareStatement(
                      """
-                        UPDATE status(status_code, message, category, method, content_type, content_length, duration, checking_date, redirect_count)
-                        VALUES (?,?,?,?,?,?,?,?,?)
-                        WHERE status_code = ?
+                        UPDATE status
+                        SET status_code=?, message=?, category=?, method=?, content_type=?, content_length=?, duration=?, checking_date=?, redirect_count=?
+                        WHERE id = ?
                         """
                 )) {
 
@@ -205,65 +206,67 @@ public class StatusUpdaterBolt implements IRichBolt {
                     stmt.executeUpdate();
                 }
             }
-            try (PreparedStatement stmt = con.prepareStatement(
-                 """
-                    INSERT INTO status(status_code, message, category, method, content_type, content_length, duration, checking_date, redirect_count, url_id)
-                    VALUES (?,?,?,?,?,?,?,?,?,?)
-                    """
-            )) {
-                if ((str = md.getFirstValue("fetch.statusCode")) != null && INT_PATTERN.matcher(str).matches()) {
-                    stmt.setInt(1, Integer.parseInt(md.getFirstValue("fetch.statusCode")));
-                } else {
-                    stmt.setNull(1, Types.INTEGER);
-                }
-                if ((str = md.getFirstValue("fetch.message")) != null) {
+            else {
+                try (PreparedStatement stmt = con.prepareStatement(
+                        """
+                        
+                                INSERT INTO status(status_code, message, category, method, content_type, content_length, duration, checking_date, redirect_count, url_id)
+                        VALUES (?,?,?,?,?,?,?,?,?,?)
+                        """
+                )) {
+                    if ((str = md.getFirstValue("fetch.statusCode")) != null && INT_PATTERN.matcher(str).matches()) {
+                        stmt.setInt(1, Integer.parseInt(md.getFirstValue("fetch.statusCode")));
+                    } else {
+                        stmt.setNull(1, Types.INTEGER);
+                    }
+                    if ((str = md.getFirstValue("fetch.message")) != null) {
 
-                    stmt.setString(2, str.length() < 1024 ? str : str.subSequence(0, 1017) + "[...]");
-                } else {
-                    stmt.setNull(2, Types.VARCHAR);
-                }
-                if ((str = md.getFirstValue("fetch.category")) != null) {
+                        stmt.setString(2, str.length() < 1024 ? str : str.subSequence(0, 1017) + "[...]");
+                    } else {
+                        stmt.setNull(2, Types.VARCHAR);
+                    }
+                    if ((str = md.getFirstValue("fetch.category")) != null) {
 
-                    stmt.setString(3, str);
-                } else {
+                        stmt.setString(3, str);
+                    } else {
 
-                    stmt.setString(3, "Undetermined");
-                }
-                if ((str = md.getFirstValue("http.method.head")) != null) {
-                    stmt.setString(4, str.equalsIgnoreCase("true") ? "HEAD" : "GET");
-                } else {
-                    stmt.setNull(4, Types.VARCHAR);
-                }
-                if ((str = md.getFirstValue("fetch.contentType")) != null) {
-                    stmt.setString(5, str.length() < 256 ? md.getFirstValue("fetch.contentType")
-                            : md.getFirstValue("fetch.contentType").substring(0, 250) + "...");
-                } else {
-                    stmt.setNull(5, Types.VARCHAR);
-                }
-                if (((str = md.getFirstValue("fetch.byteLength")) != null && INT_PATTERN.matcher(str).matches())) {
-                    stmt.setLong(6, Long.parseLong(str));
-                } else {
-                    stmt.setNull(6, Types.BIGINT);
-                }
-                if ((str = md.getFirstValue("fetch.duration")) != null && INT_PATTERN.matcher(str).matches()) {
-                    stmt.setInt(7, Integer.parseInt(str));
-                } else {
-                    stmt.setNull(7, Types.INTEGER);
-                }
-                if ((str = md.getFirstValue("fetch.checkingDate")) != null) {
-                    stmt.setTimestamp(8, Timestamp.valueOf(LocalDateTime.parse(str)));
-                } else {
-                    stmt.setTimestamp(8, Timestamp.valueOf(LocalDateTime.now()));
-                }
-                if ((str = md.getFirstValue("fetch.duration")) != null && INT_PATTERN.matcher(str).matches()) {
-                    stmt.setInt(9, Integer.parseInt(str));
-                } else {
-                    stmt.setNull(9, Types.INTEGER);
-                }
-                stmt.setLong(10, urlId);
+                        stmt.setString(3, "Undetermined");
+                    }
+                    if ((str = md.getFirstValue("http.method.head")) != null) {
+                        stmt.setString(4, str.equalsIgnoreCase("true") ? "HEAD" : "GET");
+                    } else {
+                        stmt.setNull(4, Types.VARCHAR);
+                    }
+                    if ((str = md.getFirstValue("fetch.contentType")) != null) {
+                        stmt.setString(5, str.length() < 256 ? md.getFirstValue("fetch.contentType")
+                                : md.getFirstValue("fetch.contentType").substring(0, 250) + "...");
+                    } else {
+                        stmt.setNull(5, Types.VARCHAR);
+                    }
+                    if (((str = md.getFirstValue("fetch.byteLength")) != null && INT_PATTERN.matcher(str).matches())) {
+                        stmt.setLong(6, Long.parseLong(str));
+                    } else {
+                        stmt.setNull(6, Types.BIGINT);
+                    }
+                    if ((str = md.getFirstValue("fetch.duration")) != null && INT_PATTERN.matcher(str).matches()) {
+                        stmt.setInt(7, Integer.parseInt(str));
+                    } else {
+                        stmt.setNull(7, Types.INTEGER);
+                    }
+                    if ((str = md.getFirstValue("fetch.checkingDate")) != null) {
+                        stmt.setTimestamp(8, Timestamp.valueOf(LocalDateTime.parse(str)));
+                    } else {
+                        stmt.setTimestamp(8, Timestamp.valueOf(LocalDateTime.now()));
+                    }
+                    if ((str = md.getFirstValue("fetch.duration")) != null && INT_PATTERN.matcher(str).matches()) {
+                        stmt.setInt(9, Integer.parseInt(str));
+                    } else {
+                        stmt.setNull(9, Types.INTEGER);
+                    }
+                    stmt.setLong(10, urlId);
 
-                stmt.execute();
-
+                    stmt.execute();
+                }
             }
 
             con.commit();
