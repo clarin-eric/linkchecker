@@ -1,3 +1,7 @@
+# version 4.2.0
+- dropping db access with Spring Boot data JPA and using basic JDBC instead (issue https://github.com/clarin-eric/linkchecker/issues/92)  
+- upgrading to storm 2.8.8
+
 # version 4.1.0
 - upgrading to storm 2.8.3
 - upgrading to storm crawler 3.5.1
