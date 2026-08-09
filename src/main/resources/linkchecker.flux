@@ -19,7 +19,8 @@ spouts:
                (SELECT ROW_NUMBER() OVER (PARTITION BY u.group_key ORDER BY u.priority DESC, s.checking_date) AS order_Nr, u.id, u.name, u.group_key, u.valid, u.priority, s.checking_date 
                FROM url u 
                LEFT JOIN status s ON s.url_id = u.id 
-               WHERE u.valid=true 
+               WHERE u.valid = true
+               AND u.exclude_checking != true
                AND u.group_key != 'hdl.handle.net'
                AND u.id IN (SELECT uc.url_id FROM url_context uc WHERE uc.active = true) 
                AND (s.checking_date IS NULL OR DATEDIFF(NOW(), s.checking_date) > 1)
@@ -37,7 +38,8 @@ spouts:
             (SELECT ROW_NUMBER() OVER (PARTITION BY handle_prefix ORDER BY u.priority DESC, s.checking_date) AS order_Nr, u.id, u.name, REGEXP_SUBSTR(u.name, 'hdl.handle.net/\\K([^/]*)') AS handle_prefix, u.valid, u.priority, s.checking_date 
             FROM url u 
             LEFT JOIN status s ON s.url_id = u.id 
-            WHERE u.valid=true 
+            WHERE u.valid = true
+            AND u.exclude_checking != true
             AND u.group_key = 'hdl.handle.net'
             AND u.id IN (SELECT uc.url_id FROM url_context uc WHERE uc.active = true) 
             AND (s.checking_date IS NULL OR DATEDIFF(NOW(), s.checking_date) > 1)

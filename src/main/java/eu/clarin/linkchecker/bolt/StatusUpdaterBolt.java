@@ -98,6 +98,7 @@ public class StatusUpdaterBolt implements IRichBolt {
             Integer duration = null;
             Timestamp checkingDate = null;
             Integer redirectCount = null;
+            String finalUrl = null;
 
 
             try (PreparedStatement stmt = con.prepareStatement("SELECT * FROM status s WHERE s.url_id = ?")) {
@@ -117,6 +118,7 @@ public class StatusUpdaterBolt implements IRichBolt {
                         duration = rs.getInt("duration");
                         checkingDate = rs.getTimestamp("checking_date");
                         redirectCount = rs.getInt("redirect_count");
+                        finalUrl = rs.getString("final_url");
                     }
                 }
             }
@@ -125,8 +127,8 @@ public class StatusUpdaterBolt implements IRichBolt {
 
                 try (PreparedStatement stmt = con.prepareStatement(
                         """
-                                INSERT INTO history(url_id, status_code, message, category, method, content_type, content_length, duration, checking_date, redirect_count)
-                                VALUES (?,?,?,?,?,?,?,?,?,?)
+                                INSERT INTO history(url_id, status_code, message, category, method, content_type, content_length, duration, checking_date, redirect_count, final_url)
+                                VALUES (?,?,?,?,?,?,?,?,?,?,?)
                                 """
                 )) {
 
@@ -140,6 +142,7 @@ public class StatusUpdaterBolt implements IRichBolt {
                     stmt.setInt(8, duration);
                     stmt.setTimestamp(9, checkingDate);
                     stmt.setInt(10, redirectCount);
+                    stmt.setString(11, finalUrl);
 
                     stmt.execute();
                 }
@@ -147,7 +150,7 @@ public class StatusUpdaterBolt implements IRichBolt {
                 try (PreparedStatement stmt = con.prepareStatement(
                      """
                         UPDATE status
-                        SET status_code=?, message=?, category=?, method=?, content_type=?, content_length=?, duration=?, checking_date=?, redirect_count=?
+                        SET status_code=?, message=?, category=?, method=?, content_type=?, content_length=?, duration=?, checking_date=?, redirect_count=?, final_url=?
                         WHERE id = ?
                         """
                 )) {
@@ -196,12 +199,18 @@ public class StatusUpdaterBolt implements IRichBolt {
                     } else {
                         stmt.setTimestamp(8, Timestamp.valueOf(LocalDateTime.now()));
                     }
-                    if ((str = md.getFirstValue("fetch.duration")) != null && INT_PATTERN.matcher(str).matches()) {
+                    if ((str = md.getFirstValue("fetch.redirectCount")) != null && INT_PATTERN.matcher(str).matches()) {
                         stmt.setInt(9, Integer.parseInt(str));
                     } else {
                         stmt.setNull(9, Types.INTEGER);
                     }
-                    stmt.setLong(10, statusId);
+                    if("0".equals(md.getFirstValue("fetch.redirectCount"))){
+                        stmt.setNull(10, Types.VARCHAR);
+                    }
+                    else{
+                        stmt.setString(10, md.getFirstValue("originalUrl"));
+                    }
+                    stmt.setLong(11, statusId);
 
                     stmt.executeUpdate();
                 }
@@ -210,8 +219,8 @@ public class StatusUpdaterBolt implements IRichBolt {
                 try (PreparedStatement stmt = con.prepareStatement(
                         """
                         
-                                INSERT INTO status(status_code, message, category, method, content_type, content_length, duration, checking_date, redirect_count, url_id)
-                        VALUES (?,?,?,?,?,?,?,?,?,?)
+                                INSERT INTO status(status_code, message, category, method, content_type, content_length, duration, checking_date, redirect_count, final_url, url_id)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?)
                         """
                 )) {
                     if ((str = md.getFirstValue("fetch.statusCode")) != null && INT_PATTERN.matcher(str).matches()) {
@@ -258,12 +267,18 @@ public class StatusUpdaterBolt implements IRichBolt {
                     } else {
                         stmt.setTimestamp(8, Timestamp.valueOf(LocalDateTime.now()));
                     }
-                    if ((str = md.getFirstValue("fetch.duration")) != null && INT_PATTERN.matcher(str).matches()) {
+                    if ((str = md.getFirstValue("fetch.redirectCount")) != null && INT_PATTERN.matcher(str).matches()) {
                         stmt.setInt(9, Integer.parseInt(str));
                     } else {
                         stmt.setNull(9, Types.INTEGER);
                     }
-                    stmt.setLong(10, urlId);
+                    if("0".equals(md.getFirstValue("fetch.redirectCount"))){
+                        stmt.setNull(10, Types.VARCHAR);
+                    }
+                    else{
+                        stmt.setString(10, md.getFirstValue("originalUrl"));
+                    }
+                    stmt.setLong(11, urlId);
 
                     stmt.execute();
                 }
