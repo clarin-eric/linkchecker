@@ -88,7 +88,7 @@ public class LPASpout extends AbstractQueryingSpout {
          };
       }
       catch (SQLException e) {
-
+         log.error("error in SQL query:\n{}", sql);
       }
 
       
