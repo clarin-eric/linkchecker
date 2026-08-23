@@ -16,17 +16,16 @@ spouts:
     constructorArgs:
       - >
          SELECT id, name FROM 
-               (SELECT ROW_NUMBER() OVER (PARTITION BY u.group_key ORDER BY u.priority DESC, s.checking_date) AS order_Nr, u.id, u.name, u.group_key, u.valid, u.priority, s.checking_date 
+               (SELECT ROW_NUMBER() OVER (PARTITION BY u.group_key ORDER BY u.priority DESC, s.checking_date) AS order_nr, u.id, u.name, u.group_key, u.valid, u.priority, s.checking_date
                FROM url u 
                LEFT JOIN status s ON s.url_id = u.id 
-               WHERE u.valid=true 
-               AND u.exclude_checking != TRUE
+               WHERE u.valid IS TRUE
+               AND u.exclude_checking IS NOT TRUE
                AND u.id IN (SELECT uc.url_id FROM url_context uc WHERE uc.active = true) 
                AND (s.checking_date IS NULL OR DATEDIFF(NOW(), s.checking_date) > 1)
                ORDER BY u.group_key, u.priority DESC, s.checking_date) tab1
-            WHERE order_nr <= 100 
-            ORDER by tab1.priority DESC, tab1.checking_date 
-            LIMIT 3000
+            ORDER by order_nr
+            LIMIT 10000
 bolts:
   - id: "partitioner"
     className: "org.apache.stormcrawler.bolt.URLPartitionerBolt"
