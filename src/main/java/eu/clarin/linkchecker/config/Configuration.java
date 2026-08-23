@@ -95,6 +95,7 @@ public class Configuration {
          propertySources.addFirst(new MapPropertySource("MY_MAP", (Map<String, Object>) conf.get("SPRING")));
          
          ctx.setEnvironment(environment);
+         ctx.register(ApplicationConfig.class);
 
          ctx.refresh();
          
