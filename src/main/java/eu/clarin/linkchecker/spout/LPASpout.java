@@ -85,7 +85,10 @@ public class LPASpout extends AbstractQueryingSpout {
          stream.filter(tuple -> !beingProcessed.containsKey(tuple.get("name"))).forEach(tuple -> {
    
             Metadata md = new Metadata();
-            md.setValue("urlId", tuple.get("id").toString());
+            md.setValue("urlId", tuple.get("url_id").toString());
+            if(tuple.get("status_id") != null) {
+               md.setValue("statusId", tuple.get("status_id").toString());
+            }
             md.setValue("originalUrl", tuple.get("name").toString());
             md.setValue("http.method.head", "true");
             buffer.add(tuple.get("name").toString(), md);
