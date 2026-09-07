@@ -1,3 +1,7 @@
+# version 5.0.0
+- based on Java 25
+- upgrading to storm 3.0.0 (requires Java 25)
+
 # version 4.1.0
 - upgrading to storm 2.8.3
 - upgrading to storm crawler 3.5.1
