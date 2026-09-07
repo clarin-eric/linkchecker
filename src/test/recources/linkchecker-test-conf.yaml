@@ -86,12 +86,12 @@ config:
   spout.group.max.results: 100
 
   #Max time to allow between 2 successive queries to the backend. Value in msecs, default 20000.
-  # 1 hour
-  spout.max.delay.queries: 3600000
+  # 2 hours
+  spout.max.delay.queries: 7200000
 
   # Min time (in msecs) to allow between 2 successive queries to SQL
-  # 3 minutes
-  spout.min.delay.queries: 180000
+  # 1 hour
+  spout.min.delay.queries: 3600000
   
   # linkchecker specific settings
   login.list.url: "https://raw.githubusercontent.com/clarin-eric/login-pages/master/list.txt"

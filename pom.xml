@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>eu.clarin.cmdi</groupId>
     <artifactId>linkchecker</artifactId>
-    <version>4.1.2-SNAPSHOT</version>
+    <version>4.1.2-alpha1</version>
     <packaging>jar</packaging>
     <properties>
         <maven.compiler.source>25</maven.compiler.source>
@@ -14,11 +14,11 @@
         <storm.version>3.0.0</storm.version>
         <stormcrawler.version>3.5.1</stormcrawler.version>
         <lombok.version>1.18.40</lombok.version>
-        <linkchecker-persistence.version>3.0.0-SNAPSHOT</linkchecker-persistence.version>
+        <linkchecker-persistence.version>3.0.0-alpha1</linkchecker-persistence.version>
         <mariadb.version>3.5.7</mariadb.version>
         <h2.version>2.4.240</h2.version>
-        <mockserver.version>5.15.0</mockserver.version>
-        <mockito.version>5.15.2</mockito.version>
+        <mockserver.version>7.6.0</mockserver.version>
+        <mockito.version>5.23.0</mockito.version>
         <junit.version>5.11.4</junit.version>
         <urlfrontier.version>2.4</urlfrontier.version>
     </properties>
