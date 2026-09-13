@@ -13,7 +13,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <storm.version>3.0.0</storm.version>
         <stormcrawler.version>3.5.1</stormcrawler.version>
-        <lombok.version>1.18.40</lombok.version>
+        <lombok.version>1.18.46</lombok.version>
         <linkchecker-persistence.version>3.0.0-alpha1</linkchecker-persistence.version>
         <mariadb.version>3.5.7</mariadb.version>
         <h2.version>2.4.240</h2.version>
@@ -126,7 +126,7 @@
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
-                            <version>1.18.46</version>
+                            <version>${lombok.version}</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
